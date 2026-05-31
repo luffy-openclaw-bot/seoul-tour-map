@@ -1,0 +1,274 @@
+{
+  "attractions": [
+    {
+      "id": "gyeongbokgung",
+      "name": "景福宮",
+      "name_ko": "경복궁",
+      "category": "歷史文化",
+      "lat": 37.5796,
+      "lng": 126.9770,
+      "description": "韓國最大嘅宮殿，朝鮮王朝嘅正宮。每日有守門將交接儀式，著韓服入場免費。",
+      "highlights": ["守門將交接儀式", "韓服體驗", "光化門"],
+      "transport": {
+        "subway": "地鐵3號線景福宮站5號出口",
+        "time_from_station": "步行約5分鐘"
+      },
+      "ticket": "3000韓元（韓服免費）",
+      "hours": "09:00-17:00（周二休）",
+      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "tips": "建議租借韓服入場，可免門票兼影相靚"
+    },
+    {
+      "id": "namsan-tower",
+      "name": "南山塔（N首爾塔）",
+      "name_ko": "N서울타워",
+      "category": "地標觀景",
+      "lat": 37.5511,
+      "lng": 126.9882,
+      "description": "首爾地標性建築，位於南山頂，可俯瞰全首爾夜景。著名嘅情人鎖牆喺呢度。",
+      "highlights": ["夜景觀景台", "情人鎖牆", "纜車體驗"],
+      "transport": {
+        "subway": "地鐵4號線明洞站3號出口",
+        "time_from_station": "步行至纜車站約10分鐘"
+      },
+      "ticket": "觀景台11000韓元",
+      "hours": "10:30-22:00",
+      "image": "https://images.unsplash.com/photo-1548115184-bc6544d06a58?w=400",
+      "tips": "傍晚去可以睇到日景同夜景，最正"
+    },
+    {
+      "id": "myeongdong",
+      "name": "明洞",
+      "name_ko": "명동",
+      "category": "購物美食",
+      "lat": 37.5636,
+      "lng": 126.9824,
+      "description": "首爾最熱鬧嘅購物區，集合各大品牌、藥妝店同街頭小食。自由行必去。",
+      "highlights": ["藥妝店購物", "街頭小食", "換錢所"],
+      "transport": {
+        "subway": "地鐵4號線明洞站",
+        "time_from_station": "出站即到"
+      },
+      "ticket": "免費",
+      "hours": "大部份店舖10:00-22:00",
+      "image": "https://images.unsplash.com/photo-1508669232496-04753f10638a?w=400",
+      "tips": "明洞換錢所匯率通常最好"
+    },
+    {
+      "id": "hongdae",
+      "name": "弘大（弘益大學區）",
+      "name_ko": "홍대",
+      "category": "夜生活文化",
+      "lat": 37.5563,
+      "lng": 126.9230,
+      "description": "年輕人嘅天堂，充滿街頭表演、特色咖啡店、酒吧同潮店。夜晚特別熱鬧。",
+      "highlights": ["街頭表演", "特色咖啡店", "夜生活"],
+      "transport": {
+        "subway": "地鐵2號線弘大入口站9號出口",
+        "time_from_station": "步行約5分鐘"
+      },
+      "ticket": "免費",
+      "hours": "24小時（店舖各有不同）",
+      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "tips": "週末夜晚最熱鬧，街頭表演好精彩"
+    },
+    {
+      "id": "bukchon",
+      "name": "北村韓屋村",
+      "name_ko": "북촌한옥마을",
+      "category": "歷史文化",
+      "lat": 37.5826,
+      "lng": 126.9830,
+      "description": "保存傳統韓屋嘅住宅區，可以體驗韓國傳統建築文化。記得保持安靜，尊重居民。",
+      "highlights": ["傳統韓屋", "韓服打卡", "文化體驗"],
+      "transport": {
+        "subway": "地鐵3號線安國站2號出口",
+        "time_from_station": "步行約10分鐘"
+      },
+      "ticket": "免費",
+      "hours": "24小時（建議日間參觀）",
+      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "tips": "請保持安靜，唔好大聲喧嘩，呢度係民居"
+    },
+    {
+      "id": "dongdaemun",
+      "name": "東大門設計廣場（DDP）",
+      "name_ko": "동대문디자인플라자",
+      "category": "地標觀景",
+      "lat": 37.5665,
+      "lng": 127.0094,
+      "description": "由Zaha Hadid設計嘅未來感建築，夜晚LED燈光秀好靚，附近仲有東大門批發市場。",
+      "highlights": ["未來感建築", "LED玫瑰花海", "設計展覽"],
+      "transport": {
+        "subway": "地鐵2/4/5號線東大門歷史文化公園站",
+        "time_from_station": "步行約3分鐘"
+      },
+      "ticket": "免費（展覽另計）",
+      "hours": "24小時開放戶外",
+      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "tips": "夜晚去睇LED燈光，影相超靚"
+    },
+    {
+      "id": "insadong",
+      "name": "仁寺洞",
+      "name_ko": "인사동",
+      "category": "購物美食",
+      "lat": 37.5744,
+      "lng": 126.9858,
+      "description": "傳統文化街區，有好多古董店、茶館、傳統工藝品店同人蔘雞湯餐廳。",
+      "highlights": ["傳統工藝品", "人蔘雞湯", "茶館體驗"],
+      "transport": {
+        "subway": "地鐵3號線安國站6號出口",
+        "time_from_station": "步行約5分鐘"
+      },
+      "ticket": "免費",
+      "hours": "大部份店舖10:00-20:00",
+      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "tips": "必試人蔘雞湯同韓式傳統甜點"
+    },
+    {
+      "id": "lotte-world",
+      "name": "樂天世界",
+      "name_ko": "롯데월드",
+      "category": "娛樂",
+      "lat": 37.5111,
+      "lng": 127.0982,
+      "description": "全球最大室內主題樂園，有室內同室外兩部分，適合一家大小。",
+      "highlights": ["室內過山車", "旋轉木馬", "民俗博物館"],
+      "transport": {
+        "subway": "地鐵2/8號線蠶室站4號出口",
+        "time_from_station": "步行約3分鐘"
+      },
+      "ticket": "62000韓元（一日通票）",
+      "hours": "10:00-21:00",
+      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "tips": "建議網上預先買票，平過現場買"
+    },
+    {
+      "id": "coex-aquarium",
+      "name": "COEX水族館",
+      "name_ko": "코엑스 아쿠아리움",
+      "category": "娛樂",
+      "lat": 37.5012,
+      "lng": 127.0396,
+      "description": "位於江南COEX商場內嘅大型水族館，有超過4萬隻海洋生物。",
+      "highlights": ["鯊魚餵食秀", "海底隧道", "水母區"],
+      "transport": {
+        "subway": "地鐵2號線三成站5/6號出口",
+        "time_from_station": "步行約5分鐘"
+      },
+      "ticket": "33000韓元",
+      "hours": "10:00-20:00",
+      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "tips": "可以順便行COEX商場同星空圖書館"
+    },
+    {
+      "id": "starfield-library",
+      "name": "星空圖書館",
+      "name_ko": "별마당도서관",
+      "category": "休閒",
+      "lat": 37.5096,
+      "lng": 127.0538,
+      "description": "位於COEX商場內嘅巨型開放式圖書館，13米高書架好壯觀，免費入場打卡。",
+      "highlights": ["13米高書架", "免費入場", "打卡熱點"],
+      "transport": {
+        "subway": "地鐵2號線三成站5/6號出口",
+        "time_from_station": "步行約5分鐘"
+      },
+      "ticket": "免費",
+      "hours": "10:30-22:00",
+      "image": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400",
+      "tips": "朝早去較少人，影相更靚"
+    },
+    {
+      "id": "gwangjang-market",
+      "name": "廣藏市場",
+      "name_ko": "광장시장",
+      "category": "購物美食",
+      "lat": 37.5702,
+      "lng": 126.9993,
+      "description": "首爾最傳統嘅市場之一，以綠豆餅、生牛肉、麻藥飯卷聞名，跑男節目曾經嚟過。",
+      "highlights": ["綠豆餅", "生拌牛肉", "麻藥飯卷"],
+      "transport": {
+        "subway": "地鐵1號線鐘路5街站8號出口",
+        "time_from_station": "步行約3分鐘"
+      },
+      "ticket": "免費",
+      "hours": "09:00-18:00（美食街開到深夜）",
+      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "tips": "必試綠豆餅同生拌牛肉，好地道"
+    },
+    {
+      "id": "namdaemun",
+      "name": "南大門市場",
+      "name_ko": "남대문시장",
+      "category": "購物美食",
+      "lat": 37.5591,
+      "lng": 126.9777,
+      "description": "韓國歷史最悠久嘅傳統市場，以童裝、眼鏡、人蔘、海鮮乾貨聞名。",
+      "highlights": ["傳統市場", "平價商品", "地道美食"],
+      "transport": {
+        "subway": "地鐵4號線會賢站5號出口",
+        "time_from_station": "步行約5分鐘"
+      },
+      "ticket": "免費",
+      "hours": "05:00-17:00（各區不同）",
+      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "tips": "朝早去最熱鬧，可以食到地道早餐"
+    },
+    {
+      "id": "cheonggyecheon",
+      "name": "清溪川",
+      "name_ko": "청계천",
+      "category": "自然景觀",
+      "lat": 37.5693,
+      "lng": 127.0056,
+      "description": "穿過市中心嘅人工溪流，兩旁有步行徑，適合散步放鬆，夜晚有燈光裝飾。",
+      "highlights": ["市中心溪流", "燈光裝飾", "散步放鬆"],
+      "transport": {
+        "subway": "地鐵1/2號線市廳站",
+        "time_from_station": "步行約3分鐘"
+      },
+      "ticket": "免費",
+      "hours": "24小時",
+      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "tips": "夜晚燈光亮起時最浪漫"
+    },
+    {
+      "id": "itaewon",
+      "name": "梨泰院",
+      "name_ko": "이태원",
+      "category": "夜生活文化",
+      "lat": 37.5345,
+      "lng": 126.9946,
+      "description": "國際化社區，有多國料理、酒吧同外國人聚集，夜生活豐富。",
+      "highlights": ["多國美食", "酒吧街", "國際氛圍"],
+      "transport": {
+        "subway": "地鐵6號線梨泰院站",
+        "time_from_station": "步行約5分鐘"
+      },
+      "ticket": "免費",
+      "hours": "24小時（店舖各有不同）",
+      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "tips": "想食多國料理嘅好地方"
+    },
+    {
+      "id": "everland",
+      "name": "愛寶樂園",
+      "name_ko": "에버랜드",
+      "category": "娛樂",
+      "lat": 37.2950,
+      "lng": 127.2042,
+      "description": "韓國最大主題樂園，有木製過山車T Express、動物園同四季花園。位於京畿道，需時約1小時車程。",
+      "highlights": ["T Express過山車", "野生動物園", "四季花園"],
+      "transport": {
+        "subway": "於江南站乘5002號直通巴士約1小時",
+        "time_from_station": "從市區出發約1-1.5小時"
+      },
+      "ticket": "62000韓元",
+      "hours": "10:00-21:00",
+      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "tips": "建議平日去，假日超級多人"
+    }
+  ]
+}

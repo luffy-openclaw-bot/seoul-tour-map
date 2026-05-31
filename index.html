@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首爾旅遊地圖 | Seoul Tour Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="static/css/style.css" />
+</head>
+<body>
+    <div id="app">
+        <!-- 頂部導航 -->
+        <header class="top-bar">
+            <div class="logo">
+                <i class="fas fa-map-marked-alt"></i>
+                <h1>首爾旅遊地圖</h1>
+                <span class="subtitle">Seoul Tour Map for Beginners</span>
+            </div>
+            <!-- 手機版側邊欄開關 -->
+            <button id="sidebar-toggle" class="btn-toggle sidebar-toggle-btn" title="顯示/隱藏側邊欄">
+                <i class="fas fa-bars"></i> 景點
+            </button>
+            <div class="header-actions" id="desktop-actions">
+                <button id="toggle-subway" class="btn-toggle" title="顯示/隱藏地鐵線">
+                    <i class="fas fa-subway"></i> 地鐵線
+                </button>
+                <button id="toggle-traffic" class="btn-toggle" title="顯示/隱藏交通時間">
+                    <i class="fas fa-clock"></i> 交通
+                </button>
+                <button id="reset-map" class="btn-toggle" title="重置地圖">
+                    <i class="fas fa-compress-arrows-alt"></i> 重置
+                </button>
+            </div>
+        </header>
+
+        <!-- 主體區域 -->
+        <div class="main-container">
+            <!-- 左側邊欄 -->
+            <aside class="sidebar">
+                <!-- 景點分類篩選 -->
+                <div class="panel">
+                    <h3><i class="fas fa-filter"></i> 景點分類</h3>
+                    <div class="category-filters">
+                        <button class="cat-btn active" data-category="all">
+                            <i class="fas fa-globe"></i> 全部
+                        </button>
+                        <button class="cat-btn" data-category="歷史文化">
+                            <i class="fas fa-landmark"></i> 歷史文化
+                        </button>
+                        <button class="cat-btn" data-category="地標觀景">
+                            <i class="fas fa-binoculars"></i> 地標觀景
+                        </button>
+                        <button class="cat-btn" data-category="購物美食">
+                            <i class="fas fa-shopping-bag"></i> 購物美食
+                        </button>
+                        <button class="cat-btn" data-category="夜生活文化">
+                            <i class="fas fa-music"></i> 夜生活文化
+                        </button>
+                        <button class="cat-btn" data-category="娛樂">
+                            <i class="fas fa-ticket-alt"></i> 娛樂
+                        </button>
+                        <button class="cat-btn" data-category="休閒">
+                            <i class="fas fa-coffee"></i> 休閒
+                        </button>
+                        <button class="cat-btn" data-category="自然景觀">
+                            <i class="fas fa-tree"></i> 自然景觀
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 景點列表 -->
+                <div class="panel">
+                    <h3><i class="fas fa-list"></i> 景點列表</h3>
+                    <div id="attraction-list" class="attraction-list">
+                        <!-- 動態生成 -->
+                    </div>
+                </div>
+            </aside>
+            <!-- 侧边栏遮罩 -->
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+            <!-- 手機側邊欄開關按鈕 -->
+
+            <!-- 地圖區域 -->
+            <main class="map-area">
+                <div id="map"></div>
+                
+                <!-- 地圖圖例 -->
+                <div class="map-legend">
+                    <h4>圖例</h4>
+                    <div class="legend-item"><span class="dot history"></span> 歷史文化</div>
+                    <div class="legend-item"><span class="dot landmark"></span> 地標觀景</div>
+                    <div class="legend-item"><span class="dot shopping"></span> 購物美食</div>
+                    <div class="legend-item"><span class="dot nightlife"></span> 夜生活</div>
+                    <div class="legend-item"><span class="dot entertainment"></span> 娛樂</div>
+                    <div class="legend-item"><span class="dot leisure"></span> 休閒</div>
+                    <div class="legend-item"><span class="dot nature"></span> 自然景觀</div>
+                </div>
+
+                <!-- 路線規劃面板 -->
+                <div id="route-panel" class="route-panel hidden">
+                    <h3><i class="fas fa-route"></i> 路線規劃</h3>
+                    <div class="route-inputs">
+                        <div class="route-field">
+                            <label><i class="fas fa-map-marker-alt text-green"></i> 起點</label>
+                            <select id="route-start">
+                                <option value="">選擇起點...</option>
+                            </select>
+                        </div>
+                        <div class="route-field">
+                            <label><i class="fas fa-flag-checkered text-red"></i> 終點</label>
+                            <select id="route-end">
+                                <option value="">選擇終點...</option>
+                            </select>
+                        </div>
+                        <button id="calculate-route" class="btn-primary">
+                            <i class="fas fa-search"></i> 查詢交通
+                        </button>
+                    </div>
+                    <div id="route-result" class="route-result"></div>
+                </div>
+            </main>
+        </div>
+
+        <!-- AI 對話框 -->
+        <div id="ai-chat" class="ai-chat collapsed">
+            <div class="chat-header" onclick="toggleChat()">
+                <i class="fas fa-robot"></i>
+                <span>AI 旅遊助手</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="chat-body">
+                <div id="chat-messages" class="chat-messages">
+                    <div class="message bot">
+                        <div class="avatar"><i class="fas fa-robot"></i></div>
+                        <div class="bubble">
+                            你好！我係你嘅首爾旅遊 AI 助手 🎌<br>
+                            我可以幫你：<br>
+                            • 查詢景點資訊同開放時間<br>
+                            • 解答交通路線問題<br>
+                            • 推薦行程規劃<br>
+                            • 解答韓國旅遊常見問題<br>
+                            有咩想知，隨時問我！
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="問我關於首爾旅遊嘅問題..." />
+                    <button id="send-btn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 手機版側邊欄遮罩層 -->
+
+    <!-- 景點詳情彈窗 -->
+    <div id="modal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="static/js/app.js"></script>
+</body>
+</html>

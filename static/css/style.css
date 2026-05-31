@@ -1,0 +1,1032 @@
+/* ==================== 基礎設定 ==================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
+    background: #f5f7fa;
+    color: #333;
+    overflow: hidden;
+    height: 100vh;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* ==================== 頂部導航 ==================== */
+.top-bar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    z-index: 1000;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo i {
+    font-size: 28px;
+    color: #ffd700;
+}
+
+.logo h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.subtitle {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-left: 8px;
+    font-weight: 400;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-toggle {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-toggle:hover {
+    background: rgba(255,255,255,0.35);
+    transform: translateY(-1px);
+}
+
+.btn-toggle.active {
+    background: #ffd700;
+    color: #333;
+    border-color: #ffd700;
+}
+
+/* ==================== 主體區域 ==================== */
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ==================== 左側邊欄 ==================== */
+.sidebar {
+    width: 320px;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 100;
+}
+
+.panel {
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.panel h3 {
+    font-size: 15px;
+    color: #555;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel h3 i {
+    color: #667eea;
+}
+
+/* 分類篩選 */
+.category-filters {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.cat-btn {
+    padding: 8px 10px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+}
+
+.cat-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.cat-btn.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: transparent;
+}
+
+.cat-btn i {
+    font-size: 12px;
+}
+
+/* 景點列表 */
+.attraction-list {
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.attraction-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #f8f9fc;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.attraction-item:hover {
+    background: #eef0f7;
+    border-color: #667eea;
+    transform: translateX(3px);
+}
+
+.attraction-item .thumb {
+    width: 70px;
+    height: 70px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #ddd;
+}
+
+.attraction-item .info {
+    flex: 1;
+    min-width: 0;
+}
+
+.attraction-item .name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 3px;
+}
+
+.attraction-item .category-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: white;
+    margin-bottom: 4px;
+}
+
+.attraction-item .desc {
+    font-size: 12px;
+    color: #777;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 分類顏色 */
+.tag-歷史文化 { background: #e74c3c; }
+.tag-地標觀景 { background: #3498db; }
+.tag-購物美食 { background: #f39c12; }
+.tag-夜生活文化 { background: #9b59b6; }
+.tag-娛樂 { background: #e91e63; }
+.tag-休閒 { background: #1abc9c; }
+.tag-自然景觀 { background: #27ae60; }
+
+/* ==================== 地圖區域 ==================== */
+.map-area {
+    flex: 1;
+    position: relative;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* Leaflet 自定義樣式 */
+.leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.leaflet-popup-content {
+    margin: 0;
+    width: 280px !important;
+}
+
+.popup-card {
+    text-align: center;
+}
+
+.popup-card img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+}
+
+.popup-card .popup-info {
+    padding: 12px;
+}
+
+.popup-card .popup-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.popup-card .popup-ko {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 8px;
+}
+
+.popup-card .popup-cat {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: white;
+    margin-bottom: 8px;
+}
+
+.popup-card .popup-desc {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+    margin-bottom: 10px;
+}
+
+.popup-card .popup-btn {
+    display: inline-block;
+    padding: 6px 16px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+}
+
+/* 自訂 Marker */
+.custom-marker {
+    background: white;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border: 3px solid;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+}
+
+/* 地圖圖例 - 固定位置，避免被遮擋 */
+.map-legend {
+    position: absolute;
+    bottom: 70px;
+    left: 15px;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 400;
+    min-width: 120px;
+    max-width: 200px;
+    font-size: 11px;
+}
+
+.map-legend h4 {
+    font-size: 11px;
+    margin-bottom: 4px;
+    color: #555;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    margin-bottom: 3px;
+    color: #666;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+}
+
+.dot.history { background: #e74c3c; }
+.dot.landmark { background: #3498db; }
+.dot.shopping { background: #f39c12; }
+.dot.nightlife { background: #9b59b6; }
+.dot.entertainment { background: #e91e63; }
+.dot.leisure { background: #1abc9c; }
+.dot.nature { background: #27ae60; }
+
+/* 地圖控制按鈕優化 */
+.leaflet-control-zoom {
+    bottom: 90px;
+}
+
+.leaflet-control-attribution {
+    bottom: 40px;
+    font-size: 9px;
+}
+
+/* 為地圖容器設定高，確保圖例同路線面板唔會被遮擋 */
+#map {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+}
+
+/* 路線規劃面板 */
+.route-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 500;
+    width: 280px;
+}
+
+.route-panel.hidden {
+    display: none;
+}
+
+.route-panel h3 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.route-field {
+    margin-bottom: 10px;
+}
+
+.route-field label {
+    display: block;
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 4px;
+}
+
+.route-field select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    background: white;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.route-result {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f0f4ff;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.route-result .route-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.route-result .route-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #667eea;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+/* ==================== AI 對話框 ==================== */
+.ai-chat {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 360px;
+    max-height: 500px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.ai-chat.collapsed {
+    max-height: 50px;
+    width: 200px;
+}
+
+.ai-chat.collapsed .chat-body {
+    display: none;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 14px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    user-select: none;
+}
+
+.chat-header i:first-child {
+    font-size: 18px;
+}
+
+.toggle-icon {
+    margin-left: auto;
+    transition: transform 0.3s;
+}
+
+.ai-chat.collapsed .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.chat-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.message {
+    display: flex;
+    gap: 10px;
+    max-width: 90%;
+}
+
+.message.bot {
+    align-self: flex-start;
+}
+
+.message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.message .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.message.user .avatar {
+    background: #27ae60;
+}
+
+.message .bubble {
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: calc(100% - 42px);
+}
+
+.message.bot .bubble {
+    background: #f0f4ff;
+    color: #333;
+    border-bottom-left-radius: 4px;
+}
+
+.message.user .bubble {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 13px;
+    outline: none;
+}
+
+.chat-input-area input:focus {
+    border-color: #667eea;
+}
+
+.chat-input-area button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.chat-input-area button:hover {
+    transform: scale(1.1);
+}
+
+/* 打字指示器 */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 12px 14px;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background: #999;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1); }
+}
+
+/* ==================== 彈窗 ==================== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: rgba(0,0,0,0.7);
+}
+
+.modal-body {
+    padding: 0;
+}
+
+.modal-hero {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+}
+
+.modal-info {
+    padding: 20px;
+}
+
+.modal-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.modal-ko {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 12px;
+}
+
+.modal-cat {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: white;
+    margin-bottom: 16px;
+}
+
+.modal-section {
+    margin-bottom: 16px;
+}
+
+.modal-section h4 {
+    font-size: 14px;
+    color: #667eea;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.modal-section p, .modal-section li {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.modal-section ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.modal-section li {
+    padding: 3px 0;
+    padding-left: 16px;
+    position: relative;
+}
+
+.modal-section li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.modal-tips {
+    background: #fff8e1;
+    border-left: 4px solid #ffc107;
+    padding: 12px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: #555;
+    margin-top: 16px;
+}
+
+.modal-tips i {
+    color: #f39c12;
+    margin-right: 6px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.btn-route {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-route:hover {
+    opacity: 0.9;
+}
+
+.btn-nearby {
+    background: #f0f4ff;
+    color: #667eea;
+    border: 1px solid #667eea;
+}
+
+/* ==================== 響應式設計 ==================== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        position: absolute;
+        z-index: 200;
+        height: 100%;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+        max-width: 320px;
+        background: white;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar.open + .sidebar-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.3);
+        z-index: 199;
+        cursor: pointer;
+    }
+
+    .ai-chat {
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+        max-width: 350px;
+    }
+
+    .route-panel {
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+        max-width: 350px;
+        position: fixed;
+        top: auto;
+        bottom: 20px;
+    }
+
+    .top-bar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .logo h1 {
+        font-size: 18px;
+    }
+
+    .subtitle {
+        display: none;
+    }
+
+    /* 最小螢幕優化 (360px 以下) */
+    @media (max-width: 375px) {
+        .sidebar {
+            max-width: 100%;
+        }
+
+        .ai-chat {
+            width: 90%;
+            right: 5%;
+            left: 5%;
+        }
+
+        .route-panel {
+            width: 90%;
+            right: 5%;
+            left: 5%;
+            bottom: 15px;
+        }
+
+        .route-panel h3 {
+            font-size: 13px;
+        }
+
+        .route-field label {
+            font-size: 11px;
+        }
+
+        .route-field select,
+        .btn-primary {
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        .legend-item {
+            font-size: 10px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+        }
+
+        .cat-btn {
+            font-size: 11px;
+            padding: 6px 8px;
+        }
+    }
+}
+
+/* 滾動條美化 */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+/* 輔助類 */
+.text-green { color: #27ae60; }
+.text-red { color: #e74c3c; }
+.hidden { display: none !important; }
+
+/* ==================== 移動端最佳化 ==================== */
+@media (max-width: 768px) {
+    /* 調高 AI 對話框 z-index 到 10000 */
+    .ai-chat {
+        z-index: 10000 !important;
+    }
+
+    /* 調高 Route Panel z-index */
+    .route-panel {
+        z-index: 9999 !important;
+    }
+
+    /* 確保彈窗永不被阻截 */
+    .modal {
+        z-index: 10001 !important;
+    }
+
+    /* 確保側邊欄開關按鈕有足夠 z-index */
+    .sidebar-toggle-btn {
+        z-index: 1000 !important;
+    }
+
+    /* 地圖圖例按鈕 */
+    .map-legend {
+        z-index: 900 !important;
+    }
+}
+
+/* 全局 z-index 定義 */
+.ai-chat, .ai-chat.collapsed {
+    z-index: 10000 !important;
+}
+
+.route-panel {
+    z-index: 9999 !important;
+}
+
+.modal {
+    z-index: 10001 !important;
+}
+
+.map-legend {
+    z-index: 900 !important;
+}
+
+/* 按鈕 hover 啟用狀態 */
+.btn-toggle.active:active {
+    transform: translateY(0);
+}
+
+/* ==================== 手機版側邊欄遮罩層 ==================== */
+@media (max-width: 768px) {
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 199;
+        cursor: pointer;
+    }
+    
+    .sidebar.open + .sidebar-overlay {
+        display: block;
+    }
+}
