@@ -72,6 +72,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             data = json.loads(body)
             user_message = data.get('message', '')
             system_prompt = data.get('system', '')
+            chat_history = data.get('history', [])  # 獲取對話歷史
 
             # 構建系統提示
             full_system = """你係一個韓國首爾旅遊專家 AI 助手，用粵語（廣東話書面）回答。
@@ -85,14 +86,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # 檢查是否應該委託給 Hermes Agent 處理複雜查詢
             should_delegate = self._should_delegate_to_hermes(user_message)
             if should_delegate:
-                hermes_reply = self._delegate_to_hermes(user_message, system_prompt)
+                hermes_reply = self._delegate_to_hermes(user_message, full_system, chat_history)
                 if hermes_reply:
                     self.send_json({'reply': hermes_reply, 'source': 'hermes'})
                     return
 
             # 嘗試使用 Ollama Cloud API
             try:
-                ollama_reply = self._call_ollama_api(full_system, user_message)
+                ollama_reply = self._call_ollama_api(full_system, user_message, chat_history)
                 if ollama_reply:
                     self.send_json({'reply': ollama_reply, 'source': 'ollama'})
                     return
@@ -200,7 +201,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         message_lower = user_message.lower()
         return any(indicator in message_lower for indicator in complex_indicators)
 
-    def _delegate_to_hermes(self, user_message, system_prompt):
+    def _delegate_to_hermes(self, user_message, system_prompt, history=None):
         """將任務委託給 Hermes Agent 並等待回覆"""
         try:
             # 生成唯一任務ID
@@ -212,6 +213,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'id': task_id,
                 'message': user_message,
                 'system': system_prompt,
+                'history': history or [],  # 加入對話歷史
                 'timestamp': time.time(),
                 'context': 'seoul-tour-map chatbot'
             }
@@ -252,15 +254,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             print(f"Hermes delegation failed: {e}")
             return None
 
-    def _call_ollama_api(self, system_prompt, user_message):
+    def _call_ollama_api(self, system_prompt, user_message, history=None):
         """調用 Ollama Cloud API"""
-        # 準備 Ollama API 請求 (OpenAI-compatible format)
+        # 構建訊息列表，加入對話歷史
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # 加入對話歷史
+        if history:
+            for msg in history:
+                messages.append(msg)
+        
+        # 加入當前用戶訊息
+        messages.append({"role": "user", "content": user_message})
+        
         payload = {
             "model": MODEL,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ],
+            "messages": messages,
             "stream": False,
             "temperature": 0.7,
             "max_tokens": 800

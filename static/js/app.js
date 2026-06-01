@@ -13,6 +13,10 @@ let subwayData = {};
 let activeCategory = 'all';
 let sidebarOpen = false;
 
+// 對話歷史（保留最近 10 輪對話）
+let chatHistory = [];
+const MAX_HISTORY = 10;
+
 // 分類顏色對應
 const CATEGORY_COLORS = {
     '歷史文化': '#e74c3c',
@@ -579,7 +583,8 @@ async function fetchAIReply(userText) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             message: userText,
-            system: getSystemContext()
+            system: getSystemContext(),
+            history: chatHistory.slice(0, -1)  // 唔包剛加入嘅 user message
         })
     });
 
@@ -612,6 +617,13 @@ function addMessage(text, sender) {
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+    
+    // 儲存到對話歷史
+    chatHistory.push({ role: sender === 'bot' ? 'assistant' : 'user', content: text });
+    // 保留最近 N 輪對話
+    if (chatHistory.length > MAX_HISTORY * 2) {
+        chatHistory = chatHistory.slice(-MAX_HISTORY * 2);
+    }
 }
 
 function showTyping() {
