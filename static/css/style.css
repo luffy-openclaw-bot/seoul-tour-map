@@ -1030,3 +1030,20 @@ body {
         display: block;
     }
 }
+
+
+/* 坐標點擊 Popup */
+.coord-popup { padding: 12px 14px; text-align: center; min-width: 200px; }
+.coord-popup .coord-info { margin-bottom: 10px; font-size: 13px; color: #444; }
+.coord-popup .coord-val { font-family: monospace; font-size: 14px; color: #667eea; font-weight: 600; }
+.coord-popup .coord-search-btn { display: inline-block; padding: 8px 18px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 20px; font-size: 13px; cursor: pointer; }
+.coord-popup .coord-search-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* AI 對話框 Markdown 格式 */
+.message.bot .bubble h1, .message.bot .bubble h2, .message.bot .bubble h3, .message.bot .bubble h4 { margin: 6px 0 3px 0; font-size: 14px; }
+.message.bot .bubble strong { color: #222; }
+.message.bot .bubble ul, .message.bot .bubble ol { margin: 3px 0; padding-left: 16px; }
+.message.bot .bubble li { margin-bottom: 1px; }
+.message.bot .bubble p { margin: 3px 0; }
+.message.bot .bubble hr { border: none; border-top: 1px solid #ddd; margin: 6px 0; }
+.message.bot .bubble code { background: #eef; padding: 1px 4px; border-radius: 3px; font-size: 12px; }

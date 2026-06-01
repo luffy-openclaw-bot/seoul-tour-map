@@ -60,6 +60,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/api/chat':
             self.handle_chat()
             return
+        if self.path == '/api/nearby':
+            self.handle_nearby()
+            return
         self.send_error(404)
 
     def handle_chat(self):
@@ -101,6 +104,64 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         except Exception as e:
             self.send_json({'reply': f'系統錯誤：{str(e)}', 'error': True})
+
+    def handle_nearby(self):
+        """處理附近景點查詢"""
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+            lat = data.get('lat', 0)
+            lng = data.get('lng', 0)
+            radius = data.get('radius', 2000)  # 預設 2km
+
+            # 讀取景點數據
+            attractions_file = os.path.join(self.workdir, 'static/data/attractions.json')
+            with open(attractions_file, 'r', encoding='utf-8') as f:
+                attractions_data = json.load(f)
+
+            # 簡單距離計算（使用 Haversine 公式近似）
+            import math
+            def haversine(lat1, lon1, lat2, lon2):
+                R = 6371000  # 地球半徑（米）
+                phi1 = math.radians(lat1)
+                phi2 = math.radians(lat2)
+                delta_phi = math.radians(lat2 - lat1)
+                delta_lambda = math.radians(lon2 - lon1)
+                a = math.sin(delta_phi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2)**2
+                c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+                return R * c
+
+            # 搵附近景點
+            nearby = []
+            for attr in attractions_data.get('attractions', []):
+                dist = haversine(lat, lng, attr.get('lat', 0), attr.get('lng', 0))
+                if dist <= radius:
+                    nearby.append({
+                        'name': attr.get('name'),
+                        'name_ko': attr.get('name_ko'),
+                        'category': attr.get('category'),
+                        'distance': round(dist),
+                        'description': attr.get('description', '')[:100]
+                    })
+
+            # 按距離排序
+            nearby.sort(key=lambda x: x['distance'])
+
+            if not nearby:
+                reply = "附近 2 公里內未有記錄景點。你可以試下擴大搜尋範圍或者去市中心景點看看！"
+            else:
+                reply = f"**附近 {len(nearby)} 個景點：**\n\n"
+                for i, attr in enumerate(nearby[:5], 1):  # 只顯示最近 5 個
+                    reply += f"**{i}. {attr['name']}** ({attr['name_ko']})\n"
+                    reply += f"   - 類別：{attr['category']}\n"
+                    reply += f"   - 距離：約 {attr['distance']} 米\n"
+                    reply += f"   - 簡介：{attr['description']}...\n\n"
+
+            self.send_json({'reply': reply, 'count': len(nearby), 'source': 'nearby'})
+
+        except Exception as e:
+            self.send_json({'reply': f'查詢附近景點時出錯：{str(e)}', 'error': True})
 
 
     def _should_delegate_to_hermes(self, user_message):

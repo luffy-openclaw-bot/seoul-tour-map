@@ -55,6 +55,61 @@ function initMap() {
 
     subwayLayerGroup = L.layerGroup().addTo(map);
     routeLayerGroup = L.layerGroup().addTo(map);
+
+    map.on("click", onMapClick);
+}
+
+// ==================== 地圖點擊搜尋 ====================
+function onMapClick(e) {
+    const lat = e.latlng.lat.toFixed(6);
+    const lng = e.latlng.lng.toFixed(6);
+    
+    const popup = L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`
+            <div class="coord-popup">
+                <div class="coord-latlng">📍 ${lat}, ${lng}</div>
+                <button class="search-nearby-btn" onclick="searchNearby(${lat}, ${lng})">
+                    搜尋附近資訊
+                </button>
+            </div>
+        `)
+        .openOn(map);
+}
+
+async function searchNearby(lat, lng) {
+    map.closePopup();
+    addMessage(`坐標 ${lat}, ${lng} 附近有咩景點？`, 'user');
+    showTyping();
+    
+    // Find nearby attractions (within ~2km)
+    const nearbyAttractions = attractionsData.filter(attr => {
+        const dist = map.distance([lat, lng], [attr.lat, attr.lng]);
+        return dist < 2000;
+    }).map(attr => `${attr.name} (${attr.name_ko}) - ${attr.category}`).join('\n');
+    
+    try {
+        const response = await fetch('/api/nearby', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng, radius: 2000 })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const reply = data.reply || `附近景點：\n${nearbyAttractions || '未有記錄'}`;
+            hideTyping();
+            addMessage(reply, 'bot');
+        } else {
+            throw new Error('API failed');
+        }
+    } catch (e) {
+        hideTyping();
+        const reply = nearbyAttractions 
+            ? `附近景點：\n${nearbyAttractions}\n\n（使用離線數據）`
+            : '附近未有記錄景點';
+        addMessage(reply, 'bot');
+    }
 }
 
 // ==================== 載入資料 ====================
@@ -549,9 +604,11 @@ function addMessage(text, sender) {
     const container = document.getElementById('chat-messages');
     const div = document.createElement('div');
     div.className = `message ${sender}`;
+    // Render Markdown for bot messages using marked.js
+    const displayText = sender === 'bot' ? marked.parse(text) : text;
     div.innerHTML = `
         <div class="avatar"><i class="fas fa-${sender === 'bot' ? 'robot' : 'user'}"></i></div>
-        <div class="bubble">${text}</div>
+        <div class="bubble">${displayText}</div>
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
