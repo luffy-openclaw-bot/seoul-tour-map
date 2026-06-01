@@ -32,11 +32,26 @@ function initMap() {
         zoomControl: true
     });
 
-    // OpenStreetMap 免費圖層
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // 建立兩種地圖圖層
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19
-    }).addTo(map);
+    });
+    
+    // 使用 Esri World Street Map 作為英文地圖圖層 (清晰英文標籤、免費)
+    // 注意：免費英文 tile 喺首爾 zoom 16+ 冇原生高解像數據，用 maxNativeZoom 令 Leaflet 自動放大
+    const englishLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom',
+        maxZoom: 19,
+        maxNativeZoom: 15
+    });
+
+    // 預設顯示 OSM（韓文地圖）
+    osmLayer.addTo(map);
+    
+    // 存儲圖層供後來切換使用
+    window.osmLayer = osmLayer;
+    window.englishLayer = englishLayer;
 
     subwayLayerGroup = L.layerGroup().addTo(map);
     routeLayerGroup = L.layerGroup().addTo(map);
@@ -77,7 +92,7 @@ function renderAttractionList() {
 
         item.innerHTML = `
             <img class="thumb" src="${attr.image}" alt="${attr.name}" loading="lazy"
-                 onerror="this.src='https://via.placeholder.com/70?text=${encodeURIComponent(attr.name)}'">
+                 onerror="this.src='https://placehold.co/70?text=${encodeURIComponent(attr.name)}'">
             <div class="info">
                 <div class="name">${attr.name}</div>
                 <span class="category-tag" style="background:${color}">${attr.category}</span>
@@ -175,7 +190,7 @@ function showAttractionDetail(attr) {
     const highlights = attr.highlights.map(h => `<li>${h}</li>`).join('');
 
     body.innerHTML = `
-        <img class="modal-hero" src="${attr.image}" alt="${attr.name}" onerror="this.src='https://via.placeholder.com/500x220?text=${encodeURIComponent(attr.name)}'">
+        <img class="modal-hero" src="${attr.image}" alt="${attr.name}" onerror="this.src='https://placehold.co/500x220?text=${encodeURIComponent(attr.name)}'">
         <div class="modal-info">
             <div class="modal-title">${attr.name}</div>
             <div class="modal-ko">${attr.name_ko}</div>
@@ -437,6 +452,32 @@ function bindEvents() {
     document.getElementById('chat-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
+
+    // 地圖語言切換
+    function toggleMapLanguage() {
+        if (map.hasLayer(window.osmLayer)) {
+            // 切換到英文地圖
+            map.removeLayer(window.osmLayer);
+            map.addLayer(window.englishLayer);
+            document.getElementById('toggle-map-lang').title = '切換至韓文地圖';
+            document.getElementById('toggle-map-lang').innerHTML = '<i class="fas fa-globe"></i> 韓文';
+        } else {
+            // 切換到韓文地圖
+            map.removeLayer(window.englishLayer);
+            map.addLayer(window.osmLayer);
+            document.getElementById('toggle-map-lang').title = '切換至英文地圖';
+            document.getElementById('toggle-map-lang').innerHTML = '<i class="fas fa-globe"></i> English';
+        }
+    }
+    const toggleMapLangBtn = document.getElementById('toggle-map-lang');
+    if (toggleMapLangBtn) {
+        toggleMapLangBtn.addEventListener('click', toggleMapLanguage);
+    }
+    // 定位我的位置
+    const locateUserBtn = document.getElementById('locate-user');
+    if (locateUserBtn) {
+        locateUserBtn.addEventListener('click', locateUser);
+    }
 }
 
 // ==================== AI 聊天功能 ====================
@@ -672,7 +713,89 @@ function initSidebarToggle() {
     }
 }
 
-// ==================== 初始化所有功能 ====================
+// ==================== 定位我的位置 ====================
+function locateUser() {
+    if (!navigator.geolocation) {
+        alert('您的瀏覽器不支持地理位置定位');
+        return;
+    }
+
+    // 顯示加載狀態
+    const locateBtn = document.getElementById('locate-user');
+    const originalHtml = locateBtn.innerHTML;
+    locateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 定位中...';
+    locateBtn.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            const accuracy = position.coords.accuracy;
+
+            // 添加用戶位置標記
+            const userIcon = L.divIcon({
+                html: '<div class="user-marker"><i class="fas fa-user"></i></div>',
+                className: '',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            // 如果已有用戶標記，先移除
+            if (window.userMarker) {
+                map.removeLayer(window.userMarker);
+            }
+            if (window.userAccuracyCircle) {
+                map.removeLayer(window.userAccuracyCircle);
+            }
+
+            // 精確度圓圈（半透明藍色圓圈）
+            window.userAccuracyCircle = L.circle([latitude, longitude], {
+                radius: Math.max(accuracy, 10),
+                color: '#3388ff',
+                fillColor: '#3388ff',
+                fillOpacity: 0.15,
+                weight: 1,
+                opacity: 0.5
+            }).addTo(map);
+
+            window.userMarker = L.marker([latitude, longitude], { icon: userIcon })
+                .addTo(map)
+                .bindPopup(`<b>您的位置</b><br>緯度: ${latitude.toFixed(6)}<br>經度: ${longitude.toFixed(6)}<br>精確度: ±${accuracy}米`)
+                .openPopup();
+
+            // 移動地圖到用戶位置
+            map.setView([latitude, longitude], 15);
+
+            // 恢復按鈕狀態
+            locateBtn.innerHTML = originalHtml;
+            locateBtn.disabled = false;
+        },
+        (error) => {
+            let errorMsg = '無法獲取您的位置：';
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMsg += '用戶拒絕請求地理位置';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMsg += '位置信息不可用';
+                    break;
+                case error.TIMEOUT:
+                    errorMsg += '請求超時';
+                    break;
+                case error.UNKNOWN_ERROR:
+                    errorMsg += '未知錯誤';
+                    break;
+            }
+            alert(errorMsg);
+            locateBtn.innerHTML = originalHtml;
+            locateBtn.disabled = false;
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     initSidebarToggle();

@@ -11,12 +11,19 @@ import urllib.request
 import urllib.parse
 import os
 import sys
+import time
+import glob
 
 PORT = 8082
-# Ollama Cloud API 設定
-API_BASE = 'https://ollama.com/v1'
-API_KEY='c309d7242319461783142d44f3949473.Cvsj6THEdCx3lfLBGAwYgtWx'
-MODEL = 'gemma4:31b-cloud'  # 使用 Gemma 4 31B Cloud model
+# Ollama Cloud API 設定 - 可通過環境變數覆蓋
+API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
+API_KEY = os.getenv('OLLAMA_API_KEY', 'c309d7242319461783142d44f3949473.Cvsj6THEdCx3lfLBGAwYgtWx')
+MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')  # 使用 Gemma 4 31B Cloud model
+
+# Hermes Agent 任務隊列設定
+HERMES_ENABLED = os.getenv('HERMES_ENABLED', 'false').lower() == 'true'
+HERMES_TASK_DIR = '/tmp/hermes_tasks'
+HERMES_TIMEOUT = 120  # 秒
 
 # SSL context 不驗證 cert（因 Ollama Cloud cert 可能過期）
 import ssl
@@ -72,43 +79,131 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if system_prompt:
                 full_system += "\n" + system_prompt
 
-            # 準備 Ollama API 請求 (OpenAI-compatible format)
-            payload = {
-                "model": MODEL,
-                "messages": [
-                    {"role": "system", "content": full_system},
-                    {"role": "user", "content": user_message}
-                ],
-                "stream": False,
-                "temperature": 0.7,
-                "max_tokens": 800
-            }
+            # 檢查是否應該委託給 Hermes Agent 處理複雜查詢
+            if self._should_delegate_to_hermes(user_message):
+                hermes_reply = self._delegate_to_hermes(user_message, system_prompt)
+                if hermes_reply:
+                    self.send_json({'reply': hermes_reply, 'source': 'hermes'})
+                    return
 
-            req = urllib.request.Request(
-                f"{API_BASE}/chat/completions",
-                data=json.dumps(payload).encode('utf-8'),
-                headers={
-                    'Content-Type': 'application/json',
-                    **({'Authorization': f'Bearer {API_KEY}'} if API_KEY else {})
-                }
-            )
-
+            # 嘗試使用 Ollama Cloud API
             try:
-                # 使用 custom opener with SSL context
-                opener = create_urllib_opener()
-                with opener.open(req, timeout=30) as resp:
-                    result = json.loads(resp.read().decode('utf-8'))
-                    reply = result.get('choices', [{}])[0].get('message', {}).get('content', 'AI 暫時未能回應，請稍後再試。')
-                    self.send_json({'reply': reply})
-            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as e:
-                # 如果 Ollama 唔 available，回退到前端知識庫
-                self.send_json({
-                    'reply': 'AI 伺服器暫時未能連接，已啟用離線知識庫回答。',
-                    'fallback': True
-                })
+                ollama_reply = self._call_ollama_api(full_system, user_message)
+                if ollama_reply:
+                    self.send_json({'reply': ollama_reply, 'source': 'ollama'})
+                    return
+            except Exception as e:
+                print(f"Ollama API failed: {e}")
+
+            # 回退到離線知識庫
+            offline_reply = self._generate_offline_reply(user_message)
+            self.send_json({'reply': offline_reply, 'source': 'offline'})
 
         except Exception as e:
             self.send_json({'reply': f'系統錯誤：{str(e)}', 'error': True})
+
+
+    def _should_delegate_to_hermes(self, user_message):
+        """決定是否應該將查詢委託給 Hermes Agent"""
+        if not HERMES_ENABLED:
+            return False
+
+        # 複雜查詢的關鍵字，表明可能需要工具使用
+        complex_indicators = [
+            '最新', '今日', '昨天', '新聞', '股票', '匯率', '天氣', '氣溫',  # 需要實時資訊
+            '搜索', '找', '查', 'google', '網上',  # 需要網頁搜索
+            '計算', '算', '數學', '公式',  # 需要計算
+            '圖表', '圖像', '分析',  # 需要視覺處理
+            '檔案', '讀取', '寫入', '編輯',  # 需要檔案操作
+            '程式', '代碼', '函數', '算法',  # 需要代碼執行
+            '比較', '對比', '評價', '推薦',  # 需要綜合分析
+            '詳細', '深入', '全面', '綜合'  # 需要深度研究
+        ]
+        
+        message_lower = user_message.lower()
+        return any(indicator in message_lower for indicator in complex_indicators)
+
+    def _delegate_to_hermes(self, user_message, system_prompt):
+        """將任務委託給 Hermes Agent 並等待回覆"""
+        try:
+            # 生成唯一任務ID
+            import uuid
+            task_id = str(uuid.uuid4())
+            
+            # 創建任務請求文件
+            task_request = {
+                'id': task_id,
+                'message': user_message,
+                'system': system_prompt,
+                'timestamp': time.time(),
+                'context': 'seoul-tour-map chatbot'
+            }
+            
+            request_file = os.path.join(HERMES_TASK_DIR, f'request_{task_id}.json')
+            with open(request_file, 'w', encoding='utf-8') as f:
+                json.dump(task_request, f, ensure_ascii=False, indent=2)
+            
+            # 等待響應（帶超時）
+            start_time = time.time()
+            response_file = os.path.join(HERMES_TASK_DIR, f'response_{task_id}.json')
+            
+            while time.time() - start_time < HERMES_TIMEOUT:
+                if os.path.exists(response_file):
+                    try:
+                        with open(response_file, 'r', encoding='utf-8') as f:
+                            response_data = json.load(f)
+                        # 清理任務文件
+                        os.remove(request_file)
+                        os.remove(response_file)
+                        return response_data.get('reply', '')
+                    except Exception as e:
+                        print(f"Error reading Hermes response: {e}")
+                        break
+                time.sleep(0.5)  # 每500ms檢查一次
+            
+            # 超時
+            print(f"Hermes delegation timeout for task {task_id}")
+            # 清理請求文件
+            if os.path.exists(request_file):
+                os.remove(request_file)
+            return None
+            
+        except Exception as e:
+            print(f"Hermes delegation failed: {e}")
+            return None
+
+    def _call_ollama_api(self, system_prompt, user_message):
+        """調用 Ollama Cloud API"""
+        # 準備 Ollama API 請求 (OpenAI-compatible format)
+        payload = {
+            "model": MODEL,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            "stream": False,
+            "temperature": 0.7,
+            "max_tokens": 800
+        }
+
+        req = urllib.request.Request(
+            f"{API_BASE}/chat/completions",
+            data=json.dumps(payload).encode('utf-8'),
+            headers={
+                'Content-Type': 'application/json',
+                **({'Authorization': f'Bearer {API_KEY}'} if API_KEY else {})
+            }
+        )
+
+        # 使用 custom opener with SSL context
+        opener = create_urllib_opener()
+        with opener.open(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+            return result.get('choices', [{}])[0].get('message', {}).get('content', 'AI 暫時未能回應，請稍後再試。')
+
+    def _generate_offline_reply(self, user_message):
+        """Generate offline knowledge base reply"""
+        return 'AI 伺服器暫時未能連接，已啟用離線知識庫回答。'
 
     def send_json(self, data):
         self.send_response(200)
