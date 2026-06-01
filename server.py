@@ -83,7 +83,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 full_system += "\n" + system_prompt
 
             # 檢查是否應該委託給 Hermes Agent 處理複雜查詢
-            if self._should_delegate_to_hermes(user_message):
+            should_delegate = self._should_delegate_to_hermes(user_message)
+            if should_delegate:
                 hermes_reply = self._delegate_to_hermes(user_message, system_prompt)
                 if hermes_reply:
                     self.send_json({'reply': hermes_reply, 'source': 'hermes'})
@@ -171,14 +172,29 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         # 複雜查詢的關鍵字，表明可能需要工具使用
         complex_indicators = [
-            '最新', '今日', '昨天', '新聞', '股票', '匯率', '天氣', '氣溫',  # 需要實時資訊
-            '搜索', '找', '查', 'google', '網上',  # 需要網頁搜索
-            '計算', '算', '數學', '公式',  # 需要計算
-            '圖表', '圖像', '分析',  # 需要視覺處理
-            '檔案', '讀取', '寫入', '編輯',  # 需要檔案操作
-            '程式', '代碼', '函數', '算法',  # 需要代碼執行
-            '比較', '對比', '評價', '推薦',  # 需要綜合分析
-            '詳細', '深入', '全面', '綜合'  # 需要深度研究
+            # 需要實時資訊
+            '最新', '今日', '昨天', '新聞', '股票', '匯率', '天氣', '氣溫',
+            'latest', 'today', 'news', 'weather', 'temperature',
+            # 需要網頁搜索
+            '搜索', '找', '查', 'google', '網上',
+            'search', 'find', 'look up', 'web',
+            # 需要計算
+            '計算', '算', '數學', '公式',
+            'calculate', 'math', 'formula',
+            # 需要視覺處理
+            '圖表', '圖像', '分析',
+            'chart', 'image', 'analyze', 'analysis',
+            # 需要檔案操作
+            '檔案', '讀取', '寫入', '編輯',
+            'file', 'read', 'write', 'edit',
+            # 需要代碼執行
+            '程式', '代碼', '函數', '算法',
+            'code', 'function', 'algorithm',
+            # 需要綜合分析
+            '比較', '對比', '評價', '推薦',
+            'compare', 'recommend', 'review',
+            # 需要深度研究
+            '詳細', '深入', '全面', '綜合'
         ]
         
         message_lower = user_message.lower()
@@ -213,13 +229,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     try:
                         with open(response_file, 'r', encoding='utf-8') as f:
                             response_data = json.load(f)
-                        # 清理任務文件
-                        os.remove(request_file)
-                        os.remove(response_file)
+                        # 清理任務文件（忽略文件不存在錯誤）
+                        try:
+                            if os.path.exists(request_file):
+                                os.remove(request_file)
+                            os.remove(response_file)
+                        except FileNotFoundError:
+                            pass  # Worker 可能已經刪除咗
                         return response_data.get('reply', '')
                     except Exception as e:
                         print(f"Error reading Hermes response: {e}")
-                        break
                 time.sleep(0.5)  # 每500ms檢查一次
             
             # 超時
