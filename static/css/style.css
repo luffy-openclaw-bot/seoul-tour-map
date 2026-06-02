@@ -326,6 +326,38 @@ body {
     color: white;
 }
 
+/* 用戶位置標記 */
+.user-marker {
+    background: #3388ff;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border: 3px solid white;
+    color: white;
+    font-size: 12px;
+}
+
+/* AI 路線標記 */
+.route-marker {
+    background: white;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    color: #667eea;
+    font-size: 12px;
+    border: 2px solid #667eea;
+}
+.route-marker.start { color: #27ae60; border-color: #27ae60; }
+.route-marker.end { color: #e74c3c; border-color: #e74c3c; }
+
 /* 地圖圖例 - 固定位置，避免被遮擋 */
 .map-legend {
     position: absolute;

@@ -476,6 +476,124 @@ document.getElementById('reset-map').addEventListener('click', () => {
     document.getElementById('toggle-traffic').classList.remove('active');
 });
 
+// ==================== AI 地圖動作執行 ====================
+async function executeMapAction(action, params) {
+    console.log('[Map Action]', action, params);
+    
+    switch (action) {
+        case 'center': {
+            const { lat, lng, zoom } = params;
+            map.setView([lat, lng], zoom || 15);
+            break;
+        }
+        case 'focus_attraction': {
+            const attr = attractionsData.find(a => a.id === params.id);
+            if (attr) {
+                focusAttraction(attr);
+            } else {
+                // 嘗試用名稱搵
+                const name = params.id;
+                const found = attractionsData.find(a => 
+                    a.name.includes(name) || a.name_ko.includes(name)
+                );
+                if (found) focusAttraction(found);
+            }
+            break;
+        }
+        case 'highlight_category': {
+            const { category } = params;
+            activeCategory = category;
+            // 觸發分類篩選 UI 更新
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.category === category) {
+                    btn.classList.add('active');
+                }
+            });
+            renderAttractionList();
+            addMarkers();
+            break;
+        }
+        case 'locate_user': {
+            locateUser();
+            break;
+        }
+        case 'show_route': {
+            const { from, to } = params;
+            showRouteOnMap(from, to);
+            break;
+        }
+    }
+}
+
+// ==================== AI 路線顯示 ====================
+function showRouteOnMap(fromName, toName) {
+    // 嘗試用名稱或ID搵景點
+    const fromAttr = attractionsData.find(a => 
+        a.id === fromName || a.name.includes(fromName) || a.name_ko.includes(fromName)
+    );
+    const toAttr = attractionsData.find(a => 
+        a.id === toName || a.name.includes(toName) || a.name_ko.includes(toName)
+    );
+    
+    if (!fromAttr || !toAttr) {
+        console.warn('找不到景點:', fromName, toName);
+        return;
+    }
+    
+    // 如果起點終點相同，唔畫路線
+    if (fromAttr.id === toAttr.id) {
+        focusAttraction(fromAttr);
+        return;
+    }
+    
+    // 清空之前嘅路線
+    routeLayerGroup.clearLayers();
+    
+    // 繪製路線
+    const latlngs = [
+        [fromAttr.lat, fromAttr.lng],
+        [toAttr.lat, toAttr.lng]
+    ];
+    
+    const polyline = L.polyline(latlngs, {
+        color: '#667eea',
+        weight: 4,
+        opacity: 0.7,
+        dashArray: '10, 10'
+    }).addTo(routeLayerGroup);
+    
+    // 自動 fit 路線範圍
+    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+    
+    // 顯示起點終點標記
+    const startIcon = L.divIcon({
+        html: '<div class="route-marker start"><i class="fas fa-play"></i></div>',
+        className: '',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+    });
+    const endIcon = L.divIcon({
+        html: '<div class="route-marker end"><i class="fas fa-flag"></i></div>',
+        className: '',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+    });
+    
+    L.marker([fromAttr.lat, fromAttr.lng], { icon: startIcon })
+        .addTo(routeLayerGroup)
+        .bindPopup(`<b>起點：</b>${fromAttr.name}`);
+    
+    L.marker([toAttr.lat, toAttr.lng], { icon: endIcon })
+        .addTo(routeLayerGroup)
+        .bindPopup(`<b>終點：</b>${toAttr.name}`);
+    
+    // 計算直線距離同估計時間
+    const dist = getDistance(fromAttr.lat, fromAttr.lng, toAttr.lat, toAttr.lng);
+    const estTime = Math.ceil(dist / 0.5); // 假設地鐵平均 30km/h
+    console.log(`路線：${fromAttr.name} → ${toAttr.name}，距離 ${dist.toFixed(1)}km，估計 ${estTime} 分鐘`);
+}
+
 // ==================== 分類篩選 ====================
 function bindEvents() {
     document.querySelectorAll('.cat-btn').forEach(btn => {
@@ -539,8 +657,161 @@ function bindEvents() {
     }
 }
 
-// ==================== AI 聊天功能 ====================
+// ==================== AI 聊天功能 & 地圖控制 ====================
 let useBackendAI = true; // 優先使用後端 AI
+
+/**
+ * 執行地圖控制動作
+ * 支援動作: center, focus_attraction, highlight_category, locate_user, show_route
+ * @param {string} action - 動作類型
+ * @param {object} params - 動作參數
+ * @returns {Promise<boolean>} 執行成功與否
+ */
+async function executeMapAction(action, params) {
+    console.log('Executing map action:', action, params);
+
+    switch (action) {
+        case 'center':
+            if (params.lat && params.lng) {
+                const lat = parseFloat(params.lat);
+                const lng = parseFloat(params.lng);
+                const zoom = parseInt(params.zoom) || 15;
+
+                // 飛到目的地（animate 效果）
+                map.flyTo([lat, lng], zoom, {
+                    duration: 1.5,
+                    easeLinearity: 0.25
+                });
+
+                // 更新路由結果面板顯示
+                console.log(`地圖已飛到: ${lat}, ${lng}, zoom ${zoom}`);
+            }
+            break;
+
+        case 'focus_attraction':
+            if (params.id) {
+                const attr = attractionsData.find(a => a.id === params.id);
+                if (attr) {
+                    focusAttraction(attr);
+                } else {
+                    // 嘗試用名字查找
+                    const attrByName = attractionsData.find(a =>
+                        a.name.includes(params.id) || params.id.includes(a.name)
+                    );
+                    if (attrByName) {
+                        focusAttraction(attrByName);
+                    }
+                }
+            }
+            break;
+
+        case 'highlight_category':
+            if (params.category) {
+                // 檢查是否為有效分類
+                const validCategories = Object.keys(CATEGORY_COLORS);
+                const matchedCategory = validCategories.find(c =>
+                    c === params.category || c.includes(params.category) || params.category.includes(c)
+                );
+
+                if (matchedCategory) {
+                    activeCategory = matchedCategory;
+                    // 更新 UI 按鈕狀態
+                    document.querySelectorAll('.cat-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.category === matchedCategory);
+                    });
+                    // 重新渲染
+                    renderAttractionList();
+                    addMarkers();
+                    console.log(`已篩選分類: ${matchedCategory}`);
+                }
+            }
+            break;
+
+        case 'locate_user':
+            locateUser();
+            break;
+
+        case 'show_route':
+            // 簡單顯示兩點路線
+            if (params.from && params.to) {
+                showRouteByNames(params.from, params.to);
+            }
+            break;
+
+        default:
+            console.warn('Unknown map action:', action);
+            return false;
+    }
+
+    return true;
+}
+
+/**
+ * 解析 AI 回覆中的地圖指令
+ * 指令格式：【{"type":"map_action","action":"...","params":{...}}】
+ * @param {string} reply - AI 原始回覆
+ * @returns {string} 清除指令後的純文字回覆
+ */
+function parseMapActions(reply) {
+    if (!reply) return reply;
+
+    // 匹配【...】內的 JSON 指令
+    const commandPattern = /【\s*({[^}][\s\S]*?})\s*】/g;
+    let cleanReply = reply;
+    let match;
+
+    while ((match = commandPattern.exec(reply)) !== null) {
+        try {
+            const cmdJson = match[1];
+            const cmd = JSON.parse(cmdJson);
+
+            if (cmd.type === 'map_action' && cmd.action) {
+                // 異步執行地圖動作
+                executeMapAction(cmd.action, cmd.params || {});
+                // 從回覆中移除指令標記
+                cleanReply = cleanReply.replace(match[0], '').trim();
+            }
+        } catch (e) {
+            console.warn('Failed to parse map command:', match[1], e);
+            // 保留原文
+        }
+    }
+
+    return cleanReply;
+}
+
+/**
+ * 根據景點名稱顯示路線
+ */
+function showRouteByNames(fromName, toName) {
+    // 在景點中查找匹配名稱的景點
+    const findAttraction = (name) => {
+        // 先試 ID
+        let attr = attractionsData.find(a => a.id === name);
+        if (attr) return attr;
+
+        // 再試名稱包含
+        attr = attractionsData.find(a =>
+            a.name.includes(name) || name.includes(a.name) ||
+            a.name_ko.includes(name) || name.includes(a.name_ko)
+        );
+        return attr;
+    };
+
+    const fromAttr = findAttraction(fromName);
+    const toAttr = findAttraction(toName);
+
+    if (fromAttr && toAttr) {
+        // 打開路線面板
+        const panel = document.getElementById('route-panel');
+        if (panel) {
+            panel.classList.remove('hidden');
+            document.getElementById('route-start').value = fromAttr.id;
+            document.getElementById('route-end').value = toAttr.id;
+            calculateRoute();
+        }
+    }
+}
 
 function toggleChat() {
     const chat = document.getElementById('ai-chat');
@@ -593,16 +864,60 @@ async function fetchAIReply(userText) {
     }
 
     const data = await response.json();
-    return data.reply || generateAIReply(userText);
+    let reply = data.reply || generateAIReply(userText);
+
+    // 解析並執行回覆中的地圖指令
+    const actionPattern = /【([^】]+)】/g;
+    let match;
+    const actions = [];
+    while ((match = actionPattern.exec(reply)) !== null) {
+        try {
+            const cmd = JSON.parse(match[1]);
+            if (cmd.type === 'map_action' || cmd.action) {
+                actions.push(cmd);
+            }
+        } catch (e) { /* 無視格式錯誤 */ }
+        reply = reply.replace(match[0], ''); // 移除指令標記
+    }
+
+    // 異步執行所有地圖動作
+    actions.forEach(action => {
+        const actName = action.action || action.type;
+        const actParams = action.params || {};
+        executeMapAction(actName, actParams);
+    });
+
+    return reply;
 }
 
 function getSystemContext() {
     // 提供當前景點資料作為 AI 上下文
     const attractionsSummary = attractionsData.map(a =>
-        `- ${a.name}(${a.name_ko}): ${a.category}，${a.description.substring(0, 50)}，門票${a.ticket}，交通${a.transport.subway}`
+        `- ${a.name}(${a.name_ko}) [ID:${a.id}: ${a.lat},${a.lng}]: ${a.category}，${a.description.substring(0, 30)}...`
     ).join('\n');
 
-    return `你係韓國首爾旅遊專家，用粵語（廣東話書面）回答。\n\n可用景點資料：\n${attractionsSummary}\n\n請基於以上資料回答用戶問題，如果不確定就老實講唔知。`;
+    // 可用分類
+    const categories = Object.keys(CATEGORY_COLORS).join('、');
+
+    return `你係韓國首爾旅遊專家，用粵語（廣東話書面）回答用戶關於首爾旅遊嘅問題。
+
+【地圖控制指令】重要！當用家需要睇地圖、想去某個景點、想顯示特定類別景點時，請喺回覆尾加上特殊指令格式。
+
+指令格式：將以下 JSON 放喺【...】內，例如 【{"type":"map_action","action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
+
+可用動作：
+1. center (移動地圖到指定坐標)：【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
+2. focus_attraction (聚焦景點並顯示詳情)：【{"action":"focus_attraction","params":{"id":"景點ID"}}】
+3. highlight_category (篩選顯示某分類景點)：【{"action":"highlight_category","params":{"category":"購物美食"}}】
+4. locate_user (定位用戶GPS位置)：【{"action":"locate_user"}}】
+
+景點ID：${attractionsData.map(a=>a.id).join(', ')}
+分類：${categories}
+
+景點資料：
+${attractionsSummary}
+
+注意：當用家講「去XX」、「睇吓XX」、「XX喺邊」等需要移動地圖嘅查詢時，先至加呢個指令。普通對答唔需要。`;
 }
 
 function addMessage(text, sender) {
@@ -779,6 +1094,55 @@ function initSidebarToggle() {
                 closeSidebar();
             });
         }
+    }
+}
+
+// ==================== AI 地圖控制指令執行 ====================
+async function executeMapAction(action, params) {
+    try {
+        const response = await fetch('/api/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, params })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            console.error('Map action failed:', data.error);
+            return;
+        }
+
+        // 前端執行實際地圖動作
+        switch (action) {
+            case 'center':
+                map.setView([params.lat, params.lng], params.zoom || 15);
+                break;
+            case 'focus_attraction':
+                const attr = attractionsData.find(a => a.id === params.id);
+                if (attr) focusAttraction(attr);
+                break;
+            case 'highlight_category':
+                activeCategory = params.category;
+                renderAttractionList();
+                addMarkers();
+                break;
+            case 'locate_user':
+                locateUser();
+                break;
+            case 'show_route':
+                // from 和 to 可以係 attraction id 或者名稱
+                const fromAttr = attractionsData.find(a => a.id === params.from) ||
+                    attractionsData.find(a => a.name.includes(params.from));
+                const toAttr = attractionsData.find(a => a.id === params.to) ||
+                    attractionsData.find(a => a.name.includes(params.to));
+                if (fromAttr && toAttr) {
+                    document.getElementById('route-start').value = fromAttr.id;
+                    document.getElementById('route-end').value = toAttr.id;
+                    calculateRoute();
+                }
+                break;
+        }
+    } catch (e) {
+        console.error('executeMapAction error:', e);
     }
 }
 

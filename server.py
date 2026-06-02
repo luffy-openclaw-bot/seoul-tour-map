@@ -63,6 +63,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/api/nearby':
             self.handle_nearby()
             return
+        if self.path == '/api/execute':
+            self.handle_execute()
+            return
         self.send_error(404)
 
     def handle_chat(self):
@@ -78,7 +81,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             full_system = """你係一個韓國首爾旅遊專家 AI 助手，用粵語（廣東話書面）回答。
 你非常熟悉首爾嘅景點、交通、美食、購物、文化。
 請簡潔、友善咁回答用戶問題，提供實用旅遊建議。
-如果問到具體景點資料，請盡量詳細。"""
+如果問到具體景點資料，請盡量詳細。
+
+【地圖控制指令】
+當用家需要睇地圖、想知道位置、或想去某個地方，你可以喺回覆尾加上一個特殊指令。
+指令格式：將以下 JSON 放喺【...】內，例如 【{"type":"map_action","action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
+
+可用動作：
+- center：飛去指定坐標 (lat, lng, zoom)
+  示例：「去明洞」→「{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}」
+- focus_attraction：顯示景點詳情 (id)
+  示例：「景福宮係邊」→「{"action":"focus_attraction","params":{"id":"gyeongbokgung"}}」
+- highlight_category：篩選景點分類 (category)
+  示例：「美食景點有哪些」→「{"action":"highlight_category","params":{"category":"購物美食"}}」
+- show_route：顯示路線 (from, to 可用景點名或ID)
+  示例：「由明洞去弘大」→「{"action":"show_route","params":{"from":"明洞","to":"弘大"}}」
+- locate_user：定位用戶位置（無參數）
+
+注意：只喺需要移動地圖、先Zoom去某個地方，先用呢個指令。唔好每個回覆都加指令。
+"""
 
             if system_prompt:
                 full_system += "\n" + system_prompt
@@ -165,6 +186,44 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_json({'reply': f'查詢附近景點時出錯：{str(e)}', 'error': True})
 
+    def handle_execute(self):
+        """執行 AI 發出嘅地圖控制指令"""
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+            action = data.get('action', '')
+            params = data.get('params', {})
+
+            # 白名單驗證
+            ALLOWED_ACTIONS = {
+                'center': {'lat': float, 'lng': float, 'zoom': int},
+                'focus_attraction': {'id': str},
+                'highlight_category': {'category': str},
+                'locate_user': {},
+                'show_route': {'from': str, 'to': str}
+            }
+
+            if action not in ALLOWED_ACTIONS:
+                self.send_json({'success': False, 'error': f'Unknown action: {action}'}, status=400)
+                return
+
+            # 參數類型驗證
+            expected = ALLOWED_ACTIONS[action]
+            for key, expected_type in expected.items():
+                if key in params:
+                    try:
+                        params[key] = expected_type(params[key])
+                    except (ValueError, TypeError):
+                        self.send_json({'success': False, 'error': f'Invalid type for {key}'}, status=400)
+                        return
+
+            self.send_json({'success': True, 'action': action, 'params': params})
+
+        except json.JSONDecodeError:
+            self.send_json({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def _should_delegate_to_hermes(self, user_message):
         """決定是否應該將查詢委託給 Hermes Agent"""
@@ -294,8 +353,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """Generate offline knowledge base reply"""
         return 'AI 伺服器暫時未能連接，已啟用離線知識庫回答。'
 
-    def send_json(self, data):
-        self.send_response(200)
+    def send_json(self, data, status=200):
+        self.send_response(status)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_cors_headers()
         self.end_headers()
