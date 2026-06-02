@@ -1,0 +1,279 @@
+/** ==================== 經緯度實時搜索模組樣式 ==================== */
+
+/* 搜索彈窗容器 */
+.location-search-popup .leaflet-popup-content-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    padding: 0;
+}
+
+.location-search-popup .leaflet-popup-content {
+    margin: 0;
+    width: 280px !important;
+}
+
+.search-popup-container {
+    padding: 16px;
+}
+
+.search-popup-header {
+    margin-bottom: 12px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+}
+
+.search-coord {
+    font-size: 14px;
+    color: #666;
+    font-family: monospace;
+    margin-bottom: 4px;
+}
+
+.search-location-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* 搜索類型網格 */
+.search-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.search-type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 4px;
+}
+
+.search-type-btn:hover {
+    background: var(--btn-color, #667eea);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.search-type-btn:active {
+    transform: translateY(0);
+}
+
+.search-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.search-type-btn span:last-child {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* 搜索全部按鈕 */
+.search-all-btn {
+    grid-column: span 2;
+    flex-direction: row !important;
+    gap: 8px !important;
+    padding: 14px !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.search-all-btn:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+/* 搜索結果標記 */
+.search-result-marker .place-marker {
+    width: 32px;
+    height: 32px;
+    background: var(--marker-color, #e74c3c);
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.search-center-marker .center-pin {
+    width: 36px;
+    height: 36px;
+    background: #4285F4;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+/* 地點彈窗樣式 */
+.place-popup {
+    min-width: 200px;
+}
+
+.place-popup h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.place-category {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #f0f0f0;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.place-popup p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.place-rating {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #f39c12;
+}
+
+/* 搜索加載動畫 */
+.search-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #667eea;
+    font-weight: 500;
+}
+
+.search-loading i {
+    animation: searchPulse 1s ease-in-out infinite;
+}
+
+.loading-dots {
+    animation: dots 1.5s steps(5, end) infinite;
+}
+
+@keyframes searchPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%, 100% { content: '...'; }
+}
+
+/* 搜索結果卡片（在聊天框中） */
+.search-result-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 0;
+    border-left: 4px solid #667eea;
+}
+
+.search-result-card h4 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 16px;
+}
+
+.search-result-meta {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.search-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.search-badge.category {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.search-badge.rating {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.search-badge.distance {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+/* 響應式調整 */
+@media (max-width: 480px) {
+    .location-search-popup .leaflet-popup-content {
+        width: 260px !important;
+    }
+
+    .search-type-grid {
+        gap: 6px;
+    }
+
+    .search-type-btn {
+        padding: 10px 6px;
+    }
+
+    .search-icon {
+        font-size: 20px;
+    }
+
+    .search-type-btn span:last-child {
+        font-size: 12px;
+    }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+    .location-search-popup .leaflet-popup-content-wrapper {
+        background: #2d2d2d;
+        color: #fff;
+    }
+
+    .search-coord {
+        color: #aaa;
+    }
+
+    .search-location-name {
+        color: #fff;
+    }
+
+    .search-type-btn {
+        background: #3d3d3d;
+        color: #fff;
+    }
+
+    .search-popup-header {
+        border-bottom-color: #444;
+    }
+}

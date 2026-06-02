@@ -1,0 +1,459 @@
+/**
+ * Search Module - 經緯度實時搜索前端模組
+ * 模組化設計，與主 app.js 分離，易維護
+ */
+
+// ==================== 搜索配置 ====================
+const SearchConfig = {
+    ENDPOINT: '/api/search',
+    TIMEOUT: 60000,  // 60秒（含網頁搜索）
+    DEFAULT_RADIUS: 2000,
+    MAX_RESULTS: 5
+};
+
+// 搜索類型配置
+const SearchTypes = {
+    attractions: { icon: '🏛️', label: '景點', color: '#e74c3c' },
+    restaurants: { icon: '🍜', label: '美食', color: '#f39c12' },
+    hotels: { icon: '🏨', label: '酒店', color: '#3498db' },
+    shopping: { icon: '🛍️', label: '購物', color: '#9b59b6' },
+    all: { icon: '🔍', label: '全部', color: '#27ae60' }
+};
+
+// ==================== 搜索彈窗 UI ====================
+const SearchPopup = {
+    currentLat: null,
+    currentLng: null,
+    popup: null,
+
+    /**
+     * 顯示搜索選擇彈窗
+     */
+    show(lat, lng) {
+        this.currentLat = lat;
+        this.currentLng = lng;
+
+        const content = `
+            <div class="search-popup-container">
+                <div class="search-popup-header">
+                    <div class="search-coord">📍 ${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}</div>
+                    <div class="search-location-name" id="search-location-name">正在識別位置...</div>
+                </div>
+                <div class="search-type-grid">
+                    <button class="search-type-btn" data-type="attractions" style="--btn-color: ${SearchTypes.attractions.color}">
+                        <span class="search-icon">${SearchTypes.attractions.icon}</span>
+                        <span>${SearchTypes.attractions.label}</span>
+                    </button>
+                    <button class="search-type-btn" data-type="restaurants" style="--btn-color: ${SearchTypes.restaurants.color}">
+                        <span class="search-icon">${SearchTypes.restaurants.icon}</span>
+                        <span>${SearchTypes.restaurants.label}</span>
+                    </button>
+                    <button class="search-type-btn" data-type="hotels" style="--btn-color: ${SearchTypes.hotels.color}">
+                        <span class="search-icon">${SearchTypes.hotels.icon}</span>
+                        <span>${SearchTypes.hotels.label}</span>
+                    </button>
+                    <button class="search-type-btn" data-type="shopping" style="--btn-color: ${SearchTypes.shopping.color}">
+                        <span class="search-icon">${SearchTypes.shopping.icon}</span>
+                        <span>${SearchTypes.shopping.label}</span>
+                    </button>
+                </div>
+                <button class="search-type-btn search-all-btn" data-type="all" style="--btn-color: ${SearchTypes.all.color}">
+                    <span class="search-icon">${SearchTypes.all.icon}</span>
+                    <span>搜索全部類型</span>
+                </button>
+            </div>
+        `;
+
+        this.popup = L.popup({
+            closeButton: true,
+            className: 'location-search-popup',
+            autoPan: true,
+            autoPanPadding: [50, 50]
+        })
+        .setLatLng([lat, lng])
+        .setContent(content)
+        .openOn(map);
+
+        // 綁定按鈕事件
+        this.bindEvents();
+
+        // 預先獲取位置名稱
+        this.fetchLocationName(lat, lng);
+
+        return this.popup;
+    },
+
+    /**
+     * 綁定按鈕點擊事件
+     */
+    bindEvents() {
+        const buttons = document.querySelectorAll('.search-type-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const type = btn.dataset.type;
+                this.close();
+                SearchExecutor.execute(this.currentLat, this.currentLng, type);
+            });
+        });
+    },
+
+    /**
+     * 獲取位置名稱（用於顯示）
+     */
+    async fetchLocationName(lat, lng) {
+        try {
+            // 使用簡易逆地理編碼
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh`);
+            const data = await response.json();
+            const nameEl = document.getElementById('search-location-name');
+            if (nameEl && data.display_name) {
+                const shortName = data.display_name.split(',')[0];
+                nameEl.textContent = `📍 ${shortName}`;
+            }
+        } catch (e) {
+            console.log('Location name fetch failed:', e);
+        }
+    },
+
+    /**
+     * 關閉彈窗
+     */
+    close() {
+        if (this.popup && map) {
+            map.closePopup(this.popup);
+            this.popup = null;
+        }
+    }
+};
+
+// ==================== 搜索執行器 ====================
+const SearchExecutor = {
+    abortController: null,
+
+    /**
+     * 執行搜索
+     */
+    async execute(lat, lng, queryType) {
+        // 取消之前的搜索
+        if (this.abortController) {
+            this.abortController.abort();
+        }
+        this.abortController = new AbortController();
+
+        // 在聊天框顯示搜索中狀態
+        const typeInfo = SearchTypes[queryType];
+        SearchUI.showSearching(lat, lng, typeInfo);
+
+        try {
+            // Explicit timeout wrapper
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('timeout')), SearchConfig.TIMEOUT)
+            );
+
+            const response = await Promise.race([
+                fetch(SearchConfig.ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lat: parseFloat(lat),
+                        lng: parseFloat(lng),
+                        query_type: queryType,
+                        radius: SearchConfig.DEFAULT_RADIUS
+                    }),
+                    signal: this.abortController.signal
+                }),
+                timeoutPromise
+            ]);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                SearchUI.displayResults(result.data, queryType);
+                // 在地圖上標記結果
+                SearchMap.markResults(result.data.places, lat, lng);
+            } else {
+                SearchUI.displayError(result.error || '搜索失敗');
+            }
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log('Search aborted');
+                return;
+            }
+            console.error('Search error:', error);
+            SearchUI.displayError('搜索出錯，請稍後再試');
+        } finally {
+            this.abortController = null;
+        }
+    },
+
+    /**
+     * 取消當前搜索
+     */
+    cancel() {
+        if (this.abortController) {
+            this.abortController.abort();
+            this.abortController = null;
+        }
+    }
+};
+
+// ==================== 搜索 UI 渲染 ====================
+const SearchUI = {
+    /**
+     * 顯示搜索中狀態
+     */
+    showSearching(lat, lng, typeInfo) {
+        const message = `🔍 正在搜索 ${typeInfo.label}...\n\n坐標：${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`;
+        addMessage(message, 'user');
+
+        // 顯示加載動畫
+        showTyping();
+
+        // 更新打字指示器內容
+        const typingIndicator = document.querySelector('.typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.innerHTML = `
+                <span class="search-loading">
+                    <i class="fas fa-search"></i> 實時搜索中
+                    <span class="loading-dots">...</span>
+                </span>
+            `;
+        }
+    },
+
+    /**
+     * 顯示搜索結果
+     */
+    displayResults(data, queryType) {
+        hideTyping();
+
+        const typeInfo = SearchTypes[queryType];
+        const locationName = data.location_name || '該位置';
+
+        // 構建 Markdown 結果
+        let markdown = `## ${typeInfo.icon} **${locationName}** 周邊${typeInfo.label}搜索結果\n\n`;
+        markdown += `${data.summary || ''}\n\n`;
+
+        if (data.places && data.places.length > 0) {
+            data.places.forEach((place, index) => {
+                markdown += this.renderPlaceCard(place, index + 1);
+            });
+
+            // 添加搜索來源
+            markdown += `\n---\n`;
+            markdown += `📊 **數據來源**：實時網頁搜索 (DuckDuckGo) + AI 分析\n`;
+            markdown += `🤖 **模型**：Gemma 31B Cloud\n`;
+        } else {
+            markdown += `\n⚠️ 暫時未能找到該位置周邊的${typeInfo.label}資訊。\n`;
+        }
+
+        addMessage(markdown, 'bot');
+    },
+
+    /**
+     * 渲染單個地點卡片
+     */
+    renderPlaceCard(place, index) {
+        const highlights = place.highlights || [];
+        const highlightsHtml = highlights.length > 0
+            ? highlights.map(h => `✨ ${h}`).join(' | ')
+            : '';
+
+        const rating = place.rating ? `\n⭐ **評分**：${place.rating}` : '';
+        const tips = place.tips ? `\n💡 **貼士**：${place.tips}` : '';
+        const review = place.latest_review ? `\n💬 **最新評價**：${place.latest_review}` : '';
+
+        return `
+### ${index}. ${place.name}
+**類別**：${place.category}${rating}
+
+${place.description}
+
+${highlightsHtml ? `**亮點**：${highlightsHtml}\n` : ''}${tips}${review}
+
+【{"action":"add_marker","params":{"lat":0,"lng":0,"title":"${this.escapeJson(place.name)}","color":"#e74c3c","pulse":true}}】
+
+---
+`;
+    },
+
+    /**
+     * JSON 字符串轉義
+     */
+    escapeJson(str) {
+        return str.replace(/["\\]/g, '\\$&');
+    },
+
+    /**
+     * 顯示錯誤信息
+     */
+    displayError(error) {
+        hideTyping();
+        addMessage(`❌ **搜索失敗**\n\n${error}\n\n請檢查網路連接或稍後再試。`, 'bot');
+    }
+};
+
+// ==================== 地圖標記管理 ====================
+const SearchMap = {
+    /**
+     * 標記搜索結果到地圖
+     */
+    markResults(places, centerLat, centerLng) {
+        // 清除舊標記
+        if (typeof clearSearchMarkers === 'function') {
+            clearSearchMarkers();
+        } else if (window.searchMarkersLayerGroup) {
+            window.searchMarkersLayerGroup.clearLayers();
+        }
+
+        if (!places || places.length === 0) {
+            // 無結果，標記中心點
+            this.addCenterMarker(centerLat, centerLng);
+            return;
+        }
+
+        // 收集所有標記位置用於縮放
+        const bounds = L.latLngBounds();
+
+        // 為每個結果添加標記
+        places.forEach((place, index) => {
+            if (place.lat && place.lng) {
+                const marker = this.addPlaceMarker(place, index + 1);
+                bounds.extend([place.lat, place.lng]);
+            }
+        });
+
+        // 飛到結果區域
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        } else {
+            map.flyTo([centerLat, centerLng], 14);
+        }
+    },
+
+    /**
+     * 添加中心點標記
+     */
+    addCenterMarker(lat, lng) {
+        const marker = L.marker([lat, lng], {
+            icon: L.divIcon({
+                className: 'search-center-marker',
+                html: '<div class="center-pin">📍</div>',
+                iconSize: [30, 30]
+            })
+        });
+
+        if (window.searchMarkersLayerGroup) {
+            marker.addTo(window.searchMarkersLayerGroup);
+        }
+
+        marker.bindPopup('<b>搜索位置</b>');
+        map.flyTo([lat, lng], 14);
+    },
+
+    /**
+     * 添加地點標記
+     */
+    addPlaceMarker(place, index) {
+        const colors = ['#e74c3c', '#3498db', '#f39c12', '#9b59b6', '#27ae60'];
+        const color = colors[(index - 1) % colors.length];
+
+        const marker = L.marker([place.lat, place.lng], {
+            icon: L.divIcon({
+                className: 'search-result-marker',
+                html: `
+                    <div class="place-marker" style="--marker-color: ${color}">
+                        <span class="marker-number">${index}</span>
+                    </div>
+                `,
+                iconSize: [32, 32]
+            })
+        });
+
+        if (window.searchMarkersLayerGroup) {
+            marker.addTo(window.searchMarkersLayerGroup);
+        }
+
+        // 構建 popup 內容
+        const popupContent = `
+            <div class="place-popup">
+                <h4>${place.name}</h4>
+                <div class="place-category">${place.category}</div>
+                <p>${place.description.substring(0, 100)}...</p>
+                ${place.rating ? `<div class="place-rating">⭐ ${place.rating}</div>` : ''}
+            </div>
+        `;
+
+        marker.bindPopup(popupContent);
+
+        return marker;
+    }
+};
+
+// ==================== 工具函數 ====================
+const SearchUtils = {
+    /**
+     * 格式化距離
+     */
+    formatDistance(meters) {
+        if (meters < 1000) {
+            return `${Math.round(meters)} 米`;
+        }
+        return `${(meters / 1000).toFixed(1)} 公里`;
+    },
+
+    /**
+     * 防抖函數
+     */
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+};
+
+// ==================== 初始化與導出 ====================
+// 覆寫原有的 onMapClick 函數
+function initLocationSearch() {
+    // 保存原有的 onMapClick 如果存在
+    if (typeof window.originalOnMapClick === 'undefined' && typeof onMapClick === 'function') {
+        window.originalOnMapClick = onMapClick;
+    }
+
+    // 定義新的 onMapClick
+    window.onMapClick = function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        // 顯示搜索選擇彈窗
+        SearchPopup.show(lat, lng);
+    };
+
+    // 重新綁定地圖點擊事件
+    if (typeof map !== 'undefined') {
+        map.off('click');
+        map.on('click', window.onMapClick);
+    }
+
+    console.log('[Search Module] Location search initialized');
+}
+
+// 在 DOM 加載完成後初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLocationSearch);
+} else {
+    // DOM 已加載，延遲初始化等待 map 對象存在
+    setTimeout(initLocationSearch, 1000);
+}

@@ -23,7 +23,7 @@ body {
 .top-bar {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 12px 24px;
+    padding: 8px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -34,44 +34,44 @@ body {
 .logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .logo i {
-    font-size: 28px;
+    font-size: 22px;
     color: #ffd700;
 }
 
 .logo h1 {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: 1px;
 }
 
 .subtitle {
-    font-size: 12px;
+    font-size: 10px;
     opacity: 0.9;
-    margin-left: 8px;
+    margin-left: 6px;
     font-weight: 400;
 }
 
 .header-actions {
     display: flex;
-    gap: 10px;
+    gap: 6px;
 }
 
 .btn-toggle {
     background: rgba(255,255,255,0.2);
     border: 1px solid rgba(255,255,255,0.3);
     color: white;
-    padding: 8px 14px;
-    border-radius: 20px;
+    padding: 5px 10px;
+    border-radius: 16px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 11px;
     transition: all 0.3s;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
 }
 
 .btn-toggle:hover {
@@ -358,7 +358,122 @@ body {
 .route-marker.start { color: #27ae60; border-color: #27ae60; }
 .route-marker.end { color: #e74c3c; border-color: #e74c3c; }
 
-/* 地圖圖例 - 固定位置，避免被遮擋 */
+/* ==================== Chatbot 搜索標記樣式 ==================== */
+
+/* 搜索標記 */
+.search-marker {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+.search-marker .marker-inner {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 32px;
+    background: var(--marker-color, #e74c3c);
+    border-radius: 50% 50% 50% 0;
+    transform-origin: center bottom;
+    transform: translate(-50%, 0) rotate(-45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border: 2px solid white;
+}
+
+.search-marker .marker-inner i {
+    transform: rotate(45deg);
+    color: white;
+    font-size: 14px;
+}
+
+/* 脈動效果 */
+.search-marker-pulse::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: var(--marker-color, #e74c3c);
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: markerPulse 1.5s ease-out infinite;
+}
+
+@keyframes markerPulse {
+    0% {
+        width: 20px;
+        height: 20px;
+        opacity: 0.6;
+    }
+    70% {
+        width: 60px;
+        height: 60px;
+        opacity: 0;
+    }
+    100% {
+        width: 20px;
+        height: 20px;
+        opacity: 0;
+    }
+}
+
+/* 搜索標記彈窗樣式 */
+.search-marker-popup h4 {
+    font-size: 15px;
+    color: #333;
+    margin: 0 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #667eea;
+}
+
+.search-marker-popup p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* 範圍標籤樣式 */
+.area-label {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 15px;
+    white-space: nowrap;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* 範圍彈窗樣式 */
+.area-popup h4 {
+    font-size: 15px;
+    color: #333;
+    margin: 0 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #667eea;
+}
+
+.area-popup h4 i {
+    color: #667eea;
+    margin-right: 5px;
+}
+
+.area-popup p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* ==================== 地圖圖例 - 固定位置，避免被遮擋 ==================== */
 .map-legend {
     position: absolute;
     bottom: 70px;
@@ -515,7 +630,8 @@ body {
 .ai-chat {
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    right: 10px;  /* 更靠右 */
+    left: auto;   /* 確保靠右 */
     width: 360px;
     max-height: 500px;
     background: white;
@@ -666,6 +782,74 @@ body {
 }
 
 .chat-input-area button:hover {
+    transform: scale(1.1);
+}
+
+.chat-input-area .upload-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1abc9c, #16a085);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.chat-input-area .upload-btn:hover {
+    transform: scale(1.1);
+    background: linear-gradient(135deg, #16a085, #128c7e);
+}
+
+/* 圖片預覽 */
+.image-preview {
+    padding: 8px 16px;
+    border-top: 1px solid #eee;
+    background: #f5f5f5;
+}
+
+.image-preview.hidden {
+    display: none;
+}
+
+.image-preview .preview-container {
+    position: relative;
+    display: inline-block;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.image-preview .preview-container img {
+    max-height: 120px;
+    max-width: 200px;
+    display: block;
+}
+
+.image-preview .remove-image {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    background: rgba(231, 76, 60, 0.9);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.image-preview .remove-image:hover {
+    background: #c0392b;
     transform: scale(1.1);
 }
 
@@ -857,6 +1041,26 @@ body {
     opacity: 0.9;
 }
 
+.btn-gmaps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+    background: #4285F4;
+    color: white;
+    transition: all 0.2s;
+}
+
+.btn-gmaps:hover {
+    background: #3367D6;
+}
+
 .btn-nearby {
     background: #f0f4ff;
     color: #667eea;
@@ -894,8 +1098,8 @@ body {
 
     .ai-chat {
         width: calc(100% - 40px);
-        right: 20px;
-        left: 20px;
+        right: 10px;
+        left: auto;
         max-width: 350px;
     }
 
@@ -930,8 +1134,8 @@ body {
 
         .ai-chat {
             width: 90%;
-            right: 5%;
-            left: 5%;
+            right: 10px;
+            left: auto;
         }
 
         .route-panel {

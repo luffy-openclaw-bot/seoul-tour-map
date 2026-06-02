@@ -8,6 +8,7 @@ let markers = {};
 let subwayLines = [];
 let subwayLayerGroup;
 let routeLayerGroup;
+let searchMarkersLayerGroup;  // Chatbot 搜索標記圖層
 let attractionsData = [];
 let subwayData = {};
 let activeCategory = 'all';
@@ -59,6 +60,7 @@ function initMap() {
 
     subwayLayerGroup = L.layerGroup().addTo(map);
     routeLayerGroup = L.layerGroup().addTo(map);
+    searchMarkersLayerGroup = L.layerGroup().addTo(map);  // 初始化搜索標記圖層
 
     map.on("click", onMapClick);
 }
@@ -290,6 +292,9 @@ function showAttractionDetail(attr) {
                 <button class="btn-route" onclick="planRouteTo('${attr.id}')">
                     <i class="fas fa-route"></i> 規劃路線
                 </button>
+                <a class="btn-gmaps" href="https://www.google.com/maps/search/?api=1&query=${attr.lat},${attr.lng}" target="_blank" rel="noopener">
+                    <i class="fas fa-map-marker-alt"></i> Google Maps
+                </a>
             </div>
         </div>
     `;
@@ -738,6 +743,34 @@ async function executeMapAction(action, params) {
             }
             break;
 
+        case 'add_marker':
+            // 添加搜索標記（用於顯示目的地）
+            if (params.lat && params.lng) {
+                const lat = parseFloat(params.lat);
+                const lng = parseFloat(params.lng);
+                const title = params.title || '目的地';
+                const color = params.color || '#e74c3c';
+                const popup = params.popup || title;
+                const pulse = params.pulse !== false; // 默認開啟脈動效果
+                
+                addSearchMarker(lat, lng, title, color, popup, pulse);
+            }
+            break;
+
+        case 'add_polygon':
+            // 添加範圍多邊形（用於顯示區域）
+            if (params.coords && Array.isArray(params.coords)) {
+                const name = params.name || '範圍';
+                const color = params.color || '#3498db';
+                addSearchPolygon(params.coords, name, color);
+            }
+            break;
+
+        case 'clear_search_markers':
+            // 清除所有搜索標記
+            clearSearchMarkers();
+            break;
+
         default:
             console.warn('Unknown map action:', action);
             return false;
@@ -901,15 +934,18 @@ function getSystemContext() {
 
     return `你係韓國首爾旅遊專家，用粵語（廣東話書面）回答用戶關於首爾旅遊嘅問題。
 
-【地圖控制指令】重要！當用家需要睇地圖、想去某個景點、想顯示特定類別景點時，請喺回覆尾加上特殊指令格式。
+【地圖控制指令】重要！當用家需要睇地圖、想去某個景點、想顯示特定類別景點、或者搜索特定位置時，請喺回覆尾加上特殊指令格式。
 
-指令格式：將以下 JSON 放喺【...】內，例如 【{"type":"map_action","action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
+指令格式：將以下 JSON 放喺【...】內，例如 【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
 
 可用動作：
 1. center (移動地圖到指定坐標)：【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
-2. focus_attraction (聚焦景點並顯示詳情)：【{"action":"focus_attraction","params":{"id":"景點ID"}}】
+2. focus_attraction (聚焦已知景點並顯示詳情)：【{"action":"focus_attraction","params":{"id":"景點ID"}}】
 3. highlight_category (篩選顯示某分類景點)：【{"action":"highlight_category","params":{"category":"購物美食"}}】
 4. locate_user (定位用戶GPS位置)：【{"action":"locate_user"}}】
+5. add_marker (搜索結果/特定位置時添加標記)：【{"action":"add_marker","params":{"lat":37.5500,"lng":126.9200,"title":"弘大","color":"#e74c3c","popup":"弘大購物區"}}】
+6. add_polygon (顯示區域範圍)：【{"action":"add_polygon","params":{"coords":[[37.56,126.98],[37.56,126.99],[37.57,126.99],[37.57,126.98]],"name":"明洞商圈","color":"#3498db"}}】
+7. clear_search_markers (清除搜索標記)：【{"action":"clear_search_markers"}}】
 
 景點ID：${attractionsData.map(a=>a.id).join(', ')}
 分類：${categories}
@@ -917,7 +953,11 @@ function getSystemContext() {
 景點資料：
 ${attractionsSummary}
 
-注意：當用家講「去XX」、「睇吓XX」、「XX喺邊」等需要移動地圖嘅查詢時，先至加呢個指令。普通對答唔需要。`;
+【重要使用指引】
+- 當用家講「去XX」、「睇吓XX」等需要移動地圖時，如果XX係已知景點ID，用 focus_attraction；如果係其他地點（如機場、火車站、區域名稱），用 add_marker 加上準確坐標
+- 搜索結果在內文回答後，適宜用 add_marker 喺地圖標示位置
+- 提及區域或商圈時，可用 add_polygon 顯示範圍
+- 普通對答唔需要地圖指令`;
 }
 
 function addMessage(text, sender) {
@@ -1099,6 +1139,27 @@ function initSidebarToggle() {
 
 // ==================== AI 地圖控制指令執行 ====================
 async function executeMapAction(action, params) {
+    console.log('[Map Action] Executing:', action, params);
+    
+    // 驗證坐標參數
+    if (params.lat !== undefined) {
+        params.lat = parseFloat(params.lat);
+        if (isNaN(params.lat) || params.lat < -90 || params.lat > 90) {
+            console.error('[Map Action] Invalid latitude:', params.lat);
+            return false;
+        }
+    }
+    if (params.lng !== undefined) {
+        params.lng = parseFloat(params.lng);
+        if (isNaN(params.lng) || params.lng < -180 || params.lng > 180) {
+            console.error('[Map Action] Invalid longitude:', params.lng);
+            return false;
+        }
+    }
+    if (params.zoom !== undefined) {
+        params.zoom = parseInt(params.zoom);
+    }
+    
     try {
         const response = await fetch('/api/execute', {
             method: 'POST',
@@ -1108,17 +1169,28 @@ async function executeMapAction(action, params) {
         const data = await response.json();
         if (!data.success) {
             console.error('Map action failed:', data.error);
-            return;
+            return false;
         }
 
         // 前端執行實際地圖動作
         switch (action) {
             case 'center':
-                map.setView([params.lat, params.lng], params.zoom || 15);
+                if (params.lat !== undefined && params.lng !== undefined) {
+                    map.setView([params.lat, params.lng], params.zoom || 15);
+                    console.log(`[Map Action] Map centered at ${params.lat}, ${params.lng}, zoom ${params.zoom || 15}`);
+                }
                 break;
             case 'focus_attraction':
                 const attr = attractionsData.find(a => a.id === params.id);
-                if (attr) focusAttraction(attr);
+                if (attr) {
+                    focusAttraction(attr);
+                } else {
+                    // 嘗試用名稱查找
+                    const attrByName = attractionsData.find(a =>
+                        a.name.includes(params.id) || params.id.includes(a.name)
+                    );
+                    if (attrByName) focusAttraction(attrByName);
+                }
                 break;
             case 'highlight_category':
                 activeCategory = params.category;
@@ -1140,9 +1212,39 @@ async function executeMapAction(action, params) {
                     calculateRoute();
                 }
                 break;
+            // ===== 搜索標記相關動作 =====
+            case 'add_marker':
+                // 添加搜索標記（用於顯示目的地）
+                if (params.lat !== undefined && params.lng !== undefined) {
+                    const title = params.title || '目的地';
+                    const color = params.color || '#e74c3c';
+                    const popup = params.popup || title;
+                    const pulse = params.pulse !== false; // 默認開啟脈動效果
+                    
+                    addSearchMarker(params.lat, params.lng, title, color, popup, pulse);
+                    console.log(`[Map Action] Added marker for "${title}" at ${params.lat}, ${params.lng}`);
+                }
+                break;
+            case 'add_polygon':
+                // 添加範圍多邊形（用於顯示區域）
+                if (params.coords && Array.isArray(params.coords)) {
+                    const name = params.name || '範圍';
+                    const color = params.color || '#3498db';
+                    addSearchPolygon(params.coords, name, color);
+                }
+                break;
+            case 'clear_search_markers':
+                // 清除所有搜索標記
+                clearSearchMarkers();
+                break;
+            default:
+                console.warn('[Map Action] Unknown action:', action);
+                return false;
         }
+        return true;
     } catch (e) {
         console.error('executeMapAction error:', e);
+        return false;
     }
 }
 
@@ -1239,3 +1341,304 @@ document.addEventListener('DOMContentLoaded', async () => {
     initChat();
     bindEvents();
 });
+
+// ==================== Chatbot 搜索標記與範圍顯示 ====================
+
+/**
+ * 添加搜索標記（目的地指示器）
+ * @param {number} lat - 緯度
+ * @param {number} lng - 經度
+ * @param {string} title - 標題
+ * @param {string} color - 顏色
+ * @param {string} popupContent - 彈出內容
+ * @param {boolean} pulse - 是否啟用脈動效果
+ */
+function addSearchMarker(lat, lng, title, color, popupContent, pulse = true) {
+    console.log(`[Chatbot] 添加搜索標記: ${title} @ ${lat}, ${lng}`);
+    
+    // 創建自定義圖標 HTML
+    const pulseClass = pulse ? 'search-marker-pulse' : '';
+    const iconHtml = `
+        <div class="search-marker ${pulseClass}" style="--marker-color: ${color}">
+            <div class="marker-inner">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+        </div>
+    `;
+    
+    const customIcon = L.divIcon({
+        html: iconHtml,
+        className: '',
+        iconSize: [40, 40],
+        iconAnchor: [20, 40]
+    });
+    
+    // 創建標記
+    const marker = L.marker([lat, lng], { icon: customIcon })
+        .addTo(searchMarkersLayerGroup)
+        .bindPopup(`
+            <div class="search-marker-popup">
+                <h4>${title}</h4>
+                <p>${popupContent}</p>
+            </div>
+        `);
+    
+    // 自動打開彈出窗口
+    marker.openPopup();
+    
+    return marker;
+}
+
+/**
+ * 添加搜索範圍多邊形
+ * @param {Array} coords - 多邊形坐標數組 [[lat, lng], [lat, lng], ...]
+ * @param {string} name - 區域名稱
+ * @param {string} color - 顏色
+ */
+function addSearchPolygon(coords, name, color) {
+    console.log(`[Chatbot] 添加範圍多邊形: ${name}`);
+    
+    // 驗證坐標
+    if (!Array.isArray(coords) || coords.length < 3) {
+        console.warn('多邊形坐標無效，需要至少3個點');
+        return null;
+    }
+    
+    // 創建多邊形
+    const polygon = L.polygon(coords, {
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.25,
+        weight: 3,
+        opacity: 0.8,
+        dashArray: '5, 5'
+    }).addTo(searchMarkersLayerGroup);
+    
+    // 計算多邊形中心點顯示標籤
+    const bounds = polygon.getBounds();
+    const center = bounds.getCenter();
+    
+    // 添加區域標籤
+    const labelIcon = L.divIcon({
+        html: `<div class="area-label" style="background: ${color}; color: white;">${name}</div>`,
+        className: '',
+        iconSize: [100, 30],
+        iconAnchor: [50, 15]
+    });
+    
+    L.marker(center, { icon: labelIcon, interactive: false })
+        .addTo(searchMarkersLayerGroup);
+    
+    // 顯示範圍信息彈窗
+    polygon.bindPopup(`
+        <div class="area-popup">
+            <h4><i class="fas fa-map"></i> ${name}</h4>
+            <p>這是一個熱門區域，範圍內有多個值得探索的地點。</p>
+        </div>
+    `);
+    
+    // 自動調整地圖視野以顯示整個範圍
+    map.fitBounds(bounds, { padding: [50, 50] });
+    
+    return polygon;
+}
+
+/**
+ * 清除所有搜索標記和範圍
+ */
+function clearSearchMarkers() {
+    console.log('[Chatbot] 清除所有搜索標記');
+    searchMarkersLayerGroup.clearLayers();
+}
+
+// ==================== 圖片上傳識別功能 ====================
+let currentUploadedImage = null;
+
+/**
+ * 處理圖片上傳
+ */
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // 檢查文件類型
+    if (!file.type.startsWith('image/')) {
+        alert('請上傳圖片文件');
+        return;
+    }
+    
+    // 檢查文件大小（限制 50MB — 新手機相普遍 10MB+）
+    if (file.size > 50 * 1024 * 1024) {
+        alert('圖片大小唔可以超過 50MB');
+        return;
+    }
+    
+    // 用 URL.createObjectURL 代替 FileReader.readAsDataURL
+    // 避免將 10MB+ raw file 全部 load 入 memory 做 base64（~13MB string）
+    const objectUrl = URL.createObjectURL(file);
+    
+    const img = new Image();
+    img.onload = function() {
+        // 無論原圖幾大，一律 resize + compress 至安全大小
+        const maxSize = 1024;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxSize || height > maxSize) {
+            if (width > height) {
+                height = Math.round(height * maxSize / width);
+                width = maxSize;
+            } else {
+                width = Math.round(width * maxSize / height);
+                height = maxSize;
+            }
+        }
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // JPEG 壓縮 quality 0.6 → 10MB 原圖 → ~150KB base64
+        currentUploadedImage = canvas.toDataURL('image/jpeg', 0.6);
+        
+        // 釋放 blob URL memory
+        URL.revokeObjectURL(objectUrl);
+        
+        showImagePreview(currentUploadedImage);
+        
+        // 自動展開 chatbot
+        const chat = document.getElementById('ai-chat');
+        if (chat && chat.classList.contains('collapsed')) {
+            toggleChat();
+        }
+        
+        // 自動發送圖片分析
+        analyzeUploadedImage();
+    };
+    
+    img.onerror = function() {
+        URL.revokeObjectURL(objectUrl);
+        alert('無法載入圖片，請確認文件格式正確');
+    };
+    
+    img.src = objectUrl;
+}
+
+/**
+ * 顯示圖片預覽
+ */
+function showImagePreview(imageData) {
+    const preview = document.getElementById('image-preview');
+    if (preview) {
+        preview.innerHTML = `
+            <div class="preview-container">
+                <img src="${imageData}" alt="預覽">
+                <button class="remove-image" onclick="removeUploadedImage()" title="移除圖片">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        preview.classList.remove('hidden');
+    }
+}
+
+/**
+ * 移除已上傳圖片
+ */
+function removeUploadedImage() {
+    currentUploadedImage = null;
+    const preview = document.getElementById('image-preview');
+    const fileInput = document.getElementById('image-input');
+    
+    if (preview) {
+        preview.innerHTML = '';
+        preview.classList.add('hidden');
+    }
+    if (fileInput) {
+        fileInput.value = '';
+    }
+}
+
+/**
+ * 發送圖片做 AI 分析
+ */
+async function analyzeUploadedImage() {
+    if (!currentUploadedImage) return;
+    
+    // 顯示用戶訊息
+    addMessage('[已上傳圖片，正在分析...]', 'user');
+    showTyping();
+    
+    try {
+        // 只發送 base64 內容（唔要 data:image/... 前綴）
+        const base64Image = currentUploadedImage.split(',')[1];
+        
+        const response = await fetch('/api/analyze-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Image }),
+            signal: AbortSignal.timeout(45000)  // 45s timeout
+        });
+        
+        // Check Content-Type before parsing as JSON
+        const contentType = response.headers.get('Content-Type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(`Server 返回非 JSON 回應（${response.status}）。可能圖片太大或伺服器繁忙，請重試。`);
+        }
+        
+        const data = await response.json();
+        hideTyping();
+        
+        if (data.success) {
+            const analysis = data.analysis;
+            const confidence = analysis.confidence || 0;
+            
+            // 構建 AI 回覆
+            let reply = `📍 **圖片分析結果**\n\n`;
+            reply += `**可能地點：** ${analysis.landmark_name || '未知地點'}`;
+            if (analysis.landmark_name_ko) {
+                reply += ` (${analysis.landmark_name_ko})`;
+            }
+            reply += `\n\n`;
+            
+            if (analysis.description) {
+                reply += `**分析：** ${analysis.description}\n\n`;
+            }
+            
+            reply += `**信心度：** ${(confidence * 100).toFixed(0)}%\n\n`;
+            
+            if (analysis.nearby_attractions) {
+                reply += `**附近景點：** ${analysis.nearby_attractions}\n\n`;
+            }
+            
+            reply += `📌 已喺地圖標示可能位置`;
+            
+            addMessage(reply, 'bot');
+            
+            // 執行地圖動作（如果有的話）
+            if (data.map_action) {
+                executeMapAction(data.map_action.action, data.map_action.params);
+                
+                // 同時 centre 地圖
+                if (data.map_action.params.lat && data.map_action.params.lng) {
+                    map.flyTo([data.map_action.params.lat, data.map_action.params.lng], 16, {
+                        duration: 1.5
+                    });
+                }
+            }
+        } else {
+            // 分析失敗
+            addMessage(`❌ 圖片分析失敗：${data.error || '請稍後再試'}\n\n可能原因：\n• AI 模型暫時無法識別該圖片\n• 圖片質素太模糊\n• 唔係首爾常見景點\n\n建議試吓用文字描述你想知嘅地點！`, 'bot');
+        }
+        
+    } catch (error) {
+        hideTyping();
+        console.error('圖片分析錯誤:', error);
+        addMessage(`❌ 圖片上傳失敗：${error.message}\n\n請檢查網絡連接後重試。`, 'bot');
+    }
+    
+    // 清理圖片
+    removeUploadedImage();
+}
