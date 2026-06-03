@@ -10,6 +10,7 @@ let subwayLayerGroup;
 let routeLayerGroup;
 let searchMarkersLayerGroup;  // Chatbot 搜索標記圖層
 let attractionsData = [];
+let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面板同步
 let subwayData = {};
 let activeCategory = 'all';
 let sidebarOpen = false;
@@ -125,7 +126,6 @@ async function searchNearby(lat, lng) {
 
 // ==================== 附近交通查詢 ====================
 async function searchNearbyTransport(lat, lng) {
-    map.closePopup();
     addMessage(`查詢坐標 ${lat}, ${lng} 附近嘅交通資訊`, 'user');
     showTyping();
 
@@ -212,8 +212,65 @@ async function loadData() {
 // ==================== 景點列表 ====================
 function renderAttractionList() {
     const container = document.getElementById('attraction-list');
+    if (!container) return;
     container.innerHTML = '';
 
+    // 1. 渲染搜索結果（如果有）
+    if (currentSearchResults && currentSearchResults.length > 0) {
+        const searchResultsHeader = document.createElement('div');
+        searchResultsHeader.className = 'search-results-header';
+        searchResultsHeader.innerHTML = `
+            <div class="search-results-title">
+                <i class="fas fa-search"></i> 搜索結果
+                <button class="clear-search-results" onclick="clearSearchResultsFromList()" title="清除搜索結果">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(searchResultsHeader);
+
+        currentSearchResults.forEach(place => {
+            const category = place.category || '搜索結果';
+            const color = CATEGORY_COLORS[category] || '#667eea';
+            const searchId = `search-${place.lat.toFixed(4)}-${place.lng.toFixed(4)}`;
+
+            const item = document.createElement('div');
+            item.className = 'attraction-item search-result-item';
+            item.dataset.searchId = searchId;
+            item.dataset.lat = place.lat;
+            item.dataset.lng = place.lng;
+
+            item.innerHTML = `
+                <div class="thumb-search" style="background: ${color}; color: white; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <div class="info">
+                    <div class="name">${place.name}</div>
+                    <span class="category-tag" style="background:${color}">${category}</span>
+                    <div class="desc">${place.description ? place.description.substring(0, 60) + '...' : '搜索結果'}</div>
+                </div>
+                <div class="search-item-actions">
+                    <button class="fly-to-btn" onclick="event.stopPropagation(); flyToSearchResult(${place.lat}, ${place.lng}, '${escapeHtml(place.name)}')" title="跳轉到地圖位置">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <button class="wishlist-btn ${WishlistManager.has(place.name, place.lat, place.lng) ? 'in-wishlist' : ''}" 
+                            data-name="${place.name}" data-lat="${place.lat}" data-lng="${place.lng}" 
+                            data-category="${category}" data-description="${place.description || ''}"
+                            onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
+                        <i class="${WishlistManager.has(place.name, place.lat, place.lng) ? 'fas' : 'far'} fa-heart"></i>
+                    </button>
+                </div>
+            `;
+
+            item.addEventListener('click', () => {
+                flyToSearchResult(place.lat, place.lng, place.name);
+            });
+
+            container.appendChild(item);
+        });
+    }
+
+    // 2. 渲染景點列表
     const filtered = activeCategory === 'all'
         ? attractionsData
         : attractionsData.filter(a => a.category === activeCategory);
@@ -1276,15 +1333,63 @@ const CATEGORY_EMOJIS = {
 function renderMobilePanelList() {
     const container = document.getElementById('mobile-panel-list');
     const countEl = document.getElementById('mobile-panel-count');
-    if (!container || !attractionsData.length) return;
+    if (!container) return;
 
+    container.innerHTML = '';
+
+    // 1. 渲染搜索結果（如果有）
+    if (currentSearchResults && currentSearchResults.length > 0) {
+        const searchHeader = document.createElement('div');
+        searchHeader.className = 'mobile-search-results-header';
+        searchHeader.innerHTML = `
+            <div class="search-title">
+                <i class="fas fa-search"></i> 搜索結果
+                <button class="clear-search-btn" onclick="clearSearchResultsFromList()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(searchHeader);
+
+        currentSearchResults.forEach(function(place) {
+            const category = place.category || '搜索結果';
+            const color = CATEGORY_COLORS[category] || '#667eea';
+            const emoji = CATEGORY_EMOJIS[category] || '📍';
+            
+            const card = document.createElement('div');
+            card.className = 'mobile-attraction-card search-result-item';
+            card.innerHTML =
+                '<div class="card-emoji" style="background:' + color + '15">' + emoji + '</div>' +
+                '<div class="card-info">' +
+                    '<div class="card-name">' + place.name + '</div>' +
+                    '<div class="card-sub">' +
+                        '<span class="card-dot" style="background:' + color + '"></span>' +
+                        category +
+                    '</div>' +
+                '</div>' +
+                '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(place.name, place.lat, place.lng) ? 'in-wishlist' : '') + '" ' +
+                    'data-name="' + place.name + '" data-lat="' + place.lat + '" data-lng="' + place.lng + '" ' +
+                    'data-category="' + category + '" data-description="' + (place.description || '') + '" ' +
+                    'onclick="event.stopPropagation(); toggleWishlist(this)">' +
+                    '<i class="' + (WishlistManager.has(place.name, place.lat, place.lng) ? 'fas' : 'far') + ' fa-heart"></i>' +
+                '</button>' +
+                '<div class="card-arrow"><i class="fas fa-chevron-right"></i></div>';
+
+            card.addEventListener('click', function() {
+                flyToSearchResult(place.lat, place.lng, place.name);
+                toggleMobilePanel(false);
+            });
+            container.appendChild(card);
+        });
+    }
+
+    // 2. 渲染靜態景點
     const filtered = activeCategory === 'all'
         ? attractionsData
         : attractionsData.filter(function(a) { return a.category === activeCategory; });
 
-    if (countEl) countEl.textContent = filtered.length + ' 個景點';
+    if (countEl) countEl.textContent = (filtered.length + (currentSearchResults ? currentSearchResults.length : 0)) + ' 個項目';
 
-    container.innerHTML = '';
     filtered.forEach(function(attr) {
         var color = CATEGORY_COLORS[attr.category] || '#666';
         var emoji = CATEGORY_EMOJIS[attr.category] || '📍';
@@ -1299,11 +1404,17 @@ function renderMobilePanelList() {
                     attr.category + ' · ' + attr.name_ko +
                 '</div>' +
             '</div>' +
+            '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : '') + '" ' +
+                'data-name="' + attr.name + '" data-lat="' + attr.lat + '" data-lng="' + attr.lng + '" ' +
+                'data-category="' + attr.category + '" data-price="' + attr.ticket + '" ' +
+                'data-description="' + attr.description.substring(0, 60) + '" ' +
+                'onclick="event.stopPropagation(); toggleWishlist(this)">' +
+                '<i class="' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far') + ' fa-heart"></i>' +
+            '</button>' +
             '<div class="card-arrow"><i class="fas fa-chevron-right"></i></div>';
 
         card.addEventListener('click', function() {
             focusAttraction(attr);
-            // 點擊後收起面板
             toggleMobilePanel(false);
         });
         container.appendChild(card);
@@ -2142,73 +2253,33 @@ function addSearchResultsToList(places, queryType) {
         'all': '地標觀景'
     };
     
-    // 獲取列表容器
-    const container = document.getElementById('attraction-list');
-    if (!container) return;
-    
-    // 創建搜索結果區分隔（如果不存在）
-    let searchResultsHeader = container.querySelector('.search-results-header');
-    if (!searchResultsHeader) {
-        searchResultsHeader = document.createElement('div');
-        searchResultsHeader.className = 'search-results-header';
-        searchResultsHeader.innerHTML = `
-            <div class="search-results-title">
-                <i class="fas fa-search"></i> 搜索結果
-                <button class="clear-search-results" onclick="clearSearchResultsFromList()" title="清除搜索結果">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        container.insertBefore(searchResultsHeader, container.firstChild);
-    }
-    
-    // 為每個地點添加列表項
-    places.forEach((place, idx) => {
-        // 跳過沒有坐標的
+    // 為每個地點添加
+    places.forEach((place) => {
         if (!place.lat || !place.lng) return;
         
         // 檢查是否已存在（避免重複）
-        const existingItem = container.querySelector(`[data-search-id="search-${place.lat}-${place.lng}"]`);
-        if (existingItem) return;
+        const exists = currentSearchResults.some(p => 
+            p.name === place.name && 
+            Math.abs(p.lat - place.lat) < 0.0001 && 
+            Math.abs(p.lng - place.lng) < 0.0001
+        );
         
-        const category = typeToCategory[queryType] || place.category || '搜索結果';
-        const color = CATEGORY_COLORS[category] || '#667eea';
-        
-        // 生成唯一 ID
-        const searchId = `search-${place.lat.toFixed(4)}-${place.lng.toFixed(4)}`;
-        
-        const item = document.createElement('div');
-        item.className = 'attraction-item search-result-item';
-        item.dataset.searchId = searchId;
-        item.dataset.lat = place.lat;
-        item.dataset.lng = place.lng;
-        
-        item.innerHTML = `
-            <div class="thumb-search" style="background: ${color}; color: white; display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-map-marker-alt"></i>
-            </div>
-            <div class="info">
-                <div class="name">${place.name}</div>
-                <span class="category-tag" style="background:${color}">${category}</span>
-                <div class="desc">${place.description ? place.description.substring(0, 60) + '...' : '搜索結果'}</div>
-            </div>
-            <button class="fly-to-btn" onclick="flyToSearchResult(${place.lat}, ${place.lng}, '${escapeHtml(place.name)}')" title="跳轉到地圖位置">
-                <i class="fas fa-crosshairs"></i>
-            </button>
-        `;
-        
-        // 點擊整個項目也可以跳轉
-        item.addEventListener('click', (e) => {
-            // 如果點擊的是按鈕，不執行
-            if (e.target.closest('.fly-to-btn')) return;
-            flyToSearchResult(place.lat, place.lng, place.name);
-        });
-        
-        // 插入到 header 後面
-        container.insertBefore(item, searchResultsHeader.nextSibling);
+        if (!exists) {
+            currentSearchResults.push({
+                name: place.name,
+                lat: place.lat,
+                lng: place.lng,
+                category: typeToCategory[queryType] || place.category || '搜索結果',
+                description: place.description || ''
+            });
+        }
     });
     
-    console.log(`[Search] Added ${places.length} search results to list`);
+    // 同步更新所有面板
+    renderAttractionList();
+    renderMobilePanelList();
+    
+    console.log(`[Search] Added ${places.length} search results to global state and refreshed panels`);
 }
 
 // ==================== 聊天添加地點持久化 ====================
@@ -2264,23 +2335,20 @@ function flyToSearchResult(lat, lng, name) {
  * 清除搜索結果從列表
  */
 function clearSearchResultsFromList() {
-    const container = document.getElementById('attraction-list');
-    if (!container) return;
+    // 1. 清空全局搜索結果數據
+    currentSearchResults = [];
     
-    // 移除所有搜索結果項
-    const searchItems = container.querySelectorAll('.search-result-item');
-    searchItems.forEach(item => item.remove());
+    // 2. 重新渲染兩個面板
+    renderAttractionList();
+    renderMobilePanelList();
     
-    // 移除搜索結果標題
-    const header = container.querySelector('.search-results-header');
-    if (header) header.remove();
-    
-    // 同時清除地圖標記
+    // 3. 同時清除地圖標記
     clearSearchMarkers();
     
+    // 4. 清除聊天地點持久化
     clearChatPlaces();
 
-    console.log('[Search] Cleared all search results from list');
+    console.log('[Search] Cleared all search results from global state and refreshed panels');
 }
 
 /**

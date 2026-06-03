@@ -17,6 +17,7 @@ const SearchTypes = {
     restaurants: { icon: '🍜', label: '美食', color: '#f39c12' },
     hotels: { icon: '🏨', label: '酒店', color: '#3498db' },
     shopping: { icon: '🛍️', label: '購物', color: '#9b59b6' },
+    transport: { icon: '🚇', label: '交通資訊', color: '#2ecc71' },
     all: { icon: '🔍', label: '全部', color: '#27ae60' }
 };
 
@@ -44,27 +45,31 @@ const SearchPopup = {
                     </a>
                 </div>
                 <div class="search-type-grid">
-                    <button class="search-type-btn" data-type="attractions" style="--btn-color: ${SearchTypes.attractions.color}">
+                    <button class="search-type-btn" data-type="attractions" style="--btn-color: ${SearchTypes.attractions.color}" aria-label="搜索景點">
                         <span class="search-icon">${SearchTypes.attractions.icon}</span>
                         <span>${SearchTypes.attractions.label}</span>
                     </button>
-                    <button class="search-type-btn" data-type="restaurants" style="--btn-color: ${SearchTypes.restaurants.color}">
+                    <button class="search-type-btn" data-type="restaurants" style="--btn-color: ${SearchTypes.restaurants.color}" aria-label="搜索美食">
                         <span class="search-icon">${SearchTypes.restaurants.icon}</span>
                         <span>${SearchTypes.restaurants.label}</span>
                     </button>
-                    <button class="search-type-btn" data-type="hotels" style="--btn-color: ${SearchTypes.hotels.color}">
+                    <button class="search-type-btn" data-type="hotels" style="--btn-color: ${SearchTypes.hotels.color}" aria-label="搜索酒店">
                         <span class="search-icon">${SearchTypes.hotels.icon}</span>
                         <span>${SearchTypes.hotels.label}</span>
                     </button>
-                    <button class="search-type-btn" data-type="shopping" style="--btn-color: ${SearchTypes.shopping.color}">
+                    <button class="search-type-btn" data-type="shopping" style="--btn-color: ${SearchTypes.shopping.color}" aria-label="搜索購物">
                         <span class="search-icon">${SearchTypes.shopping.icon}</span>
                         <span>${SearchTypes.shopping.label}</span>
                     </button>
+                    <button class="search-type-btn" data-type="transport" style="--btn-color: ${SearchTypes.transport.color}" aria-label="搜索交通資訊">
+                        <span class="search-icon">${SearchTypes.transport.icon}</span>
+                        <span>${SearchTypes.transport.label}</span>
+                    </button>
+                    <button class="search-type-btn search-all-btn" data-type="all" style="--btn-color: ${SearchTypes.all.color}" aria-label="搜索全部類型">
+                        <span class="search-icon">${SearchTypes.all.icon}</span>
+                        <span>${SearchTypes.all.label}</span>
+                    </button>
                 </div>
-                <button class="search-type-btn search-all-btn" data-type="all" style="--btn-color: ${SearchTypes.all.color}">
-                    <span class="search-icon">${SearchTypes.all.icon}</span>
-                    <span>搜索全部類型</span>
-                </button>
             </div>
         `;
 
@@ -93,11 +98,25 @@ const SearchPopup = {
     bindEvents() {
         const buttons = document.querySelectorAll('.search-type-btn');
         buttons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
+                
+                // 防止重複點擊
+                if (btn.classList.contains('is-loading')) return;
+                
                 const type = btn.dataset.type;
-                this.close();
-                SearchExecutor.execute(this.currentLat, this.currentLng, type);
+                
+                // 顯示加載狀態
+                btn.classList.add('is-loading');
+                buttons.forEach(b => b.style.pointerEvents = 'none'); // 禁用所有按鈕
+                
+                try {
+                    // 執行搜索並等待完成
+                    await SearchExecutor.execute(this.currentLat, this.currentLng, type);
+                } finally {
+                    // 搜索完成後關閉彈窗
+                    this.close();
+                }
             });
         });
     },
@@ -144,6 +163,19 @@ const SearchExecutor = {
             this.abortController.abort();
         }
         this.abortController = new AbortController();
+
+        // 處理交通查詢 (調用 app.js 中的現有邏輯)
+        if (queryType === 'transport') {
+            if (typeof searchNearbyTransport === 'function') {
+                try {
+                    await searchNearbyTransport(lat, lng);
+                } catch (error) {
+                    console.error('Transport search error:', error);
+                    SearchUI.displayError('交通查詢出錯');
+                }
+                return;
+            }
+        }
 
         // 在聊天框顯示搜索中狀態
         const typeInfo = SearchTypes[queryType];

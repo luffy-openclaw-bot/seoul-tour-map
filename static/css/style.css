@@ -1874,6 +1874,43 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     border: 1px solid transparent;
+    position: relative;
+}
+
+.mobile-wishlist-btn {
+    position: static !important;
+    margin-right: 4px;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #ddd !important;
+    font-size: 18px !important;
+}
+
+.mobile-wishlist-btn.in-wishlist {
+    color: #e74c3c !important;
+}
+
+.mobile-search-results-header {
+    padding: 10px 4px 4px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 8px;
+}
+
+.mobile-search-results-header .search-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #667eea;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mobile-search-results-header .clear-search-btn {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
 }
 
 .mobile-attraction-card:hover {

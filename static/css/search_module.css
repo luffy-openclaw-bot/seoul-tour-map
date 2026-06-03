@@ -96,6 +96,40 @@
     transform: translateY(0);
 }
 
+/* 按鈕加載狀態 */
+.search-type-btn.is-loading {
+    pointer-events: none;
+    opacity: 0.8;
+    position: relative;
+    color: transparent !important;
+}
+
+.search-type-btn.is-loading::after {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin: -10px 0 0 -10px;
+    border: 3px solid rgba(0,0,0,0.1);
+    border-top-color: var(--btn-color, #667eea);
+    border-radius: 50%;
+    animation: button-spin 0.8s linear infinite;
+}
+
+@keyframes button-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 深色模式下的加載圈顏色 */
+@media (prefers-color-scheme: dark) {
+    .search-type-btn.is-loading::after {
+        border-color: rgba(255,255,255,0.1);
+        border-top-color: var(--btn-color, #667eea);
+    }
+}
+
 .search-icon {
     font-size: 24px;
     line-height: 1;
@@ -106,18 +140,15 @@
     font-weight: 500;
 }
 
-/* 搜索全部按鈕 */
+/* 搜索全部按鈕 - 改為網格中的普通按鈕 */
 .search-all-btn {
-    grid-column: span 2;
-    flex-direction: row !important;
-    gap: 8px !important;
-    padding: 14px !important;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
 }
 
 .search-all-btn:hover {
     background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    color: white;
 }
 
 /* 搜索結果標記 */
