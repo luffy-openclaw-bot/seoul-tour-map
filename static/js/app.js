@@ -29,7 +29,8 @@ const CATEGORY_COLORS = {
     '娛樂': '#e91e63',
     '休閒': '#1abc9c',
     '自然景觀': '#27ae60',
-    '用戶釘選': '#1e3a8a'
+    '用戶釘選': '#1e3a8a',
+    '自訂景點': '#8e44ad'
 };
 
 // ==================== 地圖初始化 ====================
@@ -1556,7 +1557,8 @@ const CATEGORY_EMOJIS = {
     '夜生活文化': '🎶',
     '娛樂': '🎭',
     '休閒': '☕',
-    '自然景觀': '🌿'
+    '自然景觀': '🌿',
+    '自訂景點': '📌'
 };
 
 function renderMobilePanelList() {
@@ -1929,7 +1931,7 @@ async function executeMapAction(action, params) {
                         name: params.name,
                         lat: parseFloat(params.lat),
                         lng: parseFloat(params.lng),
-                        category: params.category || '地標觀景',
+                        category: '自訂景點',
                         description: params.description || ''
                     };
                     // 1. Add to visual list (using existing function)
@@ -2594,7 +2596,7 @@ function persistChatPlace(place) {
             name: place.name,
             lat: place.lat,
             lng: place.lng,
-            category: place.category || '地標觀景',
+            category: '自訂景點',
             description: place.description || '',
             addedAt: Date.now(),
             ownerFingerprint: FingerprintManager.getFingerprint(),
@@ -2778,43 +2780,56 @@ const WishlistManager = {
         }
     },
 
-    /** 從伺服器同步 */
-    async syncFromServer() {
-        try {
-            const response = await fetch('/api/get-locations');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.locations) {
-                    const localItems = this.getAll();
-                    const localIds = new Set(localItems.map(i => i.id));
-                    
-                    let merged = [...localItems];
-                    let addedCount = 0;
-                    
-                    data.locations.forEach(remoteItem => {
-                        // 嚴格數據驗證：確保 remoteItem 有效且包含必要的經緯度
-                        if (!remoteItem.id || !remoteItem.name || 
-                            remoteItem.lat === undefined || remoteItem.lng === undefined ||
-                            isNaN(parseFloat(remoteItem.lat)) || isNaN(parseFloat(remoteItem.lng))) {
-                            console.warn('[Wishlist] Skipping invalid remote item:', remoteItem);
-                            return;
-                        }
+    /** 啟動 SSE 實時同步 */
+    startSyncStream() {
+        if (this.eventSource) {
+            this.eventSource.close();
+        }
 
-                        if (!localIds.has(remoteItem.id)) {
-                            merged.push(remoteItem);
-                            addedCount++;
-                        }
-                    });
-                    
-                    if (addedCount > 0) {
-                        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
-                        this._notifyChange();
-                        console.log(`[Wishlist] Synced ${addedCount} items from server`);
-                    }
+        this.eventSource = new EventSource('/api/stream-locations');
+
+        this.eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.success && data.locations) {
+                    this._mergeRemoteLocations(data.locations);
                 }
+            } catch (e) {
+                console.warn('[Wishlist] SSE parse error:', e);
             }
-        } catch (e) {
-            console.warn('[Wishlist] Sync from server failed:', e);
+        };
+
+        this.eventSource.onerror = (error) => {
+            console.warn('[Wishlist] SSE connection error. Browser will auto-reconnect...', error);
+        };
+    },
+
+    /** 合併遠端數據 */
+    _mergeRemoteLocations(remoteLocations) {
+        const localItems = this.getAll();
+        const localIds = new Set(localItems.map(i => i.id));
+        
+        let merged = [...localItems];
+        let addedCount = 0;
+        
+        remoteLocations.forEach(remoteItem => {
+            // 嚴格數據驗證：確保 remoteItem 有效且包含必要的經緯度
+            if (!remoteItem.id || !remoteItem.name || 
+                remoteItem.lat === undefined || remoteItem.lng === undefined ||
+                isNaN(parseFloat(remoteItem.lat)) || isNaN(parseFloat(remoteItem.lng))) {
+                return;
+            }
+
+            if (!localIds.has(remoteItem.id)) {
+                merged.push(remoteItem);
+                addedCount++;
+            }
+        });
+        
+        if (addedCount > 0) {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
+            this._notifyChange();
+            console.log(`[Wishlist] Synced ${addedCount} items from server via SSE`);
         }
     },
 
@@ -3152,8 +3167,8 @@ async function checkSystemStatus() {
 
 // 點擊狀態指示器展開/收起詳情
 document.addEventListener('DOMContentLoaded', () => {
-    // 啟動時從伺服器同步地點
-    WishlistManager.syncFromServer();
+    // 啟動時建立 SSE 連線以實時同步地點
+    WishlistManager.startSyncStream();
     
     const statusDot = document.getElementById('system-status');
     const statusBar = document.getElementById('system-status-bar');

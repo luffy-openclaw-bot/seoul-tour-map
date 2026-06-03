@@ -85,6 +85,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/api/get-locations':
             self.handle_get_locations()
             return
+        if self.path == '/api/stream-locations':
+            self.handle_stream_locations()
+            return
 
         # 靜態文件
         super().do_GET()
@@ -1110,6 +1113,45 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_json({'success': True, 'locations': shared_data})
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    def handle_stream_locations(self):
+        """SSE endpoint for real-time location updates"""
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Connection', 'keep-alive')
+        self.send_cors_headers()
+        self.end_headers()
+
+        last_mtime = 0
+        try:
+            while True:
+                current_mtime = 0
+                if os.path.exists(SHARED_LOCATIONS_FILE):
+                    current_mtime = os.path.getmtime(SHARED_LOCATIONS_FILE)
+
+                if current_mtime > last_mtime or last_mtime == 0:
+                    with file_lock:
+                        if os.path.exists(SHARED_LOCATIONS_FILE):
+                            try:
+                                with open(SHARED_LOCATIONS_FILE, 'r', encoding='utf-8') as f:
+                                    shared_data = json.load(f)
+                            except json.JSONDecodeError:
+                                shared_data = []
+                        else:
+                            shared_data = []
+                            
+                    payload = json.dumps({'success': True, 'locations': shared_data}, ensure_ascii=False)
+                    self.wfile.write(f"data: {payload}\n\n".encode('utf-8'))
+                    self.wfile.flush()
+                    last_mtime = current_mtime if current_mtime > 0 else 1
+                
+                time.sleep(2)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            # Client disconnected gracefully
+            pass
+        except Exception as e:
+            print(f"DEBUG: handle_stream_locations error: {e}")
 
     def send_json(self, data, status=200):
         """Send JSON response, gracefully handle broken pipes"""
