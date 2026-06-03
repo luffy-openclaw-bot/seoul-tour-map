@@ -6,8 +6,8 @@
     <title>首爾旅遊地圖 | Seoul Tour Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="static/css/style.css?v=21" />
-    <link rel="stylesheet" href="static/css/search_module.css?v=21" />
+    <link rel="stylesheet" href="static/css/style.css?v=34" />
+    <link rel="stylesheet" href="static/css/search_module.css?v=34" />
 </head>
 <body>
     <div id="app">
@@ -22,6 +22,30 @@
             <button id="sidebar-toggle" class="btn-toggle sidebar-toggle-btn" title="顯示/隱藏側邊欄">
                 <i class="fas fa-bars"></i> 景點
             </button>
+            <!-- Burger Menu 按鈕（手機版） -->
+            <button id="burger-menu-btn" class="btn-toggle burger-menu-btn" title="選單">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <!-- Burger Menu 下拉選單 -->
+            <div class="burger-menu-dropdown" id="burger-dropdown">
+                <div class="burger-menu-item toggle-item" id="burger-toggle-subway">
+                    <span><i class="fas fa-subway"></i> 地鐵線</span>
+                    <div class="toggle-switch"><i class="fas fa-toggle-off"></i></div>
+                </div>
+                <div class="burger-menu-item toggle-item" id="burger-toggle-traffic">
+                    <span><i class="fas fa-clock"></i> 交通規劃</span>
+                    <div class="toggle-switch"><i class="fas fa-toggle-off"></i></div>
+                </div>
+                <div class="burger-menu-item" id="burger-toggle-lang">
+                    <span><i class="fas fa-globe"></i> English 地圖</span>
+                </div>
+                <div class="burger-menu-item" id="burger-locate-user">
+                    <span><i class="fas fa-location-arrow"></i> 我的定位</span>
+                </div>
+                <div class="burger-menu-item" id="burger-reset-map">
+                    <span><i class="fas fa-compress-arrows-alt"></i> 重置地圖</span>
+                </div>
+            </div>
             <div class="header-actions" id="desktop-actions">
                 <button id="toggle-subway" class="btn-toggle" title="顯示/隱藏地鐵線">
                     <i class="fas fa-subway"></i> 地鐵線
@@ -135,7 +159,12 @@
             <div class="chat-header" onclick="toggleChat()">
                 <i class="fas fa-robot"></i>
                 <span>AI 旅遊助手</span>
+                <span id="system-status" class="status-indicator status-checking" title="正在檢查系統狀態..."><i class="fas fa-circle"></i></span>
                 <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div id="system-status-bar" class="status-bar hidden">
+                <div id="status-ai" class="status-item"><i class="fas fa-brain"></i> <span>AI：檢查中...</span></div>
+                <div id="status-hermes" class="status-item"><i class="fas fa-search"></i> <span>搜索：檢查中...</span></div>
             </div>
             <div class="chat-body">
                 <div id="chat-messages" class="chat-messages">
@@ -181,7 +210,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="static/js/app.js?v=24"></script>
-    <script src="static/js/search_module.js?v=24"></script>
+    <script src="static/js/app.js?v=34"></script>
+    <script src="static/js/search_module.js?v=34"></script>
 </body>
 </html>

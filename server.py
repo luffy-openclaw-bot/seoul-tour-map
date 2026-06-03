@@ -64,7 +64,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         # API 端點
         if self.path == '/api/health':
-            self.send_json({'status': 'ok'})
+            self.handle_health_check()
             return
 
         # 靜態文件
@@ -785,6 +785,96 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+
+    def handle_health_check(self):
+        """啟動時狀態檢查：檢查 AI backend 同 Hermes Worker 可達性"""
+        import time
+        result = {
+            'status': 'ok',
+            'server': 'running',
+            'timestamp': int(time.time()),
+            'services': {}
+        }
+
+        # 檢查 Ollama Cloud AI API 可達性
+        ai_status = 'unknown'
+        ai_latency_ms = None
+        try:
+            start = time.time()
+            # 發送輕量級 API 測試請求（只檢查連通性，用最短 prompt）
+            test_payload = {
+                "model": MODEL,
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": False,
+                "max_tokens": 1
+            }
+            req = urllib.request.Request(
+                f"{API_BASE}/chat/completions",
+                data=json.dumps(test_payload).encode('utf-8'),
+                headers={
+                    'Content-Type': 'application/json',
+                    **({'Authorization': f'Bearer {API_KEY}'} if API_KEY else {})
+                }
+            )
+            opener = create_urllib_opener()
+            with opener.open(req, timeout=10) as resp:
+                ai_latency_ms = int((time.time() - start) * 1000)
+                ai_status = 'online'
+        except urllib.error.HTTPError as e:
+            # 401/403 = API reachable but auth issue; 429 = rate limited but reachable
+            ai_latency_ms = int((time.time() - start) * 1000)
+            if e.code in (401, 403, 429, 400):
+                ai_status = 'reachable'  # API 可連接但認證/限流問題
+            else:
+                ai_status = 'error'
+        except Exception as e:
+            ai_latency_ms = None
+            ai_status = 'offline'
+
+        result['services']['ai'] = {
+            'status': ai_status,
+            'latency_ms': ai_latency_ms,
+            'model': MODEL
+        }
+
+        # 檢查 Hermes Worker 狀態（通過任務隊列判斷是否有 worker 在監聽）
+        hermes_status = 'disabled'
+        if HERMES_ENABLED:
+            # 檢查是否有 response 文件（表示 worker 存在並在處理）
+            try:
+                if os.path.isdir(HERMES_TASK_DIR):
+                    response_files = [f for f in os.listdir(HERMES_TASK_DIR) if f.startswith('response_')]
+                    pending_files = [f for f in os.listdir(HERMES_TASK_DIR) if f.startswith('request_')]
+                    if len(response_files) > 0:
+                        hermes_status = 'busy'  # 有正在處理的任務
+                    elif len(pending_files) > 5:
+                        hermes_status = 'overloaded'  # 積壓太多任務
+                    else:
+                        hermes_status = 'idle'
+                else:
+                    hermes_status = 'not_configured'
+            except Exception:
+                hermes_status = 'error'
+        
+        result['services']['hermes'] = {
+            'status': hermes_status,
+            'enabled': HERMES_ENABLED
+        }
+
+        # 檢查搜索模組
+        result['services']['search'] = {
+            'status': 'available' if search_location else 'unavailable'
+        }
+
+        # 整體狀態判斷
+        if ai_status in ('online', 'reachable'):
+            result['status'] = 'ok'
+        elif ai_status == 'offline':
+            result['status'] = 'degraded'  # 伺服器在行但 AI 唔通
+        else:
+            result['status'] = 'unknown'
+
+        self.send_json(result)
 
     def log_message(self, format, *args):
         # 靜音日誌

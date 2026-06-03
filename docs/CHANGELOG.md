@@ -1,5 +1,240 @@
 # 首爾旅遊地圖平台 - 改動紀錄
 
+## 📅 2025-06-02 v34 (移除 chatbot 紅色「新內容」徽章)
+
+### 🗑️ 移除：chatbot 紅色「新內容」徽章
+
+**功能描述：**
+移除搜索時 chatbot header 上出現嘅紅色「新內容」徽章（`new-message-badge`），因為佢佔用太多空間。
+
+**改動內容：**
+- `search_module.js`：刪除 `showNewMessageBadge()` 同 `hideNewMessageBadge()` 函數，移除相關調用
+- `search_module.css`：刪除 `.new-message-badge`、`.pulse-animation`、`.ai-chat.collapsed .new-message-badge` 等相關樣式
+- `index.html`：版本號 v33 → v34（cache-busting）
+
+## 📅 2025-06-02 v32 (搜索結果地點名稱可點擊飛到)
+
+### ✅ 新增：搜索結果地點名稱點擊飛到功能
+
+**功能描述：**
+搜索結果中嘅地點名稱（如「明洞 (Myeong-dong) 🗺️」）變成可點擊連結，點擊後地圖會飛到該位置並顯示彈出框，同時添加搜尋標記。
+
+**問題背景：**
+搜索結果嘅 `【{"action":"fly_to",...}】` JSON action tags 只係以純文字形式顯示喺 chatbot 入面，用戶冇辦法互動。即使後端 AI 回覆有類似嘅 action tags，`fetchAIReply()` 有解析邏輯但不適用於搜索模組嘅結果。
+
+**實現內容：**
+
+| 文件 | 改動 |
+|------|------|
+| `static/js/app.js` | `addMessage()` 函數新增 `【...】` action tag 解析邏輯：`fly_to` 轉為可點擊 `<a>` 連結（class `.fly-to-link`），點擊後執行 `map.flyTo()` + `L.popup()` + `addSearchMarker()`；`add_marker` 及其他 action 自動執行並從文字中移除 |
+| `static/js/search_module.js` | `renderPlaceCard()` 重組格式：`fly_to` tag 放喺標題行（配合 📍 emoji），`add_marker` tag 單獨放一行，改善 Markdown 可讀性 |
+| `static/css/search_module.css` | 新增 `.fly-to-link` 樣式：藍色虛線底連結，hover 變藍底白字，active 加深藍色 |
+| `index.html` | 版本號 v31 → v32（cache-busting） |
+
+## 📅 2025-06-02 v31 (系統狀態檢查功能)
+
+### ✅ 新增：啟動時系統狀態檢查
+
+**功能描述：**
+頁面載入時自動檢查後端 AI 服務同搜索服務嘅可達性，喺 Chatbot 頭部顯示狀態指示器。
+
+**問題背景：**
+AI endpoint 偶爾唔可以訪問，用戶要等好耐先收到錯誤。加載時就想提前知道系統狀態。
+
+**實現內容：**
+
+| 文件 | 改動 |
+|------|------|
+| `server.py` | `/api/health` endpoint 由簡單 `{"status":"ok"}` 增強為完整狀態檢查：檢查 AI API 可達性（在線/有限/離線）、Hermes Worker 狀態、搜索模組可用性、延遲時間（ms） |
+| `static/js/app.js` | 新增 `checkSystemStatus()` 函數，頁面啟動時自動呼叫 `/api/health`，根據結果更新 UI 狀態指示器；單擊狀態圓點展開/收起詳情，雙擊重新檢查 |
+| `static/css/style.css` | 新增 `.status-indicator`（狀態圓點）同 `.status-bar`（狀態詳情欄）CSS，含三種狀態顏色（綠=在線、黃=降級、紅=離線）同脈動/旋轉動畫 |
+| `index.html` | Chatbot header 加入狀態圓點 `<span id="system-status">` 同狀態詳情欄 `<div id="system-status-bar">`；版本號 v30 → v31 |
+
+**狀態含義：**
+- 🟢 在線 (online)：AI API 正常連接並回應
+- 🟡 有限 (reachable)：AI API 可連接但有限流/認證問題
+- 🟡 基本模式：Hermes Worker 未啟用，只能用基本搜索
+- 🔴 離線 (offline)：無法連接 AI API 或伺服器
+
+**API 回應格式 (`GET /api/health`)：**
+```json
+{
+  "status": "ok",      // ok | degraded | unknown
+  "server": "running",
+  "timestamp": 1717312345,
+  "services": {
+    "ai": { "status": "online", "latency_ms": 1234, "model": "gemma4:31b-cloud" },
+    "hermes": { "status": "idle", "enabled": true },
+    "search": { "status": "available" }
+  }
+}
+```
+
+---
+
+## 📅 2025-06-02 v30 (手機版側邊欄開關修復)
+
+### 🐛 修復：手機版側邊欄無法開啟
+
+**問題描述：**
+手機版（≤768px）點擊頂部「景點」按鈕無法打開側邊欄，因為：
+
+1. CSS 用咗 `.sidebar.open + .sidebar-overlay` 相鄰兄弟選擇器控制 overlay 顯示，但 HTML 結構入面 `.sidebar-overlay` 同 `.sidebar` 唔係相鄰兄弟（中間隔咗 `.map-area`），導致選擇器永遠唔生效
+2. `DOMContentLoaded` 入面重複綁定咗 sidebar-toggle click 事件（`bindEvents` 同 `initSidebarToggle` 各綁一次）
+3. `closeSidebar()` 沒有處理 overlay 嘅隱藏
+
+**修復內容：**
+
+| 文件 | 改動 |
+|------|------|
+| `static/css/style.css` | 移除 `.sidebar.open + .sidebar-overlay` CSS 相鄰選擇器規則；新增 `.sidebar-overlay.active { display: block }` 由 JS 控制 |
+| `static/js/app.js` | `initSidebarToggle()` 同 `closeSidebar()` 改用 JS 控制 overlay（`classList.toggle('active')`）；移除 `bindEvents()` 入面重複嘅 sidebar-toggle 綁定 |
+| `index.html` | 版本號 v29 → v30 (cache-busting) |
+
+---
+
+## 📅 2025-06-02 (地圖點擊彈窗增強)
+
+### ✅ 新增：Google Maps 按鈕
+
+**功能描述：**
+用戶點擊地圖後，彈窗顯示坐標同搜索選項。新增 Google Maps 按鈕，一鍵打開該坐標嘅 Google Maps 頁面。
+
+**新增功能：**
+- 彈窗 header 新增「Google Maps」按鈕
+- 使用 Google Maps URL scheme：`https://www.google.com/maps?q={lat},{lng}`
+- 新視窗開啟，不影響當前頁面操作
+- 漸變背景樣式（Google 品牌色 #4285F4 → #34A853）
+- hover 效果：上移 + 陰影
+
+**技術實現：**
+
+| 組件 | 改動 |
+|------|------|
+| `search_module.js` | `SearchPopup.show()` 新增 Google Maps URL 生成 |
+| `search_module.css` | 新增 `.google-maps-btn` 按鈕樣式 |
+| `index.html` | 版本號 v28 → v29 |
+
+**修改文件：**
+- `static/js/search_module.js` — 增加按鈕 HTML 同 URL
+- `static/css/search_module.css` — 按鈕樣式
+- `index.html` — cache-busting 版本號
+
+---
+
+## 📅 2025-06-02 (搜索結果增強)
+
+### ✅ 新增：搜索結果跳轉坐標 + 自動加入景點列表
+
+**功能描述：**
+經緯度周邊搜索結果增強，提供更直觀嘅地圖互動體驗。
+
+**新增功能：**
+
+1. **跳轉坐標圖標** 📍
+   - 每個搜索結果地點名稱旁邊顯示 📍 圖標（需要有坐標）
+   - 使用 `fly_to` action 指令，點擊後地圖自動飛到該位置
+   - 顯示彈窗提示地點名稱同坐標
+
+2. **自動添加到景點列表**
+   - 搜索結果自動加入左側景點列表頂部
+   - 新增「搜索結果」分隔區塊顯示
+   - 每個項目帶有「跳轉」按鈕（🎯 圖標）
+   - 提供「清除搜索結果」按鈕一鍵移除
+   - 點擊搜索結果項目可直接跳轉到地圖位置
+
+**技術實現：**
+
+| 組件 | 改動 |
+|------|------|
+| `search_module.js` | `renderPlaceCard()` 新增 `fly_to` action 指令、修復 lat/lng 參數 |
+| `app.js` | 新增 `fly_to` action 處理、新增 `addSearchResultsToList()`、`flyToSearchResult()`、`clearSearchResultsFromList()` |
+| `style.css` | 新增搜索結果列表樣式（`.search-results-header`、`.search-result-item`、`.fly-to-btn`）|
+
+**修改文件：**
+- `static/js/search_module.js` — 渲染跳轉指令
+- `static/js/app.js` — 新增 3 個全局函數 + 1 個 action handler
+- `static/css/style.css` — 新增搜索結果列表樣式
+- `index.html` — 版本號 v27→v28
+
+**Action 指令格式：**
+```json
+// 飛到坐標
+{"action":"fly_to","params":{"lat":37.5796,"lng":126.9770,"title":"景福宮"}}
+
+// 添加標記
+{"action":"add_marker","params":{"lat":37.5796,"lng":126.9770,"title":"景福宮","color":"#e74c3c","pulse":true}}
+```
+
+---
+
+## 📅 2025-06-02 (UX 改進 - Chatbot 搜索指示)
+
+### ✅ 新增：Chatbot Widget 搜索狀態指示
+
+**問題：** 用戶點擊地圖開始搜索坐標時，如果 chatbot widget 喺收起狀態，用戶唔會知道有新內容正在載入，錯過搜索結果。
+
+**解決方案：**
+1. **自動展開 Chatbot** — 搜索開始時自動展開收起嘅 chatbot widget
+2. **新消息徽章** — 喺 chat header 顯示紅色「新內容」徽章，吸引用戶注意
+3. **圖標脈動動畫** — chatbot 圖標以金色↔紅色脈動效果吸引眼球
+4. **結果顯示後自動清除** — 搜索結果顯示或錯誤後自動移除徽章同動畫
+
+**修改文件：**
+- `static/js/search_module.js` — 新增 `showNewMessageBadge()`、`hideNewMessageBadge()` 方法，搜索開始時自動展開 widget
+- `static/css/search_module.css` — 新增徽章樣式、脈動動畫（`.new-message-badge`、`.pulse-animation`）
+
+**效果：**
+- 用戶點擊地圖搜索 → chatbot 自動展開 + header 顯示「🔴 新內容」徽章 + 機器人圖標閃爍
+- 搜索結果出現後 → 徽章自動移除，恢復正常狀態
+- 即使 chatbot 本來收起，用戶都能即時看到有新內容
+
+---
+
+## 📅 2025-06-02 (UI 改進 - Burger Menu)
+
+### ✅ 新增：手機版 Burger Menu 選單
+
+**問題：** 手機版 AppBar 按鈕太多（地鐵線、交通、重置、English、定位），排版擠迫，影響用戶體驗。
+
+**解決方案：**
+- 新增 Burger Menu 按鈕（`☰` 圖標），只喺手機版（<=768px）顯示
+- 桌面版（>=769px）繼續顯示原本嘅按鈕列
+- Burger Menu 選單包含：地鐵線、交通規劃、English 地圖、我的定位、重置地圖
+- 地鐵線同交通規劃有 Toggle 開關狀態同步
+- 點擊外部自動關閉選單
+
+**修改文件：**
+- `index.html` — 新增 Burger Menu HTML 結構（v26）
+- `static/css/style.css` — 新增 Burger Menu 樣式（v26）
+- `static/js/app.js` — 新增 Burger Menu 事件處理（v26）
+
+**效果：**
+- 手機版 AppBar 更簡潔，只顯示「景點」同「☰」兩個按鈕
+- 桌面版不變，繼續顯示所有按鈕
+- Burger Menu 下拉選單有動畫效果（fade + slide）
+
+---
+
+## 📅 2025-06-02 (UI 改進)
+
+### ✅ 改進：移除地圖標記 Modal 彈窗
+
+**問題：** 用戶點擊地圖標記時，會彈出 modal 對話框顯示詳情，同時 popup 氣泡都會顯示。雙重顯示過於繁複。
+
+**解決方案：**
+- 移除 `marker.on('click')` 入面嘅 `showAttractionDetail(attr)` 調用
+- 保留 `bindPopup()` 顯示簡短描述氣泡
+- 用戶想睇詳情時，可撳 popup 氣泡入面嘅「查看詳情」按鈕
+
+**修改文件：**
+- `static/js/app.js` — 移除 marker click handler（第 200-202 行）
+- `index.html` — version bump to v25
+
+**效果：**
+- 點擊地圖標記 → 只顯示 L.popup 氣泡（簡短描述 + 圖片 + 「查看詳情」按鈕）
+- 用戶可主動選擇是否進入 modal 詳情頁
+
 ## 📅 2025-06-02 (Bug Fix)
 
 ### 🔧 修復：經緯度周邊搜索永遠返回空結果

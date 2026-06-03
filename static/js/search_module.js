@@ -33,11 +33,15 @@ const SearchPopup = {
         this.currentLat = lat;
         this.currentLng = lng;
 
+        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
         const content = `
             <div class="search-popup-container">
                 <div class="search-popup-header">
                     <div class="search-coord">📍 ${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}</div>
                     <div class="search-location-name" id="search-location-name">正在識別位置...</div>
+                    <a href="${googleMapsUrl}" target="_blank" class="google-maps-btn" onclick="event.stopPropagation()">
+                        <i class="fas fa-map"></i> Google Maps
+                    </a>
                 </div>
                 <div class="search-type-grid">
                     <button class="search-type-btn" data-type="attractions" style="--btn-color: ${SearchTypes.attractions.color}">
@@ -212,6 +216,12 @@ const SearchUI = {
         const message = `🔍 正在搜索 ${typeInfo.label}...\n\n坐標：${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`;
         addMessage(message, 'user');
 
+        // 自動展開 chatbot widget 以顯示新內容
+        const chatWidget = document.getElementById('ai-chat');
+        if (chatWidget && chatWidget.classList.contains('collapsed')) {
+            chatWidget.classList.remove('collapsed');
+        }
+
         // 顯示加載動畫
         showTyping();
 
@@ -226,6 +236,8 @@ const SearchUI = {
             `;
         }
     },
+
+
 
     /**
      * 顯示搜索結果
@@ -249,6 +261,9 @@ const SearchUI = {
             markdown += `\n---\n`;
             markdown += `📊 **數據來源**：實時網頁搜索 (DuckDuckGo) + AI 分析\n`;
             markdown += `🤖 **模型**：Gemma 31B Cloud\n`;
+            
+            // 自動添加到景點列表
+            addSearchResultsToList(data.places, queryType);
         } else {
             markdown += `\n⚠️ 暫時未能找到該位置周邊的${typeInfo.label}資訊。\n`;
         }
@@ -269,16 +284,28 @@ const SearchUI = {
         const tips = place.tips ? `\n💡 **貼士**：${place.tips}` : '';
         const review = place.latest_review ? `\n💬 **最新評價**：${place.latest_review}` : '';
 
+        // 可點擊座標指令（如果有座標，轉為 fly_to action tag 供 addMessage 解析）
+        const flyToAction = (place.lat && place.lng)
+            ? `【{"action":"fly_to","params":{"lat":${place.lat},"lng":${place.lng},"title":"${this.escapeJson(place.name)}"}}】`
+            : '';
+
+        // 添加標記指令（如果有座標）
+        const addMarkerAction = (place.lat && place.lng)
+            ? `【{"action":"add_marker","params":{"lat":${place.lat},"lng":${place.lng},"title":"${this.escapeJson(place.name)}","color":"#e74c3c","pulse":true}}】`
+            : '';
+
+        // 標題：如果有座標，在標題後方加上 fly_to 連結（會被 addMessage 轉為可點擊）
+        const titleSuffix = (place.lat && place.lng) ? '📍' : '';
+
         return `
-### ${index}. ${place.name}
+### ${index}. ${place.name} ${titleSuffix} ${flyToAction}
 **類別**：${place.category}${rating}
 
 ${place.description}
 
 ${highlightsHtml ? `**亮點**：${highlightsHtml}\n` : ''}${tips}${review}
 
-【{"action":"add_marker","params":{"lat":0,"lng":0,"title":"${this.escapeJson(place.name)}","color":"#e74c3c","pulse":true}}】
-
+${addMarkerAction}
 ---
 `;
     },

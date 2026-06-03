@@ -36,6 +36,33 @@
     color: #333;
 }
 
+/* Google Maps 按鈕 */
+.google-maps-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #4285F4, #34A853);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.google-maps-btn:hover {
+    background: linear-gradient(135deg, #3367D6, #2D8B47);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4);
+}
+
+.google-maps-btn i {
+    font-size: 14px;
+}
+
 /* 搜索類型網格 */
 .search-type-grid {
     display: grid;
@@ -276,4 +303,32 @@
     .search-popup-header {
         border-bottom-color: #444;
     }
+}
+
+/* Chat header 確保 position: relative */
+.chat-header {
+    position: relative;
+}
+
+/* ==================== Fly-to 可點擊連結 ==================== */
+.fly-to-link {
+    color: #3498db;
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 600;
+    border-bottom: 1px dashed #3498db;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.fly-to-link:hover {
+    color: #fff;
+    background: #3498db;
+    border-bottom-color: #3498db;
+    text-decoration: none;
+}
+
+.fly-to-link:active {
+    background: #2980b9;
 }

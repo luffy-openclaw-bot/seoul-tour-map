@@ -197,9 +197,7 @@ function addMarkers() {
             .addTo(map)
             .bindPopup(createPopupContent(attr));
 
-        marker.on('click', () => {
-            showAttractionDetail(attr);
-        });
+        // 點擊 marker 只顯示 popup 氣泡，唔彈出 modal 對話框
 
         markers[attr.id] = marker;
     });
@@ -209,7 +207,6 @@ function createPopupContent(attr) {
     const color = CATEGORY_COLORS[attr.category] || '#666';
     return `
         <div class="popup-card">
-            <img src="${attr.image}" alt="${attr.name}" onerror="this.style.display='none'">
             <div class="popup-info">
                 <div class="popup-name">${attr.name}</div>
                 <div class="popup-ko">${attr.name_ko}</div>
@@ -611,19 +608,7 @@ function bindEvents() {
         });
     });
 
-    // 手機版側邊欄開關
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', () => {
-            const sidebar = document.querySelector('.sidebar');
-            if (sidebar) {
-                sidebar.classList.toggle('open');
-                sidebarToggle.innerHTML = sidebar.classList.contains('open')
-                    ? '<i class="fas fa-times"></i> 關閉'
-                    : '<i class="fas fa-bars"></i> 景點';
-            }
-        });
-    }
+    // 手機版側邊欄開關（由 initSidebarToggle 處理）
 
     // 點擊彈窗外部關閉
     document.getElementById('modal').addEventListener('click', (e) => {
@@ -964,13 +949,88 @@ function addMessage(text, sender) {
     const container = document.getElementById('chat-messages');
     const div = document.createElement('div');
     div.className = `message ${sender}`;
-    // Render Markdown for bot messages using marked.js
-    const displayText = sender === 'bot' ? marked.parse(text) : text;
+
+    let displayText = text;
+    let autoActions = [];
+
+    if (sender === 'bot') {
+        // Step 1: Extract and process 【{"action":"...","params":{...}}】 tags
+        // We need to handle fly_to separately because marked.parse() would mangle HTML links
+        const actionPattern = /【([^】]+)】/g;
+        let match;
+        let cleanText = text;
+        const flyToLinks = []; // Store fly_to link HTML, use placeholders
+
+        while ((match = actionPattern.exec(text)) !== null) {
+            try {
+                const cmd = JSON.parse(match[1]);
+                if (cmd.action === 'fly_to' && cmd.params) {
+                    // Replace fly_to tag with a placeholder, store link HTML separately
+                    const lat = cmd.params.lat;
+                    const lng = cmd.params.lng;
+                    const title = cmd.params.title || '位置';
+                    const placeholderId = `FLYTO_PLACEHOLDER_${flyToLinks.length}`;
+                    const linkHtml = `<a href="javascript:void(0)" class="fly-to-link" data-lat="${lat}" data-lng="${lng}" data-title="${title.replace(/"/g, '&quot;')}" title="點擊飛到 ${title}">${title} 🗺️</a>`;
+                    flyToLinks.push(linkHtml);
+                    cleanText = cleanText.replace(match[0], placeholderId);
+                } else if (cmd.action === 'add_marker' && cmd.params) {
+                    // add_marker actions are auto-executed after render
+                    autoActions.push(cmd);
+                    cleanText = cleanText.replace(match[0], '');
+                } else if (cmd.action) {
+                    // Other action types: auto-execute and remove from text
+                    autoActions.push(cmd);
+                    cleanText = cleanText.replace(match[0], '');
+                }
+            } catch (e) { /* ignore malformed JSON */ }
+        }
+
+        // Step 2: Parse Markdown first
+        displayText = marked.parse(cleanText);
+
+        // Step 3: Replace placeholders with actual HTML links (after Markdown parsing)
+        flyToLinks.forEach((linkHtml, index) => {
+            const placeholder = `FLYTO_PLACEHOLDER_${index}`;
+            // The placeholder may be wrapped in <p> tags by marked, handle both cases
+            displayText = displayText.replace(`<p>${placeholder}</p>`, linkHtml);
+            displayText = displayText.replace(placeholder, linkHtml);
+        });
+    } else {
+        displayText = text;
+    }
+
     div.innerHTML = `
         <div class="avatar"><i class="fas fa-${sender === 'bot' ? 'robot' : 'user'}"></i></div>
         <div class="bubble">${displayText}</div>
     `;
     container.appendChild(div);
+
+    // Bind click handlers for fly_to links after DOM insertion
+    if (sender === 'bot') {
+        div.querySelectorAll('.fly-to-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const lat = parseFloat(link.dataset.lat);
+                const lng = parseFloat(link.dataset.lng);
+                const title = link.dataset.title;
+                map.flyTo([lat, lng], 16, { duration: 1.5 });
+                L.popup()
+                    .setLatLng([lat, lng])
+                    .setContent(`<b>${title}</b><br>📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+                    .openOn(map);
+                // Also add a search marker
+                addSearchMarker(lat, lng, title, '#e74c3c', title, true);
+            });
+        });
+
+        // Auto-execute add_marker and other actions
+        autoActions.forEach(cmd => {
+            const actName = cmd.action || cmd.type;
+            const actParams = cmd.params || {};
+            executeMapAction(actName, actParams);
+        });
+    }
+
     container.scrollTop = container.scrollHeight;
     
     // 儲存到對話歷史
@@ -1106,12 +1166,12 @@ function initChat() {
 function closeSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const toggleBtn = document.getElementById('sidebar-toggle');
+    const overlay = document.querySelector('.sidebar-overlay');
     
-    if (sidebar && toggleBtn) {
-        sidebarOpen = false;
-        sidebar.classList.remove('open');
-        toggleBtn.innerHTML = '<i class="fas fa-bars"></i> 景點';
-    }
+    sidebarOpen = false;
+    if (sidebar) sidebar.classList.remove('open');
+    if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-bars"></i> 景點';
+    if (overlay) overlay.classList.remove('active');
 }
 
 function initSidebarToggle() {
@@ -1125,8 +1185,11 @@ function initSidebarToggle() {
             sidebarOpen = !sidebarOpen;
             sidebar.classList.toggle('open', sidebarOpen);
             toggleBtn.innerHTML = sidebarOpen 
-                ? '<i class="fas fa-times"></i>'
-                : '<i class="fas fa-bars"></i>';
+                ? '<i class="fas fa-times"></i> 關閉'
+                : '<i class="fas fa-bars"></i> 景點';
+            if (overlay) {
+                overlay.classList.toggle('active', sidebarOpen);
+            }
         });
 
         if (overlay) {
@@ -1237,6 +1300,20 @@ async function executeMapAction(action, params) {
                 // 清除所有搜索標記
                 clearSearchMarkers();
                 break;
+            // ===== 飛到指定坐標 =====
+            case 'fly_to':
+                // 飛到指定位置並顯示名稱
+                if (params.lat !== undefined && params.lng !== undefined) {
+                    const title = params.title || '位置';
+                    map.flyTo([params.lat, params.lng], 16, { duration: 1.5 });
+                    // 顯示 tooltip 提示
+                    L.popup()
+                        .setLatLng([params.lat, params.lng])
+                        .setContent(`<b>${title}</b><br>📍 ${params.lat.toFixed(5)}, ${params.lng.toFixed(5)}`)
+                        .openOn(map);
+                    console.log(`[Map Action] Flying to ${params.lat}, ${params.lng} (${title})`);
+                }
+                break;
             default:
                 console.warn('[Map Action] Unknown action:', action);
                 return false;
@@ -1340,6 +1417,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initRoutePanel();
     initChat();
     bindEvents();
+    // 頁面啟動時檢查系統狀態
+    checkSystemStatus();
 });
 
 // ==================== Chatbot 搜索標記與範圍顯示 ====================
@@ -1642,3 +1721,377 @@ async function analyzeUploadedImage() {
     // 清理圖片
     removeUploadedImage();
 }
+
+// ==================== Burger Menu（手機版選單） ====================
+document.addEventListener('DOMContentLoaded', function() {
+    const burgerBtn = document.getElementById('burger-menu-btn');
+    const burgerDropdown = document.getElementById('burger-dropdown');
+    
+    // Burger Menu 開關
+    if (burgerBtn && burgerDropdown) {
+        burgerBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            burgerDropdown.classList.toggle('show');
+        });
+        
+        // 點擊外部關閉
+        document.addEventListener('click', function(e) {
+            if (!burgerDropdown.contains(e.target) && !burgerBtn.contains(e.target)) {
+                burgerDropdown.classList.remove('show');
+            }
+        });
+    }
+    
+    // 更新 Burger Menu Toggle 狀態
+    function updateBurgerToggleState(burgerItem, isActive) {
+        if (!burgerItem) return;
+        const icon = burgerItem.querySelector('.toggle-switch i');
+        if (isActive) {
+            burgerItem.classList.add('active');
+            if (icon) {
+                icon.classList.remove('fa-toggle-off');
+                icon.classList.add('fa-toggle-on');
+            }
+        } else {
+            burgerItem.classList.remove('active');
+            if (icon) {
+                icon.classList.remove('fa-toggle-on');
+                icon.classList.add('fa-toggle-off');
+            }
+        }
+    }
+    
+    // 地鐵線 Toggle（手機版）
+    const burgerSubway = document.getElementById('burger-toggle-subway');
+    if (burgerSubway) {
+        burgerSubway.addEventListener('click', function() {
+            const desktopBtn = document.getElementById('toggle-subway');
+            if (desktopBtn) desktopBtn.click();
+        });
+    }
+    
+    // 交通規劃 Toggle（手機版）
+    const burgerTraffic = document.getElementById('burger-toggle-traffic');
+    if (burgerTraffic) {
+        burgerTraffic.addEventListener('click', function() {
+            const desktopBtn = document.getElementById('toggle-traffic');
+            if (desktopBtn) desktopBtn.click();
+        });
+    }
+    
+    // English 地圖（手機版）
+    const burgerLang = document.getElementById('burger-toggle-lang');
+    if (burgerLang) {
+        burgerLang.addEventListener('click', function() {
+            const desktopBtn = document.getElementById('toggle-map-lang');
+            if (desktopBtn) desktopBtn.click();
+            burgerDropdown.classList.remove('show');
+        });
+    }
+    
+    // 我的定位（手機版）
+    const burgerLocate = document.getElementById('burger-locate-user');
+    if (burgerLocate) {
+        burgerLocate.addEventListener('click', function() {
+            const desktopBtn = document.getElementById('locate-user');
+            if (desktopBtn) desktopBtn.click();
+            burgerDropdown.classList.remove('show');
+        });
+    }
+    
+    // 重置地圖（手機版）
+    const burgerReset = document.getElementById('burger-reset-map');
+    if (burgerReset) {
+        burgerReset.addEventListener('click', function() {
+            const desktopBtn = document.getElementById('reset-map');
+            if (desktopBtn) desktopBtn.click();
+            burgerDropdown.classList.remove('show');
+        });
+    }
+    
+    // 監聽桌面版按鈕狀態，同步更新 Burger Menu
+    const subwayBtn = document.getElementById('toggle-subway');
+    const trafficBtn = document.getElementById('toggle-traffic');
+    
+    if (subwayBtn && burgerSubway) {
+        const subwayObserver = new MutationObserver(function() {
+            updateBurgerToggleState(burgerSubway, subwayBtn.classList.contains('active'));
+        });
+        subwayObserver.observe(subwayBtn, { attributes: true, attributeFilter: ['class'] });
+    }
+    
+    if (trafficBtn && burgerTraffic) {
+        const trafficObserver = new MutationObserver(function() {
+            updateBurgerToggleState(burgerTraffic, trafficBtn.classList.contains('active'));
+        });
+        trafficObserver.observe(trafficBtn, { attributes: true, attributeFilter: ['class'] });
+    }
+});
+
+// ==================== 搜索結果添加到景點列表 ====================
+
+/**
+ * 將搜索結果添加到景點列表
+ * @param {Array} places - 搜索結果地點陣列
+ * @param {string} queryType - 搜索類型 (attractions/restaurants/hotels/shopping/all)
+ */
+function addSearchResultsToList(places, queryType) {
+    if (!places || places.length === 0) return;
+    
+    // 類型到分類的映射
+    const typeToCategory = {
+        'attractions': '地標觀景',
+        'restaurants': '購物美食',
+        'hotels': '購物美食',
+        'shopping': '購物美食',
+        'all': '地標觀景'
+    };
+    
+    // 獲取列表容器
+    const container = document.getElementById('attraction-list');
+    if (!container) return;
+    
+    // 創建搜索結果區分隔（如果不存在）
+    let searchResultsHeader = container.querySelector('.search-results-header');
+    if (!searchResultsHeader) {
+        searchResultsHeader = document.createElement('div');
+        searchResultsHeader.className = 'search-results-header';
+        searchResultsHeader.innerHTML = `
+            <div class="search-results-title">
+                <i class="fas fa-search"></i> 搜索結果
+                <button class="clear-search-results" onclick="clearSearchResultsFromList()" title="清除搜索結果">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.insertBefore(searchResultsHeader, container.firstChild);
+    }
+    
+    // 為每個地點添加列表項
+    places.forEach((place, idx) => {
+        // 跳過沒有坐標的
+        if (!place.lat || !place.lng) return;
+        
+        // 檢查是否已存在（避免重複）
+        const existingItem = container.querySelector(`[data-search-id="search-${place.lat}-${place.lng}"]`);
+        if (existingItem) return;
+        
+        const category = typeToCategory[queryType] || place.category || '搜索結果';
+        const color = CATEGORY_COLORS[category] || '#667eea';
+        
+        // 生成唯一 ID
+        const searchId = `search-${place.lat.toFixed(4)}-${place.lng.toFixed(4)}`;
+        
+        const item = document.createElement('div');
+        item.className = 'attraction-item search-result-item';
+        item.dataset.searchId = searchId;
+        item.dataset.lat = place.lat;
+        item.dataset.lng = place.lng;
+        
+        item.innerHTML = `
+            <div class="thumb-search" style="background: ${color}; color: white; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div class="info">
+                <div class="name">${place.name}</div>
+                <span class="category-tag" style="background:${color}">${category}</span>
+                <div class="desc">${place.description ? place.description.substring(0, 60) + '...' : '搜索結果'}</div>
+            </div>
+            <button class="fly-to-btn" onclick="flyToSearchResult(${place.lat}, ${place.lng}, '${escapeHtml(place.name)}')" title="跳轉到地圖位置">
+                <i class="fas fa-crosshairs"></i>
+            </button>
+        `;
+        
+        // 點擊整個項目也可以跳轉
+        item.addEventListener('click', (e) => {
+            // 如果點擊的是按鈕，不執行
+            if (e.target.closest('.fly-to-btn')) return;
+            flyToSearchResult(place.lat, place.lng, place.name);
+        });
+        
+        // 插入到 header 後面
+        container.insertBefore(item, searchResultsHeader.nextSibling);
+    });
+    
+    console.log(`[Search] Added ${places.length} search results to list`);
+}
+
+/**
+ * 跳轉到搜索結果位置
+ */
+function flyToSearchResult(lat, lng, name) {
+    map.flyTo([lat, lng], 16, { duration: 1.5 });
+    
+    // 顯示 popup
+    L.popup()
+        .setLatLng([lat, lng])
+        .setContent(`<b>${name}</b><br>📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+        .openOn(map);
+}
+
+/**
+ * 清除搜索結果從列表
+ */
+function clearSearchResultsFromList() {
+    const container = document.getElementById('attraction-list');
+    if (!container) return;
+    
+    // 移除所有搜索結果項
+    const searchItems = container.querySelectorAll('.search-result-item');
+    searchItems.forEach(item => item.remove());
+    
+    // 移除搜索結果標題
+    const header = container.querySelector('.search-results-header');
+    if (header) header.remove();
+    
+    // 同時清除地圖標記
+    clearSearchMarkers();
+    
+    console.log('[Search] Cleared all search results from list');
+}
+
+/**
+ * HTML 轉義
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ==================== 系統狀態檢查 ====================
+/**
+ * 頁面啟動時檢查後端 AI 服務等狀態
+ * 喺 chat header 顯示狀態指示器（綠色=正常，黃色=降級，紅色=離線）
+ */
+async function checkSystemStatus() {
+    const statusDot = document.getElementById('system-status');
+    const statusBar = document.getElementById('system-status-bar');
+    const statusAi = document.getElementById('status-ai');
+    const statusHermes = document.getElementById('status-hermes');
+
+    // 設為檢查中狀態
+    statusDot.className = 'status-indicator status-checking';
+    statusDot.title = '正在檢查系統狀態...';
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超時
+
+        const response = await fetch('/api/health', {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 更新 AI 狀態
+        const ai = data.services?.ai || {};
+        const aiEl = statusAi.querySelector('span');
+        const aiStatus = ai.status || 'unknown';
+        const aiLatency = ai.latency_ms;
+
+        if (aiStatus === 'online') {
+            aiEl.textContent = `AI：在線 (${aiLatency}ms)`;
+            statusAi.classList.add('status-online');
+            statusAi.classList.remove('status-offline', 'status-degraded');
+        } else if (aiStatus === 'reachable') {
+            aiEl.textContent = `AI：有限 (${aiLatency}ms)`;
+            statusAi.classList.add('status-degraded');
+            statusAi.classList.remove('status-online', 'status-offline');
+        } else {
+            aiEl.textContent = `AI：離線`;
+            statusAi.classList.add('status-offline');
+            statusAi.classList.remove('status-online', 'status-degraded');
+        }
+        // 顯示 model 資訊
+        if (ai.model) {
+            aiEl.textContent += ` [${ai.model}]`;
+        }
+
+        // 更新 Hermes/搜索 狀態
+        const hermes = data.services?.hermes || {};
+        const search = data.services?.search || {};
+        const hermesEl = statusHermes.querySelector('span');
+
+        const hermesStatus = hermes.status || 'unknown';
+        const hermesEnabled = hermes.enabled;
+
+        if (!hermesEnabled) {
+            hermesEl.textContent = '搜索：基本模式';
+            statusHermes.classList.add('status-degraded');
+            statusHermes.classList.remove('status-online', 'status-offline');
+        } else if (hermesStatus === 'idle') {
+            hermesEl.textContent = '搜索：就緒 ✓';
+            statusHermes.classList.add('status-online');
+            statusHermes.classList.remove('status-offline', 'status-degraded');
+        } else if (hermesStatus === 'busy') {
+            hermesEl.textContent = '搜索：處理中...';
+            statusHermes.classList.add('status-online');
+            statusHermes.classList.remove('status-offline', 'status-degraded');
+        } else if (hermesStatus === 'overloaded') {
+            hermesEl.textContent = '搜索：繁忙';
+            statusHermes.classList.add('status-degraded');
+            statusHermes.classList.remove('status-online', 'status-offline');
+        } else {
+            hermesEl.textContent = '搜索：' + (search.status === 'available' ? '可用' : '不可用');
+            statusHermes.classList.add('status-online');
+            statusHermes.classList.remove('status-offline', 'status-degraded');
+        }
+
+        // 設定整體狀態指示器
+        if (data.status === 'ok') {
+            statusDot.className = 'status-indicator status-online';
+            statusDot.title = '系統正常運行';
+            // 如果所有服務都 OK，5秒後自動隱藏狀態欄
+            setTimeout(() => {
+                statusBar.classList.add('hidden');
+            }, 5000);
+        } else if (data.status === 'degraded') {
+            statusDot.className = 'status-indicator status-degraded';
+            statusDot.title = '部分服務不可用';
+            // 降級狀態保持顯示
+        } else {
+            statusDot.className = 'status-indicator status-offline';
+            statusDot.title = '服務離線';
+        }
+
+        // 顯示狀態欄
+        statusBar.classList.remove('hidden');
+
+    } catch (err) {
+        console.error('[Status Check] Failed:', err);
+        statusDot.className = 'status-indicator status-offline';
+        statusDot.title = '無法連接伺服器';
+
+        const aiEl = statusAi.querySelector('span');
+        const hermesEl = statusHermes.querySelector('span');
+        aiEl.textContent = 'AI：無法連接';
+        hermesEl.textContent = '搜索：無法連接';
+        statusAi.classList.add('status-offline');
+        statusHermes.classList.add('status-offline');
+
+        statusBar.classList.remove('hidden');
+    }
+}
+
+// 點擊狀態指示器展開/收起詳情
+document.addEventListener('DOMContentLoaded', () => {
+    const statusDot = document.getElementById('system-status');
+    const statusBar = document.getElementById('system-status-bar');
+    if (statusDot && statusBar) {
+        statusDot.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止觸發 chat toggle
+            statusBar.classList.toggle('hidden');
+        });
+        // 同時提供重新檢查功能
+        statusDot.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            checkSystemStatus();
+        });
+    }
+});
