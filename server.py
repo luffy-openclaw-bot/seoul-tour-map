@@ -17,6 +17,7 @@ import os
 import sys
 import time
 import glob
+import xml.etree.ElementTree as ET
 
 # 導入搜索模組
 import importlib.util
@@ -37,6 +38,8 @@ PORT = 8082
 API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
 API_KEY = os.getenv('OLLAMA_API_KEY', 'c309d7242319461783142d44f3949473.Cvsj6THEdCx3lfLBGAwYgtWx')
 MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')  # 使用 Gemma 4 31B Cloud model
+DATA_GO_KR_KEY = os.getenv('DATA_GO_KR_KEY', 'YOUR_SERVICE_KEY_HERE')
+ODSAY_API_KEY = os.getenv('ODSAY_API_KEY', 'YOUR_ODSAY_KEY_HERE')
 
 # Hermes Agent 任務隊列設定
 HERMES_ENABLED = os.getenv('HERMES_ENABLED', 'false').lower() == 'true'
@@ -75,6 +78,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        print(f"POST request: {self.path}")
         if self.path == '/api/chat':
             self.handle_chat()
             return
@@ -89,6 +93,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if self.path == '/api/search':
             self.handle_location_search()
+            return
+        if self.path == '/api/transit':
+            self.handle_transit()
             return
         self.send_error(404)
 
@@ -146,7 +153,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
    
 8. locate_user：定位用戶位置（無參數）
 
-9. add_to_list：將提及嘅地點永久加入景點列表
+9. transit_info：獲取當前地圖中心附近嘅實時巴士/地鐵資訊
+   示例：「我想睇附近巴士」→【{"action":"transit_info","params":{"type":"bus"}}】
+
+10. add_to_list：將提及嘅地點永久加入景點列表
    用途：每次提及具體地點（咖啡店、酒店、景點、餐廳等）時，除咗加地圖標記，仲要將佢加入左側景點列表，方便用戶之後搵返
    示例：「機場有 Starbucks」→ 除咗 add_marker，仲要加【{"action":"add_to_list","params":{"name":"Starbucks（仁川機場）","lat":37.4602,"lng":126.4407,"category":"購物美食","description":"機場內連鎖咖啡店"}}】
    參數：name（地點名稱）, lat, lng（坐標）, category（分類，用現有分類名：地標觀景/購物美食/自然公園/文化藝術/夜生活/住宿/交通）, description（簡短描述，可選）, color（顏色，可選）
@@ -157,6 +167,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 - 每次新查詢，先加 clear_search_markers 清除之前標記
 - 只喺需要移動地圖、顯示位置、顯示範圍時先用呢啲指令。唔好每個回覆都加指令。
 - 提及具體地點時（咖啡店、酒店、餐廳、景點等），必須用 add_to_list 將佢加入景點列表，同時用 add_marker 喺地圖標示位置。兩個動作組合使用。
+
+【韓國交通基本知識 (Rookie Tips)】
+- T-money 卡：最方便嘅支付方式，便利店（如 GS25, CU）有售，可用於巴士、地鐵同的士。
+- 轉乘優惠：巴士同地鐵之間 30 分鐘內轉乘免費（夜晚 9 點到朝早 7 點為 1 小時內）。記住每次上落車都要拍卡！
+- 巴士：前門上車拍卡，後門落車拍卡。落車前要撳紅色「STOP」鐘。
+- 地鐵：留意月台方向（通常標示終點站）。入錯閘唔使驚，5 分鐘內同站出閘係免費嘅。
+- Slash Command：你可以叫用家輸入 `/transit` 嚟睇地圖中心附近嘅實時巴士同地鐵資訊。
+- 導航建議：推薦用家下載 Naver Map 或 KakaoMap，因為 Google Maps 喺韓國嘅步行導航唔太準確。
 """
 
             if system_prompt:
@@ -736,7 +754,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return
             
             # 驗證 query_type
-            valid_types = ['attractions', 'restaurants', 'hotels', 'shopping', 'all']
+            valid_types = ['attractions', 'restaurants', 'hotels', 'shopping', 'bus', 'all']
             if query_type not in valid_types:
                 query_type = 'all'
             
@@ -779,6 +797,214 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     'source': 'error'
                 }
             }, status=500)
+
+    def handle_transit(self):
+        """
+        處理公共交通查詢 (ODsay API 代理)
+        POST /api/transit
+        Body: { lat, lng, type: 'bus'|'subway' }
+        """
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            print(f"Transit request body: {body}")
+            data = json.loads(body)
+            
+            lat = data.get('lat')
+            lng = data.get('lng')
+            transit_type = data.get('type', 'bus')
+            
+            print(f"Transit type: {transit_type}, lat: {lat}, lng: {lng}")
+            
+            if not lat or not lng:
+                self.send_json({'success': False, 'error': '缺少經緯度'}, status=400)
+                return
+
+            # 如果沒有 ODsay Key，返回模擬數據
+            if ODSAY_API_KEY == 'YOUR_ODSAY_KEY_HERE':
+                self.send_json({
+                    'success': True,
+                    'is_demo': True,
+                    'data': self._get_demo_transit_data(lat, lng, transit_type)
+                })
+                return
+
+            # 使用 ODsay API 獲取數據
+            result = self._fetch_odsay_data(lat, lng, transit_type)
+            
+            self.send_json({'success': True, 'data': result})
+            
+        except Exception as e:
+            import traceback
+            print(f"Transit handle error: {traceback.format_exc()}")
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    def _get_demo_transit_data(self, lat, lng, transit_type):
+        """當沒有 API Key 時返回模擬數據"""
+        if transit_type == 'bus':
+            return {
+                'stations': [
+                    {
+                        'name': '明洞站 巴士站 (Myeong-dong Stn)',
+                        'id': '02150',
+                        'distance': 120,
+                        'arrivals': [
+                            {'line': '100', 'time': '2 分鐘', 'status': '即將抵達'},
+                            {'line': '143', 'time': '7 分鐘', 'status': '正常'}
+                        ]
+                    }
+                ],
+                'tips': self._get_transit_tips('bus')
+            }
+        else:
+            return {
+                'stations': [
+                    {
+                        'name': '明洞站 (Myeong-dong)',
+                        'line': '4 號線',
+                        'distance': 180,
+                        'arrivals': [
+                            {'line': '4 號線', 'dest': '烏耳島 (Oido)', 'time': '3 分鐘', 'status': '即將抵達'},
+                            {'line': '4 號線', 'dest': '榛接 (Jinjeop)', 'time': '6 分鐘', 'status': '正常'}
+                        ]
+                    }
+                ],
+                'tips': self._get_transit_tips('subway')
+            }
+
+    def _fetch_odsay_data(self, lat, lng, transit_type):
+        """從 ODsay 獲取大眾運輸數據"""
+        try:
+            # 1. 搜尋半徑內的所有車站
+            # stationClass: 1:巴士, 2:地鐵, 0:全部
+            station_class = "1" if transit_type == 'bus' else "2"
+            search_url = f"https://api.odsay.com/v1/api/pointBusStation?apiKey={ODSAY_API_KEY}&x={lng}&y={lat}&radius=400&stationClass={station_class}"
+            
+            req = urllib.request.Request(search_url)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                
+                if 'result' not in res_data or 'station' not in res_data['result']:
+                    return {'stations': [], 'tips': self._get_transit_tips(transit_type)}
+                
+                stations = []
+                # 只取最近 3 個站
+                raw_stations = res_data['result']['station'][:3]
+                
+                for s in raw_stations:
+                    station_id = s.get('stationID')
+                    station_name = s.get('stationName')
+                    dist = s.get('distance')
+                    
+                    arrivals = []
+                    if transit_type == 'bus':
+                        arrivals = self._fetch_odsay_bus_arrivals(station_id)
+                    else:
+                        arrivals = self._fetch_odsay_subway_arrivals(station_id)
+                        
+                    stations.append({
+                        'name': station_name,
+                        'id': station_id,
+                        'distance': dist,
+                        'arrivals': arrivals
+                    })
+                
+                return {
+                    'stations': stations,
+                    'tips': self._get_transit_tips(transit_type)
+                }
+        except Exception as e:
+            print(f"ODsay API Error: {e}")
+            return {'error': f'無法獲取交通資訊: {str(e)}', 'stations': []}
+
+    def _fetch_odsay_bus_arrivals(self, station_id):
+        """獲取巴士實時到站資訊"""
+        try:
+            url = f"https://api.odsay.com/v1/api/realtimeStation?apiKey={ODSAY_API_KEY}&stationID={station_id}"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                
+                arrivals = []
+                if 'result' in res_data and 'realtime' in res_data['result']:
+                    for arr in res_data['result']['realtime']:
+                        line_no = arr.get('routeNm')
+                        # 處理到站時間 (ODsay 返回秒數或訊息)
+                        arrival_msg = arr.get('arrivalMsg', '未知')
+                        
+                        # 簡化時間顯示
+                        time_display = arrival_msg
+                        status = '正常'
+                        if '分鐘' in arrival_msg:
+                            time_display = arrival_msg
+                        elif '秒' in arrival_msg:
+                            try:
+                                # 嘗試轉換為分鐘
+                                seconds = int(arrival_msg.replace('秒', ''))
+                                time_display = f"{max(1, seconds // 60)} 分鐘"
+                            except:
+                                pass
+                        elif '약' in arrival_msg: # "約..."
+                            time_display = arrival_msg.replace('약', '約').replace('분', ' 分鐘')
+                        
+                        if '곧 도착' in arrival_msg or '即將' in arrival_msg:
+                            status = '即將抵達'
+                            time_display = '即將抵達'
+
+                        arrivals.append({
+                            'line': line_no,
+                            'time': time_display,
+                            'status': status
+                        })
+                return arrivals[:5]
+        except:
+            return []
+
+    def _fetch_odsay_subway_arrivals(self, station_id):
+        """獲取地鐵實時到站資訊 (ODsay subwayStationInfo)"""
+        try:
+            # 注意：ODsay 的 realtimeStation 對地鐵支援可能較限於特定城市，
+            # 這裡先用 subwayStationInfo 獲取基本資訊，如果需要實時則需要另外處理
+            url = f"https://api.odsay.com/v1/api/subwayStationInfo?apiKey={ODSAY_API_KEY}&stationID={station_id}"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                
+                arrivals = []
+                if 'result' in res_data:
+                    # ODsay subwayStationInfo 返回的是靜態資訊，實時資訊在 realtimeStation
+                    # 嘗試再次呼叫 realtimeStation 獲取地鐵實時數據
+                    rt_url = f"https://api.odsay.com/v1/api/realtimeStation?apiKey={ODSAY_API_KEY}&stationID={station_id}"
+                    with urllib.request.urlopen(urllib.request.Request(rt_url), timeout=5) as rt_resp:
+                        rt_data = json.loads(rt_resp.read().decode('utf-8'))
+                        if 'result' in rt_data and 'realtime' in rt_data['result']:
+                            for arr in rt_data['result']['realtime']:
+                                dest = arr.get('endpointName', '未知')
+                                msg = arr.get('arrivalMsg', '正常')
+                                arrivals.append({
+                                    'line': res_data['result'].get('laneName', '地鐵'),
+                                    'dest': dest,
+                                    'time': msg,
+                                    'status': '即將抵達' if '곧 도착' in msg else '正常'
+                                })
+                return arrivals[:4]
+        except:
+            return []
+
+    def _get_transit_tips(self, transit_type):
+        """獲取 Rookie-friendly 交通貼士"""
+        if transit_type == 'bus':
+            return [
+                '💡 使用 T-money 卡轉乘可享優惠。',
+                '🚌 韓國巴士前門上車、後門落車，記住落車要拍卡！',
+                '📱 巴士站牌通常有 QR Code 可以掃描查看更詳細嘅實時位置。'
+            ]
+        else:
+            return [
+                '🚇 韓國地鐵入閘後，5 分鐘內同站出閘係免費嘅（入錯邊可以用呢招）。',
+                '🚉 轉乘站步行距離可能好長，請跟住地面或天花板嘅顏色線行。',
+                '💳 唔夠錢可以喺站內「自動充值機」加錢落 T-money 卡。'
+            ]
 
     def send_json(self, data, status=200):
         """Send JSON response, gracefully handle broken pipes"""
@@ -888,8 +1114,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_json(result)
 
     def log_message(self, format, *args):
-        # 靜音日誌
-        pass
+        # 暫時啟用日誌以排查問題
+        print(format % args)
 
 if __name__ == '__main__':
     os.chdir(os.path.join(os.path.dirname(__file__), '..', 'seoul-tour-map'))

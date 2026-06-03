@@ -3,8 +3,8 @@
 /* 搜索彈窗容器 */
 .location-search-popup .leaflet-popup-content-wrapper {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    border-radius: 16px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     padding: 0;
 }
 
@@ -14,49 +14,51 @@
 }
 
 .search-popup-container {
-    padding: 16px;
+    padding: 20px;
 }
 
 .search-popup-header {
-    margin-bottom: 12px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+    padding-bottom: 16px;
 }
 
 .search-coord {
-    font-size: 14px;
-    color: #666;
-    font-family: monospace;
+    font-size: 13px;
+    color: #9ca3af;
+    font-family: 'JetBrains Mono', monospace;
     margin-bottom: 4px;
 }
 
 .search-location-name {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.4;
 }
 
 /* Google Maps 按鈕 */
 .google-maps-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-    padding: 6px 12px;
-    background: linear-gradient(135deg, #4285F4, #34A853);
+    gap: 8px;
+    margin-top: 12px;
+    padding: 8px 14px;
+    background: #4285F4;
     color: white;
     text-decoration: none;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 500;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .google-maps-btn:hover {
-    background: linear-gradient(135deg, #3367D6, #2D8B47);
+    background: #3367D6;
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .google-maps-btn i {
@@ -67,8 +69,8 @@
 .search-type-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 12px;
+    margin-bottom: 0;
 }
 
 .search-type-btn {
@@ -76,20 +78,21 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 12px 8px;
-    border: 2px solid transparent;
-    border-radius: 10px;
-    background: #f8f9fa;
+    padding: 16px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
     cursor: pointer;
     transition: all 0.2s ease;
-    gap: 4px;
+    gap: 8px;
 }
 
 .search-type-btn:hover {
-    background: var(--btn-color, #667eea);
-    color: white;
+    background: #f9fafb;
+    border-color: var(--btn-color, #4f46e5);
+    color: var(--btn-color, #4f46e5);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .search-type-btn:active {
@@ -113,7 +116,7 @@
     left: 50%;
     margin: -10px 0 0 -10px;
     border: 3px solid rgba(0,0,0,0.1);
-    border-top-color: var(--btn-color, #667eea);
+    border-top-color: var(--btn-color, #4f46e5);
     border-radius: 50%;
     animation: button-spin 0.8s linear infinite;
 }
@@ -126,7 +129,7 @@
 @media (prefers-color-scheme: dark) {
     .search-type-btn.is-loading::after {
         border-color: rgba(255,255,255,0.1);
-        border-top-color: var(--btn-color, #667eea);
+        border-top-color: var(--btn-color, #4f46e5);
     }
 }
 
@@ -142,13 +145,19 @@
 
 /* 搜索全部按鈕 - 改為網格中的普通按鈕 */
 .search-all-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    grid-column: span 2;
+    flex-direction: row !important;
+    gap: 8px !important;
+    padding: 14px !important;
+    background: #4f46e5;
     color: white;
+    border-color: #4f46e5;
 }
 
 .search-all-btn:hover {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    background: #4338ca;
     color: white;
+    border-color: #4338ca;
 }
 
 /* 搜索結果標記 */
@@ -182,36 +191,52 @@
 
 /* 地點彈窗樣式 */
 .place-popup {
-    min-width: 200px;
+    padding: 16px;
+    min-width: 220px;
 }
 
 .place-popup h4 {
-    margin: 0 0 8px 0;
-    font-size: 16px;
-    color: #333;
+    margin: 0 0 6px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
 }
 
 .place-category {
     display: inline-block;
-    padding: 2px 8px;
-    background: #f0f0f0;
-    border-radius: 12px;
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 8px;
+    padding: 2px 10px;
+    background: #f3f4f6;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 12px;
+    text-transform: uppercase;
 }
 
 .place-popup p {
-    margin: 0;
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.6;
+}
+
+.place-rating, .place-price {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 13px;
-    color: #666;
-    line-height: 1.5;
+    font-weight: 600;
+    margin-top: 4px;
+    margin-right: 12px;
 }
 
 .place-rating {
-    margin-top: 8px;
-    font-size: 14px;
-    color: #f39c12;
+    color: #f59e0b;
+}
+
+.place-price {
+    color: #10b981;
 }
 
 /* 搜索加載動畫 */
@@ -369,11 +394,5 @@
     font-size: 13px;
     color: #e67e22;
     font-weight: 500;
-    margin-top: 3px;
-}
-
-.place-popup .place-rating {
-    font-size: 13px;
-    color: #f39c12;
     margin-top: 3px;
 }

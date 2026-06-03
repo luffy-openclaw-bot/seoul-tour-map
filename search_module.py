@@ -76,6 +76,7 @@ class LocationSearcher:
         "restaurants": "{location} restaurants food dining recommendation reviews 2025",
         "hotels": "{location} hotels accommodation booking reviews 2025",
         "shopping": "{location} shopping malls markets stores 2025",
+        "bus": "{location} bus stops routes information public transportation",
         "all": "{location} travel guide attractions restaurants hotels things to do"
     }
     
@@ -84,7 +85,8 @@ class LocationSearcher:
         "attractions": ["景點", "attraction", "sight", "temple", "palace", "museum", "park", "tower"],
         "restaurants": ["餐廳", "restaurant", "food", "dining", "cafe", "food", "bar"],
         "hotels": ["酒店", "hotel", "accommodation", "hostel", "guesthouse"],
-        "shopping": ["購物", "shopping", "mall", "market", "store", "shop"]
+        "shopping": ["購物", "shopping", "mall", "market", "store", "shop"],
+        "bus": ["巴士", "bus", "station", "stop", "route", "transport"]
     }
     
     def __init__(self):
@@ -362,6 +364,7 @@ class LocationSearcher:
             "restaurants": "餐廳、美食推薦、咖啡店、酒吧",
             "hotels": "酒店、旅館、民宿、住宿選擇",
             "shopping": "商場、購物街、市場、特色商店",
+            "bus": "巴士站、巴士路線、交通樞紐",
             "all": "旅遊景點、餐廳、酒店、購物區"
         }
         
@@ -395,7 +398,7 @@ class LocationSearcher:
 
 注意：
 |- 須包含 lat、lng 坐標，方便地圖標記
-|- price 欄位必填：景點填門票或免費，餐廳填人均消費（₩），酒店填每晚房價（₩），購物填消費等級（$/$$/$$$）
+|- price 欄位必填：景點填門票或免費，餐廳填人均消費（₩），酒店填每晚房價（₩），購物填消費等級（$/$$/$$$），巴士填基本車資（如 ₩1200）
 |- 用粵語（廣東話書面）撰寫所有文字
 |- 如果實在不熟悉該位置，可以建議用戶查詢更具體的地區名稱
 """

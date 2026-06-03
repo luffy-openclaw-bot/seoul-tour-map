@@ -17,7 +17,8 @@ const SearchTypes = {
     restaurants: { icon: '🍜', label: '美食', color: '#f39c12' },
     hotels: { icon: '🏨', label: '酒店', color: '#3498db' },
     shopping: { icon: '🛍️', label: '購物', color: '#9b59b6' },
-    transport: { icon: '🚇', label: '交通資訊', color: '#2ecc71' },
+    transport: { icon: '🚇', label: '地鐵', color: '#3498db' },
+    bus: { icon: '🚌', label: '巴士', color: '#2ecc71' },
     all: { icon: '🔍', label: '全部', color: '#27ae60' }
 };
 
@@ -61,9 +62,13 @@ const SearchPopup = {
                         <span class="search-icon">${SearchTypes.shopping.icon}</span>
                         <span>${SearchTypes.shopping.label}</span>
                     </button>
-                    <button class="search-type-btn" data-type="transport" style="--btn-color: ${SearchTypes.transport.color}" aria-label="搜索交通資訊">
+                    <button class="search-type-btn" data-type="transport" style="--btn-color: ${SearchTypes.transport.color}" aria-label="搜索地鐵">
                         <span class="search-icon">${SearchTypes.transport.icon}</span>
                         <span>${SearchTypes.transport.label}</span>
+                    </button>
+                    <button class="search-type-btn" data-type="bus" style="--btn-color: ${SearchTypes.bus.color}" aria-label="搜索巴士">
+                        <span class="search-icon">${SearchTypes.bus.icon}</span>
+                        <span>${SearchTypes.bus.label}</span>
                     </button>
                     <button class="search-type-btn search-all-btn" data-type="all" style="--btn-color: ${SearchTypes.all.color}" aria-label="搜索全部類型">
                         <span class="search-icon">${SearchTypes.all.icon}</span>

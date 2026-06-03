@@ -129,12 +129,12 @@ async function searchNearbyTransport(lat, lng) {
     addMessage(`查詢坐標 ${lat}, ${lng} 附近嘅交通資訊`, 'user');
     showTyping();
 
-    // Find nearby subway stations (within ~1km)
+    // Find nearby subway stations (within ~2km)
     const nearbyStations = [];
     subwayData.lines.forEach(line => {
         line.stations.forEach(station => {
             const dist = map.distance([lat, lng], [station.lat, station.lng]);
-            if (dist < 1000) {
+            if (dist < 2000) {
                 nearbyStations.push({
                     name: station.name,
                     line: line.name,
@@ -173,7 +173,8 @@ async function searchNearbyTransport(lat, lng) {
         });
         reply += '\n';
     } else {
-        reply += '🚇 1公里範圍內未有地鐵站\n\n';
+        reply += '🚇 2公里範圍內未有地鐵站記錄\n';
+        reply += '💡 提示：你可以試下點擊「🚌 巴士」按鈕嚟獲取更全面嘅實時路面交通資訊。\n\n';
     }
 
     if (nearbyAttractions.length > 0) {
@@ -346,11 +347,12 @@ function createPopupContent(attr) {
     const color = CATEGORY_COLORS[attr.category] || '#666';
     return `
         <div class="popup-card">
+            ${attr.image ? `<img src="${attr.image}" alt="${attr.name}" onerror="this.src='https://placehold.co/300x140?text=${encodeURIComponent(attr.name)}'">` : ''}
             <div class="popup-info">
                 <div class="popup-name">${attr.name}</div>
                 <div class="popup-ko">${attr.name_ko}</div>
                 <span class="popup-cat" style="background:${color}">${attr.category}</span>
-                <div class="popup-desc">${attr.description.substring(0, 60)}...</div>
+                <div class="popup-desc">${attr.description.substring(0, 80)}...</div>
                 <button class="popup-btn" onclick="showAttractionDetailById('${attr.id}')">
                     查看詳情
                 </button>
@@ -579,23 +581,38 @@ document.getElementById('toggle-subway').addEventListener('click', function() {
 
     if (subwayVisible) {
         subwayData.lines.forEach(line => {
-            const latlngs = line.stations.map(s => [s.lat, s.lng]);
-            L.polyline(latlngs, {
-                color: line.color,
-                weight: 4,
-                opacity: 0.7
-            }).addTo(subwayLayerGroup);
+            // 繪製路徑
+            if (line.paths && line.paths.length > 0) {
+                line.paths.forEach(path => {
+                    L.polyline(path, {
+                        color: line.color,
+                        weight: 4,
+                        opacity: 0.7
+                    }).addTo(subwayLayerGroup);
+                });
+            } else if (line.stations && line.stations.length > 0) {
+                // 回退到舊格式
+                const latlngs = line.stations.map(s => [s.lat, s.lng]);
+                L.polyline(latlngs, {
+                    color: line.color,
+                    weight: 4,
+                    opacity: 0.7
+                }).addTo(subwayLayerGroup);
+            }
 
-            line.stations.forEach(station => {
-                L.circleMarker([station.lat, station.lng], {
-                    radius: 5,
-                    fillColor: line.color,
-                    color: 'white',
-                    weight: 2,
-                    fillOpacity: 1
-                }).addTo(subwayLayerGroup)
-                .bindPopup(`<b>${station.name}站</b><br>${line.name}`);
-            });
+            // 繪製車站標記
+            if (line.stations) {
+                line.stations.forEach(station => {
+                    L.circleMarker([station.lat, station.lng], {
+                        radius: 4, // 稍微縮小標記
+                        fillColor: line.color,
+                        color: 'white',
+                        weight: 1,
+                        fillOpacity: 1
+                    }).addTo(subwayLayerGroup)
+                    .bindPopup(`<b>${station.name}站</b><br>${station.name_ko}<br>${line.name}`);
+                });
+            }
         });
     }
 });
@@ -996,6 +1013,15 @@ async function sendMessage() {
     addMessage(text, 'user');
     input.value = '';
 
+    // 檢查 Slash Commands
+    if (text.startsWith('/')) {
+        const command = text.split(' ')[0].toLowerCase();
+        if (command === '/transit') {
+            handleTransitCommand();
+            return;
+        }
+    }
+
     showTyping();
 
     if (useBackendAI) {
@@ -1015,6 +1041,92 @@ async function sendMessage() {
             const reply = generateAIReply(text);
             addMessage(reply, 'bot');
         }, 600);
+    }
+}
+
+/**
+ * 處理 /transit 指令
+ */
+async function handleTransitCommand() {
+    showTyping();
+    
+    // 獲取地圖中心坐標作為搜索點
+    const center = map.getCenter();
+    const lat = center.lat;
+    const lng = center.lng;
+
+    try {
+        // 同時獲取巴士同地鐵資訊
+        const [busRes, subwayRes] = await Promise.all([
+            fetch('/api/transit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat, lng, type: 'bus' })
+            }),
+            fetch('/api/transit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat, lng, type: 'subway' })
+            })
+        ]);
+
+        const busData = await busRes.json();
+        const subwayData = await subwayRes.json();
+        
+        hideTyping();
+
+        let combinedHtml = `### 🗺️ **附近交通概覽**\n\n`;
+        
+        if (busData.data.is_demo || subwayData.data.is_demo) {
+            combinedHtml += `*⚠️ 目前正使用模擬數據展示*\n\n`;
+        }
+
+        // 渲染地鐵 (優先顯示)
+        if (subwayData.success && subwayData.data.stations && subwayData.data.stations.length > 0) {
+            combinedHtml += `#### 🚇 **地鐵 (Subway)**\n`;
+            subwayData.data.stations.forEach(station => {
+                combinedHtml += `**${station.name}** (${station.distance}m)\n`;
+                if (station.arrivals && station.arrivals.length > 0) {
+                    station.arrivals.forEach(arr => {
+                        combinedHtml += `- ${arr.line} [${arr.dest}]：**${arr.time}**\n`;
+                    });
+                } else {
+                    combinedHtml += `- *暫無實時資訊*\n`;
+                }
+                combinedHtml += `\n`;
+            });
+        }
+
+        // 渲染巴士
+        if (busData.success && busData.data.stations && busData.data.stations.length > 0) {
+            combinedHtml += `#### 🚌 **巴士 (Bus)**\n`;
+            busData.data.stations.forEach(station => {
+                combinedHtml += `**${station.name}** (${station.distance}m)\n`;
+                station.arrivals.forEach(arr => {
+                    const statusEmoji = arr.status === '即將抵達' ? '🔴' : '🟢';
+                    combinedHtml += `- ${statusEmoji} **${arr.line}**：${arr.time}\n`;
+                });
+                combinedHtml += `\n`;
+            });
+        }
+
+        if (!combinedHtml.includes('####')) {
+            combinedHtml += `附近 400 米內未發現巴士站或地鐵站。請試下移動地圖中心到主要道路再試。\n\n`;
+        }
+
+        // 渲染貼士 (取地鐵貼士)
+        const tips = (subwayData.data.tips || busData.data.tips || []);
+        if (tips.length > 0) {
+            combinedHtml += `---\n### 💡 **新手乘車貼士 (Rookie Tips)**\n\n`;
+            tips.forEach(tip => combinedHtml += `- ${tip}\n`);
+        }
+
+        addMessage(combinedHtml, 'bot');
+
+    } catch (e) {
+        hideTyping();
+        console.error('Transit error:', e);
+        addMessage('❌ 系統錯誤，暫時無法獲取實時交通資訊。', 'bot');
     }
 }
 
@@ -1714,6 +1826,9 @@ async function executeMapAction(action, params) {
                     console.log(`[Map Action] Added to list: ${params.name}`);
                 }
                 break;
+            case 'transit_info':
+                handleTransitCommand();
+                break;
             default:
                 console.warn('[Map Action] Unknown action:', action);
                 return false;
@@ -1771,7 +1886,16 @@ function locateUser() {
 
             window.userMarker = L.marker([latitude, longitude], { icon: userIcon })
                 .addTo(map)
-                .bindPopup(`<b>您的位置</b><br>緯度: ${latitude.toFixed(6)}<br>經度: ${longitude.toFixed(6)}<br>精確度: ±${accuracy}米`)
+                .bindPopup(`
+                    <div class="user-location-popup">
+                        <div class="user-location-title">📍 您的位置</div>
+                        <div class="user-location-info">
+                            <div>緯度: ${latitude.toFixed(6)}</div>
+                            <div>經度: ${longitude.toFixed(6)}</div>
+                            <div class="user-location-accuracy">精確度: ±${accuracy}米</div>
+                        </div>
+                    </div>
+                `)
                 .openPopup();
 
             // 移動地圖到用戶位置
