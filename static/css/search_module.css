@@ -239,21 +239,26 @@
     color: #10b981;
 }
 
-/* 搜索加載動畫 */
+/* 搜尋加載動畫 */
 .search-loading {
     display: flex;
     align-items: center;
     gap: 8px;
     color: #667eea;
     font-weight: 500;
+    white-space: nowrap; /* 確保在氣泡中不換行 */
 }
 
 .search-loading i {
     animation: searchPulse 1s ease-in-out infinite;
 }
 
-.loading-dots {
-    animation: dots 1.5s steps(5, end) infinite;
+.loading-dots::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    text-align: left;
+    animation: dots 1.5s steps(4, end) infinite;
 }
 
 @keyframes searchPulse {
@@ -262,10 +267,10 @@
 }
 
 @keyframes dots {
-    0%, 20% { content: ''; }
-    40% { content: '.'; }
-    60% { content: '..'; }
-    80%, 100% { content: '...'; }
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75%, 100% { content: '...'; }
 }
 
 /* 搜索結果卡片（在聊天框中） */

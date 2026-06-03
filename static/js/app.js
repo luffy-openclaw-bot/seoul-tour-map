@@ -1316,7 +1316,7 @@ function showTyping() {
         <div class="avatar"><i class="fas fa-robot"></i></div>
         <div class="bubble">
             <div class="typing-indicator">
-                <span></span><span></span><span></span>
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
             </div>
         </div>
     `;

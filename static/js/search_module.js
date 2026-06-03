@@ -268,7 +268,7 @@ const SearchUI = {
             typingIndicator.innerHTML = `
                 <span class="search-loading">
                     <i class="fas fa-search"></i> 實時搜索中
-                    <span class="loading-dots">...</span>
+                    <span class="loading-dots"></span>
                 </span>
             `;
         }
