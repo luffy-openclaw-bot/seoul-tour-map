@@ -360,20 +360,23 @@ body {
 
 /* ==================== Chatbot 搜索標記樣式 ==================== */
 
-/* 搜索標記 */
+/* 搜索標記 — pin shape with tip at bottom-center
+   iconAnchor=[20,44] means the map point aligns with pixel (20,44) in the div.
+   The div is 40×44, giving enough vertical room for the pin shape + shadow.
+   The pin tip sits at the very bottom (y=44 area) so it lands right on the map coordinate.
+*/
 .search-marker {
     position: relative;
     width: 40px;
-    height: 40px;
+    height: 44px;   /* enough height so pin tip is at the bottom */
 }
 
 .search-marker .marker-inner {
     position: absolute;
-    bottom: 0;
+    bottom: 2px;     /* pin tip sits ~2px from bottom */
     left: 50%;
-    transform: translateX(-50%);
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     background: var(--marker-color, #e74c3c);
     border-radius: 50% 50% 50% 0;
     transform-origin: center bottom;
@@ -388,16 +391,16 @@ body {
 .search-marker .marker-inner i {
     transform: rotate(45deg);
     color: white;
-    font-size: 14px;
+    font-size: 13px;
 }
 
-/* 脈動效果 */
+/* 脈動效果 — radiates from pin tip (bottom-center) instead of div center */
 .search-marker-pulse::before {
     content: '';
     position: absolute;
-    top: 50%;
+    bottom: 0;             /* aligned with pin tip = map coordinate */
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, 50%);  /* centre the circle on the tip point */
     width: 20px;
     height: 20px;
     background: var(--marker-color, #e74c3c);
@@ -1573,5 +1576,224 @@ body {
 @media (max-width: 768px) {
     .fly-to-btn {
         opacity: 1;
+    }
+}
+
+/* ==================== 手機版底部景點列表面板 (Bottom Sheet) ==================== */
+.mobile-location-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    z-index: 1500;
+    transform: translateY(calc(100% - 48px)); /* 預設只露出 drag handle */
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 70vh;
+    flex-direction: column;
+    touch-action: none;
+    display: none; /* 桌面版隱藏 */
+}
+
+.mobile-location-panel.expanded {
+    transform: translateY(0);
+}
+
+.mobile-location-panel.hidden-panel {
+    transform: translateY(100%);
+}
+
+/* Drag Handle */
+.mobile-panel-drag-handle {
+    padding: 8px 16px 6px;
+    cursor: grab;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.mobile-panel-drag-handle:active {
+    cursor: grabbing;
+}
+
+.drag-indicator {
+    width: 40px;
+    height: 4px;
+    background: #ccc;
+    border-radius: 2px;
+    margin: 0 auto 8px;
+}
+
+.mobile-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mobile-panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+}
+
+.mobile-panel-count {
+    font-size: 12px;
+    color: #667eea;
+    background: #f0f4ff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+/* 分類 Tabs */
+.mobile-panel-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 0 16px 8px;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+}
+
+.mobile-panel-tabs::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.mobile-tab {
+    white-space: nowrap;
+    padding: 6px 12px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #666;
+    flex-shrink: 0;
+}
+
+.mobile-tab:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.mobile-tab.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: transparent;
+}
+
+/* 景點列表 */
+.mobile-panel-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 手機版景點卡片 */
+.mobile-attraction-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #f8f9fc;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.mobile-attraction-card:hover {
+    background: #eef0f7;
+    border-color: #667eea;
+}
+
+.mobile-attraction-card:active {
+    transform: scale(0.98);
+}
+
+.mobile-attraction-card .card-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #ddd;
+}
+
+.mobile-attraction-card .card-emoji {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.mobile-attraction-card .card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mobile-attraction-card .card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.mobile-attraction-card .card-sub {
+    font-size: 12px;
+    color: #777;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mobile-attraction-card .card-arrow {
+    color: #999;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+/* 分類顏色小圓點 */
+.mobile-attraction-card .card-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+/* 手機版顯示 Bottom Sheet */
+@media (max-width: 768px) {
+    .mobile-location-panel {
+        display: flex;
+    }
+
+    /* 手機版 AI 對話框要避開底部面板 */
+    .ai-chat {
+        bottom: 56px !important; /* 避開底部面板 */
+    }
+
+    .ai-chat.collapsed {
+        bottom: 56px !important;
+    }
+}
+
+/* 桌面版隱藏 Bottom Sheet */
+@media (min-width: 769px) {
+    .mobile-location-panel {
+        display: none !important;
     }
 }

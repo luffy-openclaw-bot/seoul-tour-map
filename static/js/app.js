@@ -605,6 +605,11 @@ function bindEvents() {
             activeCategory = btn.dataset.category;
             renderAttractionList();
             addMarkers();
+            // 同步手機版 panel tabs
+            document.querySelectorAll('.mobile-tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.category === activeCategory);
+            });
+            renderMobilePanelList();
         });
     });
 
@@ -1162,6 +1167,152 @@ function initChat() {
     // 預設已經喺 HTML 有歡迎訊息
 }
 
+// ==================== 手機版底部景點列表面板 ====================
+let mobilePanelExpanded = false;
+
+// 類別對應 emoji
+const CATEGORY_EMOJIS = {
+    '歷史文化': '🏯',
+    '地標觀景': '🗼',
+    '購物美食': '🍜',
+    '夜生活文化': '🎶',
+    '娛樂': '🎭',
+    '休閒': '☕',
+    '自然景觀': '🌿'
+};
+
+function renderMobilePanelList() {
+    const container = document.getElementById('mobile-panel-list');
+    const countEl = document.getElementById('mobile-panel-count');
+    if (!container || !attractionsData.length) return;
+
+    const filtered = activeCategory === 'all'
+        ? attractionsData
+        : attractionsData.filter(function(a) { return a.category === activeCategory; });
+
+    if (countEl) countEl.textContent = filtered.length + ' 個景點';
+
+    container.innerHTML = '';
+    filtered.forEach(function(attr) {
+        var color = CATEGORY_COLORS[attr.category] || '#666';
+        var emoji = CATEGORY_EMOJIS[attr.category] || '📍';
+        var card = document.createElement('div');
+        card.className = 'mobile-attraction-card';
+        card.innerHTML =
+            '<div class="card-emoji" style="background:' + color + '15">' + emoji + '</div>' +
+            '<div class="card-info">' +
+                '<div class="card-name">' + attr.name + '</div>' +
+                '<div class="card-sub">' +
+                    '<span class="card-dot" style="background:' + color + '"></span>' +
+                    attr.category + ' · ' + attr.name_ko +
+                '</div>' +
+            '</div>' +
+            '<div class="card-arrow"><i class="fas fa-chevron-right"></i></div>';
+
+        card.addEventListener('click', function() {
+            focusAttraction(attr);
+            // 點擊後收起面板
+            toggleMobilePanel(false);
+        });
+        container.appendChild(card);
+    });
+}
+
+function initMobilePanel() {
+    var panel = document.getElementById('mobile-location-panel');
+    var dragHandle = document.getElementById('mobile-panel-drag-handle');
+    if (!panel || !dragHandle) return;
+
+    // 點擊 drag handle 切換展開/收起
+    dragHandle.addEventListener('click', function() {
+        toggleMobilePanel(!mobilePanelExpanded);
+    });
+
+    // 觸控拖動支援
+    var startY = 0;
+    var startTranslateY = 0;
+    var isDragging = false;
+
+    dragHandle.addEventListener('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+        isDragging = true;
+        // 移除 transition 以便拖動時即時跟手
+        panel.style.transition = 'none';
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function(e) {
+        if (!isDragging) return;
+        var currentY = e.touches[0].clientY;
+        var deltaY = currentY - startY;
+        // 向下拖 = 收起，向上拖 = 展開
+        if (mobilePanelExpanded) {
+            // 已展開狀態，向下拖
+            if (deltaY > 50) {
+                toggleMobilePanel(false);
+                isDragging = false;
+            }
+        } else {
+            // 已收起狀態，向上拖
+            if (deltaY < -30) {
+                toggleMobilePanel(true);
+                isDragging = false;
+            }
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function() {
+        if (isDragging) {
+            panel.style.transition = '';
+            isDragging = false;
+        }
+    });
+
+    // 分類 tab 點擊
+    var tabs = document.querySelectorAll('.mobile-tab');
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            activeCategory = tab.dataset.category;
+            renderMobilePanelList();
+            // 同步桌面版分類按鈕
+            document.querySelectorAll('.cat-btn').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.category === activeCategory);
+            });
+            // 同步地圖 markers
+            addMarkers();
+            renderAttractionList();
+        });
+    });
+
+    // 初始渲染
+    renderMobilePanelList();
+}
+
+function toggleMobilePanel(expanded) {
+    var panel = document.getElementById('mobile-location-panel');
+    var dragHandle = document.getElementById('mobile-panel-drag-handle');
+    if (!panel) return;
+
+    mobilePanelExpanded = expanded;
+    panel.style.transition = '';
+
+    if (expanded) {
+        panel.classList.add('expanded');
+        panel.classList.remove('hidden-panel');
+    } else {
+        panel.classList.remove('expanded');
+    }
+
+    // 更新 drag handle 文字
+    if (dragHandle) {
+        var titleEl = dragHandle.querySelector('.mobile-panel-title');
+        if (titleEl) {
+            titleEl.textContent = expanded ? '📍 景點列表' : '📍 景點列表';
+        }
+    }
+}
+
 // ==================== 手機側邊欄開關 ====================
 function closeSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -1417,6 +1568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initRoutePanel();
     initChat();
     bindEvents();
+    initMobilePanel();
     // 頁面啟動時檢查系統狀態
     checkSystemStatus();
 });
@@ -1448,8 +1600,8 @@ function addSearchMarker(lat, lng, title, color, popupContent, pulse = true) {
     const customIcon = L.divIcon({
         html: iconHtml,
         className: '',
-        iconSize: [40, 40],
-        iconAnchor: [20, 40]
+        iconSize: [40, 44],
+        iconAnchor: [20, 44]   // tip at bottom-center aligns with map coordinate
     });
     
     // 創建標記

@@ -6,8 +6,8 @@
     <title>首爾旅遊地圖 | Seoul Tour Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="static/css/style.css?v=34" />
-    <link rel="stylesheet" href="static/css/search_module.css?v=34" />
+    <link rel="stylesheet" href="static/css/style.css?v=35" />
+    <link rel="stylesheet" href="static/css/search_module.css?v=35" />
 </head>
 <body>
     <div id="app">
@@ -196,7 +196,29 @@
         </div>
     </div>
 
-    <!-- 手機版側邊欄遮罩層 -->
+    <!-- 手機版底部景點列表面板 (Bottom Sheet) -->
+    <div id="mobile-location-panel" class="mobile-location-panel">
+        <div class="mobile-panel-drag-handle" id="mobile-panel-drag-handle">
+            <div class="drag-indicator"></div>
+            <div class="mobile-panel-header">
+                <span class="mobile-panel-title">📍 景點列表</span>
+                <span class="mobile-panel-count" id="mobile-panel-count"></span>
+            </div>
+        </div>
+        <div class="mobile-panel-tabs" id="mobile-panel-tabs">
+            <button class="mobile-tab active" data-category="all">全部</button>
+            <button class="mobile-tab" data-category="歷史文化">🏯 歷史</button>
+            <button class="mobile-tab" data-category="地標觀景">🗼 觀景</button>
+            <button class="mobile-tab" data-category="購物美食">🍜 美食</button>
+            <button class="mobile-tab" data-category="夜生活文化">🎶 夜生活</button>
+            <button class="mobile-tab" data-category="娛樂">🎭 娛樂</button>
+            <button class="mobile-tab" data-category="休閒">☕ 休閒</button>
+            <button class="mobile-tab" data-category="自然景觀">🌿 自然</button>
+        </div>
+        <div class="mobile-panel-list" id="mobile-panel-list">
+            <!-- 動態生成 -->
+        </div>
+    </div>
 
     <!-- 景點詳情彈窗 -->
     <div id="modal" class="modal hidden">
@@ -210,7 +232,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="static/js/app.js?v=34"></script>
-    <script src="static/js/search_module.js?v=34"></script>
+    <script src="static/js/app.js?v=35"></script>
+    <script src="static/js/search_module.js?v=35"></script>
 </body>
 </html>

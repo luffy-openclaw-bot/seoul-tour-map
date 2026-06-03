@@ -1,5 +1,51 @@
 # 首爾旅遊地圖平台 - 改動紀錄
 
+## 📅 2025-06-04 v36 (手機版底部景點列表 Bottom Sheet)
+
+### ✨ 新功能：手機版景點列表 Bottom Sheet
+
+**功能描述：**
+為手機版新增底部滑出式景點列表面板（Bottom Sheet），取代原本需要打開全屏側邊欄才能瀏覽景點的方式。
+
+**設計特點：**
+- 底部滑出面板，預設只露出 drag handle（📍 景點列表 + 景點數量）
+- 點擊或向上拖動即可展開成 70vh 高度嘅景點列表
+- 橫向滾動分類 tab 快速篩選（全部/歷史/觀景/美食/夜生活/娛樂/休閒/自然）
+- 景點卡片使用 emoji + 顏色標記，簡潔易讀
+- 點擊景點卡片 → 地圖飛到該位置 → 自動收起面板
+- 分類篩選同桌面版同步
+- AI 對話框在手機版避開底部面板（bottom: 56px）
+- 拖動手勢支援（向上展開/向下收起）
+- 桌面版完全隱藏，唔影響現有 sidebar
+
+**修改文件：**
+
+| 文件 | 改動 |
+|------|------|
+| `index.html` | 新增 `#mobile-location-panel` HTML 結構（drag handle + 分類 tabs + 景點列表）|
+| `static/css/style.css` | 新增 Bottom Sheet 完整 CSS（固定底部、圓角、拖動指示條、分類 tabs、景點卡片、手機版 media queries、AI 對話框避讓）|
+| `static/js/app.js` | 新增 `renderMobilePanelList()`、`initMobilePanel()`、`toggleMobilePanel()` 函數；桌面版分類按鈕點擊同步更新 mobile panel；DOMContentLoaded 加入 `initMobilePanel()` |
+| `index.html` | 版本號 bump v34 → v35 |
+
+## 📅 2025-06-03 v35 (修正搜索標記同脈動圈對齊)
+
+### 🐛 修正：搜索標記（search-marker）水滴形狀同脈動動畫對齊問題
+
+**問題描述：**
+搜索標記（chatbot AI 添加嘅地點 pin）嘅水滴形圖標同脈動（pulse）動畫圈唔對齊——脈動圈由圖標中心向外擴散，而唔係由 pin 尖端（即地圖坐標位置）向外擴散，導致視覺上標記同動畫圈偏移。
+
+**根本原因：**
+- `.search-marker-pulse::before` 用咗 `top: 50%; left: 50%; transform: translate(-50%, -50%)`，將脈動圈中心放喺 div 嘅中心（y=20px）
+- 但 `iconAnchor: [20, 40]` 將地圖坐標對齊喺 div 嘅底部（y=40px）
+- 即脈動圈同 pin 尖端相差咗 20px
+
+**修正內容：**
+
+| 文件 | 改動 |
+|------|------|
+| `static/css/style.css` | `.search-marker` 高度改為 44px（留空間畀 pin 尖端陰影）；`.marker-inner` 改為 `bottom: 2px`、尺寸 28×28；`.search-marker-pulse::before` 改為 `bottom: 0; left: 50%; transform: translate(-50%, 50%)` 將脈動圈對齊 pin 尖端 |
+| `static/js/app.js` | `addSearchMarker()` 嘅 `iconSize` 改為 `[40, 44]`、`iconAnchor` 改為 `[20, 44]`，配合新 CSS 高度 |
+
 ## 📅 2025-06-02 v34 (移除 chatbot 紅色「新內容」徽章)
 
 ### 🗑️ 移除：chatbot 紅色「新內容」徽章
