@@ -18,6 +18,14 @@ import sys
 import time
 import glob
 import xml.etree.ElementTree as ET
+import threading
+
+# 全局鎖用於文件操作
+file_lock = threading.Lock()
+# 使用絕對路徑
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+print(f"DEBUG: BASE_DIR={BASE_DIR}")
+SHARED_LOCATIONS_FILE = os.path.join(BASE_DIR, 'shared_locations.json')
 
 # 導入搜索模組
 import importlib.util
@@ -59,8 +67,8 @@ def create_urllib_opener():
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        # 設置工作目錄為 seoul-tour-map
-        self.workdir = os.path.join(os.path.dirname(__file__), '..', 'seoul-tour-map')
+        # 設置工作目錄為當前目錄 (seoul-tour-map)
+        self.workdir = os.path.dirname(os.path.abspath(__file__))
         super().__init__(*args, directory=self.workdir, **kwargs)
 
     def do_OPTIONS(self):
@@ -73,12 +81,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/api/health':
             self.handle_health_check()
             return
+        if self.path == '/api/get-locations':
+            self.handle_get_locations()
+            return
 
         # 靜態文件
         super().do_GET()
 
     def do_POST(self):
-        print(f"POST request: {self.path}")
+        print(f"DEBUG: do_POST path='{self.path}'")
         if self.path == '/api/chat':
             self.handle_chat()
             return
@@ -96,6 +107,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if self.path == '/api/transit':
             self.handle_transit()
+            return
+        if self.path == '/api/sync-locations':
+            self.handle_sync_locations()
             return
         self.send_error(404)
 
@@ -1005,6 +1019,96 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 '🚉 轉乘站步行距離可能好長，請跟住地面或天花板嘅顏色線行。',
                 '💳 唔夠錢可以喺站內「自動充值機」加錢落 T-money 卡。'
             ]
+    
+    def handle_sync_locations(self):
+        """同步地點列表到伺服器"""
+        print(f"DEBUG: handle_sync_locations called")
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            new_locations = json.loads(body)
+            
+            if not isinstance(new_locations, list):
+                self.send_json({'success': False, 'error': 'Invalid data format, expected list'}, status=400)
+                return
+
+            # 嚴格數據驗證
+            validated_locations = []
+            for loc in new_locations:
+                # 必填字段檢查
+                if not all(k in loc for k in ('id', 'name', 'lat', 'lng')):
+                    print(f"DEBUG: Skipping invalid location (missing fields): {loc.get('name', 'Unknown')}")
+                    continue
+                
+                # 類型與數值範圍檢查
+                try:
+                    lat = float(loc['lat'])
+                    lng = float(loc['lng'])
+                    # 簡單範圍檢查 (首爾大致範圍: 37.4~37.7, 126.7~127.2)
+                    # 放寬一點以兼容周邊地區
+                    if not (30 < lat < 45 and 120 < lng < 135):
+                        print(f"DEBUG: Skipping invalid location (out of range): {loc['name']} ({lat}, {lng})")
+                        continue
+                    
+                    # 確保類型正確
+                    validated_loc = {
+                        'id': str(loc['id']),
+                        'name': str(loc['name']),
+                        'lat': lat,
+                        'lng': lng,
+                        'category': str(loc.get('category', '地標觀景')),
+                        'description': str(loc.get('description', '')),
+                        'price': str(loc.get('price', '')),
+                        'addedAt': loc.get('addedAt', int(time.time() * 1000)),
+                        'ownerFingerprint': str(loc.get('ownerFingerprint', 'unknown'))
+                    }
+                    validated_locations.append(validated_loc)
+                except (ValueError, TypeError):
+                    print(f"DEBUG: Skipping invalid location (type error): {loc.get('name', 'Unknown')}")
+                    continue
+
+            with file_lock:
+                shared_data = []
+                if os.path.exists(SHARED_LOCATIONS_FILE):
+                    with open(SHARED_LOCATIONS_FILE, 'r', encoding='utf-8') as f:
+                        try:
+                            shared_data = json.load(f)
+                        except json.JSONDecodeError:
+                            shared_data = []
+                
+                # 合併數據，基於 ID 去重
+                existing_ids = {loc['id'] for loc in shared_data}
+                added_count = 0
+                for loc in validated_locations:
+                    if loc['id'] not in existing_ids:
+                        shared_data.append(loc)
+                        added_count += 1
+                
+                if added_count > 0:
+                    # 原子寫入
+                    temp_file = SHARED_LOCATIONS_FILE + '.tmp'
+                    with open(temp_file, 'w', encoding='utf-8') as f:
+                        json.dump(shared_data, f, ensure_ascii=False, indent=2)
+                    os.replace(temp_file, SHARED_LOCATIONS_FILE)
+                    print(f"DEBUG: Saved {added_count} new locations to {SHARED_LOCATIONS_FILE}")
+                
+            self.send_json({'success': True, 'count': len(shared_data), 'added': added_count})
+        except Exception as e:
+            print(f"DEBUG: handle_sync_locations error: {e}")
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    def handle_get_locations(self):
+        """獲取所有共享地點"""
+        try:
+            with file_lock:
+                if os.path.exists(SHARED_LOCATIONS_FILE):
+                    with open(SHARED_LOCATIONS_FILE, 'r', encoding='utf-8') as f:
+                        shared_data = json.load(f)
+                else:
+                    shared_data = []
+            self.send_json({'success': True, 'locations': shared_data})
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def send_json(self, data, status=200):
         """Send JSON response, gracefully handle broken pipes"""
@@ -1114,11 +1218,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_json(result)
 
     def log_message(self, format, *args):
-        # 暫時啟用日誌以排查問題
+        # 只打印到控制台，避免文件權限問題
         print(format % args)
 
 if __name__ == '__main__':
-    os.chdir(os.path.join(os.path.dirname(__file__), '..', 'seoul-tour-map'))
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     # 使用 ThreadingHTTPServer 單獨線程處理 request，避免阻塞
     from http.server import HTTPServer

@@ -44,6 +44,9 @@ const SearchPopup = {
                     <a href="${googleMapsUrl}" target="_blank" class="google-maps-btn" onclick="event.stopPropagation()">
                         <i class="fas fa-map"></i> Google Maps
                     </a>
+                    <button class="pin-location-btn-mini" onclick="addPinFromMap(${lat}, ${lng}); SearchPopup.close();" title="釘選此位置">
+                        <i class="fas fa-thumbtack"></i> 釘選
+                    </button>
                 </div>
                 <div class="search-type-grid">
                     <button class="search-type-btn" data-type="attractions" style="--btn-color: ${SearchTypes.attractions.color}" aria-label="搜索景點">

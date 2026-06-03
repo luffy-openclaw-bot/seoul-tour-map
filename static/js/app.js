@@ -8,6 +8,7 @@ let markers = {};
 let subwayLines = [];
 let subwayLayerGroup;
 let routeLayerGroup;
+let wishlistLayerGroup;  // 用戶釘選標記圖層
 let searchMarkersLayerGroup;  // Chatbot 搜索標記圖層
 let attractionsData = [];
 let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面板同步
@@ -27,7 +28,8 @@ const CATEGORY_COLORS = {
     '夜生活文化': '#9b59b6',
     '娛樂': '#e91e63',
     '休閒': '#1abc9c',
-    '自然景觀': '#27ae60'
+    '自然景觀': '#27ae60',
+    '用戶釘選': '#1e3a8a'
 };
 
 // ==================== 地圖初始化 ====================
@@ -61,6 +63,7 @@ function initMap() {
 
     subwayLayerGroup = L.layerGroup().addTo(map);
     routeLayerGroup = L.layerGroup().addTo(map);
+    wishlistLayerGroup = L.layerGroup().addTo(map); // 初始化用戶釘選圖層
     searchMarkersLayerGroup = L.layerGroup().addTo(map);  // 初始化搜索標記圖層
 
     map.on("click", onMapClick);
@@ -77,6 +80,9 @@ function onMapClick(e) {
             <div class="coord-popup">
                 <div class="coord-latlng">📍 ${lat}, ${lng}</div>
                 <div class="coord-actions">
+                    <button class="pin-location-btn" onclick="addPinFromMap(${lat}, ${lng})">
+                        <i class="fas fa-thumbtack"></i> 釘選此位置
+                    </button>
                     <button class="search-nearby-btn" onclick="searchNearby(${lat}, ${lng})">
                         <i class="fas fa-search"></i> 搜尋附近資訊
                     </button>
@@ -193,6 +199,120 @@ async function searchNearbyTransport(lat, lng) {
     addMessage(reply, 'bot');
 }
 
+// ==================== 用戶釘選功能 ====================
+function addPinFromMap(lat, lng) {
+    const modal = document.getElementById('modal');
+    const body = document.getElementById('modal-body');
+    const defaultName = `📍 釘選位置 (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
+    
+    body.innerHTML = `
+        <div class="modal-info">
+            <div class="modal-title">釘選此位置</div>
+            <div class="modal-section">
+                <p>請輸入此位置的名稱：</p>
+                <input type="text" id="pin-name-input" class="pin-input" placeholder="${defaultName}" value="${defaultName}">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-route" id="confirm-pin-btn">
+                    <i class="fas fa-check"></i> 確定
+                </button>
+                <button class="btn-wishlist-modal" onclick="closeModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+            </div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+    
+    // 自動聚焦輸入框並選中文字
+    const input = document.getElementById('pin-name-input');
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 100);
+
+    // 綁定確認按鈕
+    document.getElementById('confirm-pin-btn').onclick = () => {
+        const name = input.value.trim() || defaultName;
+        savePin(name, lat, lng);
+        closeModal();
+    };
+
+    // 支援 Enter 鍵確認
+    input.onkeypress = (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('confirm-pin-btn').click();
+        }
+    };
+}
+
+function savePin(name, lat, lng) {
+    const item = {
+        name: name,
+        lat: lat,
+        lng: lng,
+        category: '用戶釘選',
+        description: `用戶於地圖手動釘選的位置 (${lat}, ${lng})`
+    };
+    
+    const added = WishlistManager.add(item);
+    
+    if (added) {
+        map.closePopup();
+        // 顯示提示
+        const toast = document.createElement('div');
+        toast.className = 'wishlist-toast';
+        toast.innerHTML = `<i class="fas fa-thumbtack" style="color:#1e3a8a"></i> 已成功釘選「${name}」`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+}
+
+function renderWishlistMarkers() {
+    if (!wishlistLayerGroup) return;
+    wishlistLayerGroup.clearLayers();
+    
+    const items = WishlistManager.getAll();
+    
+    items.forEach(item => {
+        // 只為「用戶釘選」或不在預定義景點列表中的項目添加標記
+        // 預定義景點已有自己的 markers
+        const isPredefined = attractionsData.some(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
+        
+        if (item.category === '用戶釘選' || !isPredefined) {
+            const color = CATEGORY_COLORS['用戶釘選'] || '#1e3a8a';
+            
+            // 自定義 Pin 圖標
+            const iconHtml = `<div class="pin-marker">
+                <i class="fas fa-thumbtack"></i>
+            </div>`;
+            
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: '',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+            
+            const marker = L.marker([item.lat, item.lng], { icon: customIcon })
+                .addTo(wishlistLayerGroup)
+                .bindPopup(`
+                    <div class="popup-card">
+                        <div class="popup-info">
+                            <div class="popup-name">${item.name}</div>
+                            <span class="popup-cat" style="background:${color}">用戶釘選</span>
+                            <div class="popup-desc">坐標：${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+                            <button class="popup-btn" style="background:#e74c3c" onclick="WishlistManager.remove('${item.id}')">
+                                移除釘選
+                            </button>
+                        </div>
+                    </div>
+                `);
+        }
+    });
+}
+
 // ==================== 載入資料 ====================
 async function loadData() {
     try {
@@ -264,7 +384,7 @@ function renderAttractionList() {
             `;
 
             item.addEventListener('click', () => {
-                flyToSearchResult(place.lat, place.lng, place.name);
+                flyToSearchResult(place.lat, place.lng, place);
             });
 
             container.appendChild(item);
@@ -1279,11 +1399,8 @@ function addMessage(text, sender) {
                 const lat = parseFloat(link.dataset.lat);
                 const lng = parseFloat(link.dataset.lng);
                 const title = link.dataset.title;
-                map.flyTo([lat, lng], 16, { duration: 1.5 });
-                L.popup()
-                    .setLatLng([lat, lng])
-                    .setContent(`<b>${title}</b><br>📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`)
-                    .openOn(map);
+                // 使用統一的 flyToSearchResult 以獲得豐富的氣泡詳情
+                flyToSearchResult(lat, lng, title);
                 // Also add a search marker
                 addSearchMarker(lat, lng, title, '#e74c3c', title, true);
             });
@@ -1488,7 +1605,7 @@ function renderMobilePanelList() {
                 '<div class="card-arrow"><i class="fas fa-chevron-right"></i></div>';
 
             card.addEventListener('click', function() {
-                flyToSearchResult(place.lat, place.lng, place.name);
+                flyToSearchResult(place.lat, place.lng, place);
                 toggleMobilePanel(false);
             });
             container.appendChild(card);
@@ -1800,12 +1917,8 @@ async function executeMapAction(action, params) {
                 // 飛到指定位置並顯示名稱
                 if (params.lat !== undefined && params.lng !== undefined) {
                     const title = params.title || '位置';
-                    map.flyTo([params.lat, params.lng], 16, { duration: 1.5 });
-                    // 顯示 tooltip 提示
-                    L.popup()
-                        .setLatLng([params.lat, params.lng])
-                        .setContent(`<b>${title}</b><br>📍 ${params.lat.toFixed(5)}, ${params.lng.toFixed(5)}`)
-                        .openOn(map);
+                    // 使用統一的 flyToSearchResult 以獲得豐富的氣泡詳情
+                    flyToSearchResult(params.lat, params.lng, title);
                     console.log(`[Map Action] Flying to ${params.lat}, ${params.lng} (${title})`);
                 }
                 break;
@@ -1945,6 +2058,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 初始化願望清單面板
     renderWishlistPanel();
     updateWishlistCount();
+    // 渲染地圖釘選
+    renderWishlistMarkers();
     // 恢復聊天添加的地點
     loadChatPlaces();
     // 頁面啟動時檢查系統狀態
@@ -1987,7 +2102,7 @@ function addSearchMarker(lat, lng, title, color, popupContent, pulse = true) {
         .addTo(searchMarkersLayerGroup)
         .bindPopup(`
             <div class="search-marker-popup">
-                <h4>${title}</h4>
+                <h4><i class="fas fa-map-marker-alt"></i>${title}</h4>
                 <p>${popupContent}</p>
             </div>
         `);
@@ -2389,10 +2504,9 @@ function addSearchResultsToList(places, queryType) {
         );
         
         if (!exists) {
+            // 存儲完整數據以支持豐富的氣泡顯示
             currentSearchResults.push({
-                name: place.name,
-                lat: place.lat,
-                lng: place.lng,
+                ...place, // 保留原始所有字段 (rating, price, highlights, tips, etc.)
                 category: typeToCategory[queryType] || place.category || '搜索結果',
                 description: place.description || ''
             });
@@ -2406,10 +2520,68 @@ function addSearchResultsToList(places, queryType) {
     console.log(`[Search] Added ${places.length} search results to global state and refreshed panels`);
 }
 
+// ==================== 設備指紋系統 ====================
+const FingerprintManager = {
+    STORAGE_KEY: 'seoul_tour_device_uuid',
+    TIMESTAMP_KEY: 'seoul_tour_device_ts',
+
+    /** 獲取或生成設備唯一標識 */
+    getFingerprint() {
+        let uuid = localStorage.getItem(this.STORAGE_KEY);
+        let ts = localStorage.getItem(this.TIMESTAMP_KEY);
+        
+        if (!uuid) {
+            uuid = this._generateUUID();
+            localStorage.setItem(this.STORAGE_KEY, uuid);
+        }
+        
+        if (!ts) {
+            ts = Date.now().toString();
+            localStorage.setItem(this.TIMESTAMP_KEY, ts);
+        }
+
+        const ua = navigator.userAgent;
+        // 組合指紋: UA + 首次生成時間戳 + UUID 哈希
+        // 使用自定義哈希處理 UUID 以符合用戶需求
+        const uuidHash = this._hash(uuid);
+        
+        // 使用 URL 安全的 Base64 處理，並處理非 ASCII 字符
+        try {
+            const fingerprintRaw = `${ua}|${ts}|${uuidHash}`;
+            // 由於 btoa 只能處理 ASCII，先用 encodeURIComponent
+            const encoded = btoa(unescape(encodeURIComponent(fingerprintRaw)));
+            return encoded.substring(0, 32);
+        } catch (e) {
+            // 回退方案：簡單哈希
+            return `fp_${this._hash(ua + ts + uuid)}`.substring(0, 32);
+        }
+    },
+
+    /** 簡單的哈希函數 (DJB2) */
+    _hash(str) {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) {
+            hash = (hash * 33) ^ str.charCodeAt(i);
+        }
+        return (hash >>> 0).toString(16);
+    },
+
+    _generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+};
+
 // ==================== 聊天添加地點持久化 ====================
 const CHAT_PLACES_KEY = 'seoul_tour_chat_places';
 
 function persistChatPlace(place) {
+    if (!place.name || place.lat === undefined || place.lng === undefined) {
+        console.error('[ChatPlaces] Cannot persist invalid place:', place);
+        return;
+    }
     const places = JSON.parse(localStorage.getItem(CHAT_PLACES_KEY) || '[]');
     // 避免重複（按名稱+坐標）
     const exists = places.some(p =>
@@ -2424,9 +2596,13 @@ function persistChatPlace(place) {
             lng: place.lng,
             category: place.category || '地標觀景',
             description: place.description || '',
-            addedAt: Date.now()
+            addedAt: Date.now(),
+            ownerFingerprint: FingerprintManager.getFingerprint(),
+            id: `chat_${place.name}_${place.lat.toFixed(4)}_${place.lng.toFixed(4)}` // 添加 ID 以便伺服器端去重
         });
         localStorage.setItem(CHAT_PLACES_KEY, JSON.stringify(places));
+        // 同步聊天地點到伺服器
+        WishlistManager.syncToServer(places);
     }
 }
 
@@ -2443,16 +2619,87 @@ function clearChatPlaces() {
 }
 
 /**
+ * 創建搜索結果的豐富彈窗內容
+ */
+function createSearchResultPopupContent(place) {
+    const category = place.category || '搜索結果';
+    const color = CATEGORY_COLORS[category] || '#667eea';
+    
+    // 構建亮點 HTML
+    let highlightsHtml = '';
+    if (place.highlights && Array.isArray(place.highlights) && place.highlights.length > 0) {
+        highlightsHtml = `
+            <div class="place-highlights" style="margin-top: 8px; font-size: 12px; color: #666;">
+                ${place.highlights.slice(0, 2).map(h => `<div style="margin-bottom: 2px;">✨ ${h}</div>`).join('')}
+            </div>
+        `;
+    }
+
+    return `
+        <div class="place-popup">
+            <h4 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700;">${place.name}</h4>
+            <div class="place-category" style="display: inline-block; padding: 2px 8px; background: ${color}20; color: ${color}; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 8px;">
+                ${category}
+            </div>
+            <p style="margin: 0 0 8px 0; font-size: 13px; color: #4b5563; line-height: 1.5;">
+                ${place.description ? (place.description.length > 100 ? place.description.substring(0, 100) + '...' : place.description) : '暫無簡介'}
+            </p>
+            <div class="place-meta" style="display: flex; gap: 12px; margin-bottom: 8px; font-size: 13px; font-weight: 600;">
+                ${place.rating ? `<span class="place-rating" style="color: #f59e0b;">⭐ ${place.rating}</span>` : ''}
+                ${place.price ? `<span class="place-price" style="color: #10b981;">💰 ${place.price}</span>` : ''}
+            </div>
+            ${highlightsHtml}
+            ${place.tips ? `<div class="place-tips" style="margin-top: 8px; padding: 8px; background: #fef3c7; border-radius: 6px; font-size: 12px; color: #92400e;">
+                <i class="fas fa-lightbulb"></i> ${place.tips.substring(0, 60)}${place.tips.length > 60 ? '...' : ''}
+            </div>` : ''}
+            <div class="place-coord" style="margin-top: 12px; font-size: 11px; color: #9ca3af; font-family: monospace;">
+                📍 ${parseFloat(place.lat).toFixed(5)}, ${parseFloat(place.lng).toFixed(5)}
+            </div>
+        </div>
+    `;
+}
+
+/**
  * 跳轉到搜索結果位置
  */
-function flyToSearchResult(lat, lng, name) {
+function flyToSearchResult(lat, lng, nameOrPlace) {
     map.flyTo([lat, lng], 16, { duration: 1.5 });
     
+    let placeData = null;
+    if (typeof nameOrPlace === 'object' && nameOrPlace !== null) {
+        placeData = nameOrPlace;
+    } else {
+        // 如果傳遞的是名稱，嘗試在 currentSearchResults 中尋找完整數據
+        placeData = currentSearchResults.find(p => 
+            p.name === nameOrPlace && 
+            Math.abs(p.lat - lat) < 0.0001 && 
+            Math.abs(p.lng - lng) < 0.0001
+        );
+    }
+    
+    let content;
+    if (placeData) {
+        content = createSearchResultPopupContent(placeData);
+    } else {
+        // 如果還是找不到（例如是兼容舊調用或自定義釘選），顯示簡單內容
+        content = `
+            <div class="place-popup">
+                <h4 style="margin: 0 0 8px 0;">${nameOrPlace || '未知地點'}</h4>
+                <div class="place-coord" style="font-size: 12px; color: #9ca3af;">
+                    📍 ${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}
+                </div>
+            </div>
+        `;
+    }
+    
     // 顯示 popup
-    L.popup()
-        .setLatLng([lat, lng])
-        .setContent(`<b>${name}</b><br>📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`)
-        .openOn(map);
+    L.popup({
+        maxWidth: 280,
+        className: 'location-search-popup'
+    })
+    .setLatLng([lat, lng])
+    .setContent(content)
+    .openOn(map);
 }
 
 /**
@@ -2508,8 +2755,66 @@ const WishlistManager = {
     save(items) {
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(items));
+            // 同步到伺服器
+            this.syncToServer(items);
         } catch (e) {
             console.error('[Wishlist] Save error:', e);
+        }
+    },
+
+    /** 同步到伺服器 */
+    async syncToServer(items) {
+        try {
+            const response = await fetch('/api/sync-locations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(items)
+            });
+            if (response.ok) {
+                console.log('[Wishlist] Synced to server');
+            }
+        } catch (e) {
+            console.warn('[Wishlist] Sync to server failed:', e);
+        }
+    },
+
+    /** 從伺服器同步 */
+    async syncFromServer() {
+        try {
+            const response = await fetch('/api/get-locations');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.locations) {
+                    const localItems = this.getAll();
+                    const localIds = new Set(localItems.map(i => i.id));
+                    
+                    let merged = [...localItems];
+                    let addedCount = 0;
+                    
+                    data.locations.forEach(remoteItem => {
+                        // 嚴格數據驗證：確保 remoteItem 有效且包含必要的經緯度
+                        if (!remoteItem.id || !remoteItem.name || 
+                            remoteItem.lat === undefined || remoteItem.lng === undefined ||
+                            isNaN(parseFloat(remoteItem.lat)) || isNaN(parseFloat(remoteItem.lng))) {
+                            console.warn('[Wishlist] Skipping invalid remote item:', remoteItem);
+                            return;
+                        }
+
+                        if (!localIds.has(remoteItem.id)) {
+                            merged.push(remoteItem);
+                            addedCount++;
+                        }
+                    });
+                    
+                    if (addedCount > 0) {
+                        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
+                        this._notifyChange();
+                        console.log(`[Wishlist] Synced ${addedCount} items from server`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[Wishlist] Sync from server failed:', e);
         }
     },
 
@@ -2521,6 +2826,10 @@ const WishlistManager = {
 
     /** 添加項目到願望清單 */
     add(item) {
+        if (!item.name || item.lat === undefined || item.lng === undefined) {
+            console.error('[Wishlist] Cannot add invalid item:', item);
+            return false;
+        }
         const items = this.getAll();
         const id = this._generateId(item.name, item.lat, item.lng);
 
@@ -2538,7 +2847,8 @@ const WishlistManager = {
             category: item.category || '',
             price: item.price || '',
             description: item.description || '',
-            addedAt: Date.now()
+            addedAt: Date.now(),
+            ownerFingerprint: FingerprintManager.getFingerprint()
         });
 
         this.save(items);
@@ -2589,6 +2899,8 @@ const WishlistManager = {
         updateAllWishlistButtons();
         // 更新側邊欄願望清單計數
         updateWishlistCount();
+        // 更新地圖上的釘選標記
+        renderWishlistMarkers();
     }
 };
 
@@ -2840,6 +3152,9 @@ async function checkSystemStatus() {
 
 // 點擊狀態指示器展開/收起詳情
 document.addEventListener('DOMContentLoaded', () => {
+    // 啟動時從伺服器同步地點
+    WishlistManager.syncFromServer();
+    
     const statusDot = document.getElementById('system-status');
     const statusBar = document.getElementById('system-status-bar');
     if (statusDot && statusBar) {

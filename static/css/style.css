@@ -231,6 +231,7 @@ body {
 .tag-娛樂 { background: #e91e63; }
 .tag-休閒 { background: #1abc9c; }
 .tag-自然景觀 { background: #27ae60; }
+.tag-用戶釘選 { background: #1e3a8a; }
 
 /* ==================== 地圖區域 ==================== */
 .map-area {
@@ -245,7 +246,7 @@ body {
 
 /* Leaflet 自定義樣式 */
 .leaflet-popup-content-wrapper {
-    border-radius: 16px;
+    border-radius: 10px;
     padding: 0;
     overflow: hidden;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -358,7 +359,8 @@ body {
 }
 
 .coord-popup .search-nearby-btn,
-.coord-popup .transport-nearby-btn {
+.coord-popup .transport-nearby-btn,
+.coord-popup .pin-location-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -391,6 +393,17 @@ body {
 
 .coord-popup .transport-nearby-btn:hover {
     background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.coord-popup .pin-location-btn {
+    background: #1e3a8a;
+    color: white;
+}
+
+.coord-popup .pin-location-btn:hover {
+    background: #1e40af;
     transform: translateY(-1px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
@@ -438,6 +451,21 @@ body {
     font-size: 14px;
     font-weight: bold;
     color: white;
+}
+
+/* 用戶釘選標記 */
+.pin-marker {
+    background: #1e3a8a;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border: 3px solid white;
+    color: white;
+    font-size: 16px;
 }
 
 /* 用戶位置標記 */
@@ -558,19 +586,43 @@ body {
 }
 
 /* 搜索標記彈窗樣式 */
+.search-marker-popup {
+    padding: 5px;
+    min-width: 180px;
+}
+
 .search-marker-popup h4 {
-    font-size: 15px;
-    color: #333;
-    margin: 0 0 8px;
-    padding-bottom: 6px;
+    font-size: 16px;
+    color: #2c3e50;
+    margin: 0 0 10px;
+    padding-bottom: 8px;
     border-bottom: 2px solid #667eea;
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+}
+
+.search-marker-popup h4 i {
+    color: #667eea;
+    margin-right: 8px;
+    font-size: 14px;
 }
 
 .search-marker-popup p {
     margin: 0;
-    font-size: 13px;
-    color: #666;
-    line-height: 1.5;
+    font-size: 14px;
+    color: #444;
+    line-height: 1.6;
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+    .search-marker-popup h4 {
+        color: #ecf0f1;
+    }
+    .search-marker-popup p {
+        color: #bdc3c7;
+    }
 }
 
 /* 範圍標籤樣式 */
@@ -1277,6 +1329,23 @@ body {
     cursor: pointer;
     font-size: 13px;
     transition: all 0.2s;
+}
+
+/* 釘選輸入框樣式 */
+.pin-input {
+    width: 100%;
+    padding: 12px;
+    margin: 15px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.pin-input:focus {
+    border-color: #1e3a8a;
+    box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
 }
 
 .btn-route {

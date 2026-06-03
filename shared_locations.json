@@ -1,0 +1,57 @@
+[
+  {
+    "id": "test_1",
+    "name": "Myeongdong",
+    "lat": 37.5635,
+    "lng": 126.9895,
+    "category": "地標觀景",
+    "description": "",
+    "price": "",
+    "addedAt": 1780488938589,
+    "ownerFingerprint": "unknown"
+  },
+  {
+    "id": "wl_通仁市場_37.5780_126.9720",
+    "name": "通仁市場",
+    "lat": 37.578,
+    "lng": 126.972,
+    "category": "地標觀景",
+    "description": "特色銅錢市場，多種傳統小食",
+    "price": "",
+    "addedAt": 1780488000938,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "wl_景福宮_37.5796_126.9770",
+    "name": "景福宮",
+    "lat": 37.5796,
+    "lng": 126.977,
+    "category": "歷史文化",
+    "description": "韓國最大嘅宮殿，朝鮮王朝嘅正宮。每日有守門將交接儀式，著韓服入場免費。",
+    "price": "3000韓元（韓服免費）",
+    "addedAt": 1780488050387,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "wl_明洞_37.5636_126.9824",
+    "name": "明洞",
+    "lat": 37.5636,
+    "lng": 126.9824,
+    "category": "購物美食",
+    "description": "首爾最熱鬧嘅購物區，集合各大品牌、藥妝店同街頭小食。自由行必去。",
+    "price": "免費",
+    "addedAt": 1780488171201,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "wl_弘大（弘益大學區）_37.5563_126.9230",
+    "name": "弘大（弘益大學區）",
+    "lat": 37.5563,
+    "lng": 126.923,
+    "category": "夜生活文化",
+    "description": "年輕人嘅天堂，充滿街頭表演、特色咖啡店、酒吧同潮店。夜晚特別熱鬧。",
+    "price": "免費",
+    "addedAt": 1780488249857,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  }
+]
