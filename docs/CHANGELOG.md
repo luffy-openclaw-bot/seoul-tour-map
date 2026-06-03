@@ -1,5 +1,61 @@
 # 首爾旅遊地圖平台 - 改動紀錄
 
+## 📅 2025-06-04 v38 (價格資訊 + 願望清單功能)
+
+### ✨ 新功能 1：搜索結果價格資訊顯示
+
+**功能描述：**
+地圖點擊搜索周邊地點時，AI 分析結果新增 💰 價格欄位，讓用戶一目了然知道消費水平。
+
+**實現內容：**
+- 後端 AI prompt 新增必填 `price` 欄位要求（景點填門票/免費、餐廳填人均₩、酒店填每晚₩、購物填$/$$/$$$）
+- `PlaceInfo` 資料類新增 `price: str` 欄位
+- AI 回應解析器提取 `place_data.get('price', '')`
+- 搜索結果卡片顯示 `💰 **價格**：xxx`
+- 地圖 popup 標記顯示 `💰 xxx`
+- 景點列表項顯示 `💰 ${attr.ticket}` 橙色標籤
+
+### ✨ 新功能 2：願望清單 (Wishlist) 系統
+
+**功能描述：**
+完整嘅收藏系統，用戶可一鍵收藏/移除景點，資料持久化喺 localStorage，頁面刷新後保留。
+
+**核心實現：**
+
+| 組件 | 功能 |
+|------|------|
+| `WishlistManager` | localStorage CRUD：`add()`, `remove()`, `toggle()`, `has()`, `count()`, `getAll()` |
+| 唯一 ID | `wl_{name}_{lat.toFixed(4)}_{lng.toFixed(4)}` — 名稱+座標避免重複 |
+| `renderWishlistPanel()` | 側邊欄願望清單面板渲染，含 fly-to 同移除按鈕 |
+| `toggleWishlist(btn)` | 通用 ❤️ 按鈕處理器，切換收藏狀態 + Toast 通知 |
+| `updateAllWishlistButtons()` | 批量更新所有 ❤️ 按鈕外觀 |
+| `add_to_wishlist` action | `executeMapAction` 處理搜索結果嘅 JSON action tag |
+
+**❤️ 按鈕位置：**
+1. 景點列表 — 右上角圓形心形按鈕（`.wishlist-btn`）
+2. 搜索結果 — `add_to_wishlist` JSON action tag（點擊連結觸發）
+3. 詳情 Modal — 底部「加入願望清單」/「已收藏」按鈕（`.btn-wishlist-modal`）
+
+**UI 特色：**
+- 側邊欄「❤️ 願望清單」面板 + 數量 badge
+- 收藏狀態即時切換（空心/fa-heart ↔ 實心/fas fa-heart）
+- Toast 通知：「已加入願望清單」/「已從願望清單移除」
+- 願望清單面板點擊項目可飛到地圖位置
+- 頁面 DOMContentLoaded 自動初始化面板
+
+**修改文件：**
+
+| 文件 | 改動 |
+|------|------|
+| `search_module.py` | `PlaceInfo` 新增 `price: str`；AI prompt 要求 `price` 必填；解析器提取 price |
+| `static/js/search_module.js` | `renderPlaceCard()` 顯示價格 + `add_to_wishlist` action tag；`addPlaceMarker()` popup 顯示價格 |
+| `static/js/app.js` | 新增 `WishlistManager` 物件、`renderWishlistPanel()`、`toggleWishlist()`、`updateWishlistButtons()`、`updateWishlistCount()`；景點列表項 + Modal 新增 ❤️ 按鈕；`executeMapAction` 新增 `add_to_wishlist`/`remove_from_wishlist` case；`DOMContentLoaded` 初始化面板 |
+| `index.html` | 側邊欄新增 `#wishlist-panel` + `#wishlist-list` + `#wishlist-count`；版本號 v37→v38 |
+| `static/css/style.css` | 新增願望清單面板、項目、badge、按鈕、Modal 按鈕、Toast、價格標籤等完整 CSS |
+| `static/css/search_module.css` | 新增 `.place-popup` 內 `.place-price` 同 `.place-rating` 樣式 |
+
+---
+
 ## 📅 2025-06-04 v36 (手機版底部景點列表 Bottom Sheet)
 
 ### ✨ 新功能：手機版景點列表 Bottom Sheet
@@ -32,19 +88,25 @@
 ### 🐛 修正：搜索標記（search-marker）水滴形狀同脈動動畫對齊問題
 
 **問題描述：**
-搜索標記（chatbot AI 添加嘅地點 pin）嘅水滴形圖標同脈動（pulse）動畫圈唔對齊——脈動圈由圖標中心向外擴散，而唔係由 pin 尖端（即地圖坐標位置）向外擴散，導致視覺上標記同動畫圈偏移。
+搜索標記（chatbot AI 添加嘅地點 pin）嘅水滴形圖標用咗 `rotate(-45deg)` CSS hack，令到：
+1. Pin 形狀唔靚 — 角落唔圓滑、陰影變形、icon 要反轉補償旋轉
+2. 脈動（pulse）動畫圈由圖標中心擴散，唔係由針尖擴散，同地圖坐標偏移咗 ~20px
+3. 整體視覺效果差，同真正嘅地圖 pin 形狀唔似
 
-**根本原因：**
-- `.search-marker-pulse::before` 用咗 `top: 50%; left: 50%; transform: translate(-50%, -50%)`，將脈動圈中心放喺 div 嘅中心（y=20px）
-- 但 `iconAnchor: [20, 40]` 將地圖坐標對齊喺 div 嘅底部（y=40px）
-- 即脈動圈同 pin 尖端相差咗 20px
-
-**修正內容：**
+**修正方案：**
+完全重新設計搜索標記為經典水滴形地釘（Google Maps pin 風格）：
+- 上半部：圓形泡泡（`border-radius: 50%`）放白色 icon，白色 3px 邊框
+- 下半部：CSS 三角形（`::after` 僞元素用 border trick）作為針尖
+- 脈動圈：由針尖（div 底部中心 = iconAnchor）向外擴散
+- 用 `filter: drop-shadow()` 取代 `box-shadow`（唔會跟旋轉變形）
+- 冇再用 `rotate`，icon 唔使反轉
 
 | 文件 | 改動 |
 |------|------|
-| `static/css/style.css` | `.search-marker` 高度改為 44px（留空間畀 pin 尖端陰影）；`.marker-inner` 改為 `bottom: 2px`、尺寸 28×28；`.search-marker-pulse::before` 改為 `bottom: 0; left: 50%; transform: translate(-50%, 50%)` 將脈動圈對齊 pin 尖端 |
-| `static/js/app.js` | `addSearchMarker()` 嘅 `iconSize` 改為 `[40, 44]`、`iconAnchor` 改為 `[20, 44]`，配合新 CSS 高度 |
+| `static/css/style.css` | `.search-marker` 改為 48×48px；`.marker-inner` 改為純圓形（top:0, 32×32, border-radius:50%）；加 `::after` 僞元素畫三角針尖；脈動圈 `bottom:0; transform: translate(-50%, 50%)` 對齊針尖；用 `filter: drop-shadow` |
+| `static/js/app.js` | `addSearchMarker()` 嘅 `iconSize: [48,48]`、`iconAnchor: [24,48]` 配合新尺寸 |
+| `index.html` | Cache-busting v35→v36 |
+| `docs/CHANGELOG.md` | 今次改動紀錄 |
 
 ## 📅 2025-06-02 v34 (移除 chatbot 紅色「新內容」徽章)
 

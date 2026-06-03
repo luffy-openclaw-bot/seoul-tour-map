@@ -8,6 +8,10 @@ Location Search Module - 經緯度實時周邊搜索模組
 3. AI 結果分析 (Ollama Cloud)
 """
 
+# Load .env file before any other imports that read env vars
+from dotenv import load_dotenv
+load_dotenv()
+
 import json
 import urllib.request
 import urllib.parse
@@ -44,6 +48,7 @@ class PlaceInfo:
     description: str
     highlights: List[str]
     rating: str
+    price: str
     latest_review: str
     tips: str
     source_url: str = ""
@@ -379,6 +384,7 @@ class LocationSearcher:
             "description": "簡短描述（30-50字）",
             "highlights": ["亮點1", "亮點2"],
             "rating": "評分（如 4.5/5 或 高/中/低）",
+            "price": "價格資訊（如：免費、₩3000、₩30000-50000、$$、$$$）",
             "latest_review": "最新評論摘要（如有）",
             "tips": "旅遊貼士（如：最佳造訪時間、交通建議）"
         }}
@@ -388,9 +394,10 @@ class LocationSearcher:
 ```
 
 注意：
-- 須包含 lat、lng 坐標，方便地圖標記
-- 用粵語（廣東話書面）撰寫所有文字
-- 如果實在不熟悉該位置，可以建議用戶查詢更具體的地區名稱
+|- 須包含 lat、lng 坐標，方便地圖標記
+|- price 欄位必填：景點填門票或免費，餐廳填人均消費（₩），酒店填每晚房價（₩），購物填消費等級（$/$$/$$$）
+|- 用粵語（廣東話書面）撰寫所有文字
+|- 如果實在不熟悉該位置，可以建議用戶查詢更具體的地區名稱
 """
     
     def _parse_ai_response(self, response: str) -> List[PlaceInfo]:
@@ -423,6 +430,7 @@ class LocationSearcher:
                     description=place_data.get('description', ''),
                     highlights=place_data.get('highlights', []),
                     rating=place_data.get('rating', ''),
+                    price=place_data.get('price', ''),
                     latest_review=place_data.get('latest_review', ''),
                     tips=place_data.get('tips', ''),
                     lat=place_data.get('lat'),

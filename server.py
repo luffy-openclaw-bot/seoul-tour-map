@@ -4,6 +4,10 @@
 提供靜態文件服務 + AI 聊天 API
 """
 
+# Load .env file before any other imports that read env vars
+from dotenv import load_dotenv
+load_dotenv()
+
 import http.server
 import socketserver
 import json
@@ -142,11 +146,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
    
 8. locate_user：定位用戶位置（無參數）
 
+9. add_to_list：將提及嘅地點永久加入景點列表
+   用途：每次提及具體地點（咖啡店、酒店、景點、餐廳等）時，除咗加地圖標記，仲要將佢加入左側景點列表，方便用戶之後搵返
+   示例：「機場有 Starbucks」→ 除咗 add_marker，仲要加【{"action":"add_to_list","params":{"name":"Starbucks（仁川機場）","lat":37.4602,"lng":126.4407,"category":"購物美食","description":"機場內連鎖咖啡店"}}】
+   參數：name（地點名稱）, lat, lng（坐標）, category（分類，用現有分類名：地標觀景/購物美食/自然公園/文化藝術/夜生活/住宿/交通）, description（簡短描述，可選）, color（顏色，可選）
+
 注意：
 - 用戶問具體景點位置（如「景福宮喺邊」），用 center + add_marker 組合
 - 用戶問區域（如「明洞有咩玩」），用 add_polygon 顯示範圍
 - 每次新查詢，先加 clear_search_markers 清除之前標記
 - 只喺需要移動地圖、顯示位置、顯示範圍時先用呢啲指令。唔好每個回覆都加指令。
+- 提及具體地點時（咖啡店、酒店、餐廳、景點等），必須用 add_to_list 將佢加入景點列表，同時用 add_marker 喺地圖標示位置。兩個動作組合使用。
 """
 
             if system_prompt:
@@ -252,7 +262,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'show_route': {'from': str, 'to': str},
                 'add_marker': {'lat': float, 'lng': float, 'title': str, 'color': str, 'popup': str, 'pulse': bool},
                 'add_polygon': {'name': str, 'color': str, 'coords': list},
-                'clear_search_markers': {}
+                'clear_search_markers': {},
+                'add_to_list': {'name': str, 'lat': float, 'lng': float, 'category': str, 'description': str, 'color': str},
             }
 
             if action not in ALLOWED_ACTIONS:

@@ -4,6 +4,10 @@ Hermes worker for Seoul Tour Map.
 Processes tasks from the task queue with web search capability.
 """
 
+# Load .env file before any other imports that read env vars
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import json
 import time

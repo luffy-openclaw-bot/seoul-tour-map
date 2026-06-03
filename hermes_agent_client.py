@@ -4,6 +4,10 @@ Hermes Agent API Client - Seoul Tour Map Integration
 Supports fallback to Ollama Cloud API when Hermes Agent is unavailable.
 """
 
+# Load .env file before any other imports that read env vars
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import json
 import urllib.request

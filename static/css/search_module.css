@@ -332,3 +332,17 @@
 .fly-to-link:active {
     background: #2980b9;
 }
+
+/* 搜索結果價格樣式 (popup) */
+.place-popup .place-price {
+    font-size: 13px;
+    color: #e67e22;
+    font-weight: 500;
+    margin-top: 3px;
+}
+
+.place-popup .place-rating {
+    font-size: 13px;
+    color: #f39c12;
+    margin-top: 3px;
+}

@@ -310,6 +310,60 @@ body {
     border: none;
 }
 
+/* 地圖點擊坐標彈窗 */
+.coord-popup {
+    padding: 10px 12px;
+    text-align: center;
+}
+
+.coord-popup .coord-latlng {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.coord-popup .coord-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.coord-popup .search-nearby-btn,
+.coord-popup .transport-nearby-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 18px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.coord-popup .search-nearby-btn {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.coord-popup .search-nearby-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.coord-popup .transport-nearby-btn {
+    background: linear-gradient(135deg, #009D3E, #0052A4);
+    color: white;
+}
+
+.coord-popup .transport-nearby-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
 /* 自訂 Marker */
 .custom-marker {
     background: white;
@@ -360,69 +414,85 @@ body {
 
 /* ==================== Chatbot 搜索標記樣式 ==================== */
 
-/* 搜索標記 — pin shape with tip at bottom-center
-   iconAnchor=[20,44] means the map point aligns with pixel (20,44) in the div.
-   The div is 40×44, giving enough vertical room for the pin shape + shadow.
-   The pin tip sits at the very bottom (y=44 area) so it lands right on the map coordinate.
+/* 搜索標記 — 經典水滴形地釘 (map pin)
+   結構：上方圓形泡泡 + 下方三角尖 → 針尖對齊地圖坐標
+   iconAnchor=[24,48] 即針尖 = div 底部中心 = 地圖坐標
 */
 .search-marker {
     position: relative;
-    width: 40px;
-    height: 44px;   /* enough height so pin tip is at the bottom */
+    width: 48px;
+    height: 48px;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.35));
 }
 
+/* 圓形泡泡（上半部） */
 .search-marker .marker-inner {
     position: absolute;
-    bottom: 2px;     /* pin tip sits ~2px from bottom */
+    top: 0;
     left: 50%;
-    width: 28px;
-    height: 28px;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 32px;
     background: var(--marker-color, #e74c3c);
-    border-radius: 50% 50% 50% 0;
-    transform-origin: center bottom;
-    transform: translate(-50%, 0) rotate(-45deg);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    border: 2px solid white;
+    border: 3px solid white;
+    z-index: 2;
 }
 
 .search-marker .marker-inner i {
-    transform: rotate(45deg);
     color: white;
-    font-size: 13px;
+    font-size: 15px;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
 }
 
-/* 脈動效果 — radiates from pin tip (bottom-center) instead of div center */
+/* 針尖三角形（下半部）— 用僞元素畫 */
+.search-marker::after {
+    content: '';
+    position: absolute;
+    top: 28px;          /* 泡泡底部對接 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 16px solid var(--marker-color, #e74c3c);
+    z-index: 1;
+}
+
+/* 脈動效果 — 由針尖向外擴散 */
 .search-marker-pulse::before {
     content: '';
     position: absolute;
-    bottom: 0;             /* aligned with pin tip = map coordinate */
+    bottom: 0;                              /* 針尖 = div 底部 = 地圖坐標 */
     left: 50%;
-    transform: translate(-50%, 50%);  /* centre the circle on the tip point */
-    width: 20px;
-    height: 20px;
+    transform: translate(-50%, 50%);
+    width: 16px;
+    height: 16px;
     background: var(--marker-color, #e74c3c);
     border-radius: 50%;
-    opacity: 0.6;
+    opacity: 0.5;
     animation: markerPulse 1.5s ease-out infinite;
+    z-index: 0;
 }
 
 @keyframes markerPulse {
     0% {
-        width: 20px;
-        height: 20px;
-        opacity: 0.6;
+        width: 16px;
+        height: 16px;
+        opacity: 0.5;
     }
     70% {
-        width: 60px;
-        height: 60px;
+        width: 64px;
+        height: 64px;
         opacity: 0;
     }
     100% {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         opacity: 0;
     }
 }
@@ -636,7 +706,7 @@ body {
     right: 10px;  /* 更靠右 */
     left: auto;   /* 確保靠右 */
     width: 360px;
-    max-height: 500px;
+    max-height: 35vh; /* 減少到低於手機螢幕的一半 */
     background: white;
     border-radius: 16px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.2);
@@ -670,6 +740,15 @@ body {
 
 .chat-header i:first-child {
     font-size: 18px;
+}
+
+/* Chat title — responsive truncation */
+.chat-title {
+    flex: 1 1 auto;
+    min-width: 0;           /* allow flex item to shrink below content width */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .toggle-icon {
@@ -1268,6 +1347,64 @@ body {
             font-size: 11px;
             padding: 6px 8px;
         }
+
+        /* Chat widget ≤375px 更緊湊 */
+        .chat-header {
+            padding: 8px 10px;
+            gap: 4px;
+            font-size: 12px;
+        }
+
+        .chat-header i:first-child {
+            font-size: 14px;
+        }
+
+        .ai-chat.collapsed {
+            min-width: 100px;
+            max-width: 160px;
+        }
+    }
+}
+
+/* ==================== 超小螢幕 FAB 圖標模式（≤360px） ==================== */
+@media (max-width: 360px) {
+    .ai-chat.collapsed {
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px;
+        max-width: 48px;
+        border-radius: 50%;
+        bottom: 66px !important;  /* 避開底部面板 + margin */
+        right: 12px;
+    }
+
+    .ai-chat.collapsed .chat-header {
+        padding: 0;
+        justify-content: center;
+        gap: 0;
+        height: 48px;
+        border-radius: 50%;
+    }
+
+    .ai-chat.collapsed .chat-title {
+        display: none;  /* FAB 隱藏文字 */
+    }
+
+    .ai-chat.collapsed .chat-header i:first-child {
+        font-size: 20px;
+    }
+
+    .ai-chat.collapsed .toggle-icon {
+        display: none;  /* FAB 不需要 chevron */
+    }
+
+    /* FAB 模式：狀態指示器回到機器人圖標上（badge 風格，因標題隱藏） */
+    .ai-chat.collapsed .chat-header .status-indicator {
+        position: absolute;
+        top: 2px;
+        left: 28px;
+        font-size: 8px;
+        margin-left: 0;
     }
 }
 
@@ -1319,6 +1456,35 @@ body {
     /* 地圖圖例按鈕 */
     .map-legend {
         z-index: 900 !important;
+    }
+
+    /* ===== Chat widget mobile enhancements ===== */
+
+    /* chat-header 作為定位上下文（badge-dot 需要） */
+    .chat-header {
+        position: relative;
+        padding: 10px 12px;
+        gap: 6px;
+        font-size: 13px;
+    }
+
+    .chat-header i:first-child {
+        font-size: 16px;
+    }
+
+    /* 狀態指示器緊跟標題右側（inline），而非 badge 風格 */
+    .chat-header .status-indicator {
+        position: static;
+        font-size: 8px;
+        margin-left: 2px;
+        flex-shrink: 0;
+    }
+
+    /* collapsed 寬度自適應 */
+    .ai-chat.collapsed {
+        width: auto;
+        min-width: 120px;
+        max-width: 200px;
     }
 }
 
@@ -1783,7 +1949,8 @@ body {
 
     /* 手機版 AI 對話框要避開底部面板 */
     .ai-chat {
-        bottom: 56px !important; /* 避開底部面板 */
+        bottom: 56px !important;
+        max-height: 40vh !important; /* 手機版特別調整 */
     }
 
     .ai-chat.collapsed {
@@ -1795,5 +1962,259 @@ body {
 @media (min-width: 769px) {
     .mobile-location-panel {
         display: none !important;
+    }
+}
+
+/* ==================== 願望清單樣式 ==================== */
+
+/* 願望清單面板 */
+#wishlist-panel h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #e74c3c;
+}
+
+.wishlist-badge {
+    background: #e74c3c;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.wishlist-badge:empty,
+.wishlist-badge[data-count="0"] {
+    display: none;
+}
+
+/* 願望清單列表 */
+.wishlist-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.wishlist-empty {
+    text-align: center;
+    color: #999;
+    padding: 24px 12px;
+    font-size: 13px;
+}
+
+.wishlist-empty i {
+    display: block;
+    font-size: 28px;
+    margin-bottom: 8px;
+    color: #ddd;
+}
+
+/* 願望清單項目 */
+.wishlist-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: #fff;
+    border: 1px solid #eee;
+    cursor: pointer;
+    transition: all 0.2s;
+    gap: 8px;
+}
+
+.wishlist-item:hover {
+    border-color: #e74c3c;
+    box-shadow: 0 2px 8px rgba(231,76,60,0.12);
+}
+
+.wishlist-thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.wishlist-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.wishlist-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wishlist-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+}
+
+.wishlist-cat {
+    font-size: 10px;
+    color: white;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.wishlist-price {
+    font-size: 10px;
+    color: #e67e22;
+    font-weight: 500;
+}
+
+.wishlist-remove-btn {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    flex-shrink: 0;
+    transition: color 0.2s;
+}
+
+.wishlist-remove-btn:hover {
+    color: #e74c3c;
+}
+
+/* 景點列表中的心形按鈕 */
+.wishlist-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255,255,255,0.9);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 15px;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    z-index: 2;
+}
+
+.wishlist-btn:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+.wishlist-btn.in-wishlist {
+    color: #e74c3c;
+    background: rgba(231,76,60,0.08);
+}
+
+.wishlist-btn.in-wishlist i {
+    font-weight: 900;
+}
+
+/* Modal 中的願望清單按鈕 */
+.btn-wishlist-modal {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 2px solid #e74c3c;
+    background: white;
+    color: #e74c3c;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.25s;
+    font-weight: 600;
+}
+
+.btn-wishlist-modal:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-wishlist-modal.in-wishlist {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-wishlist-modal.in-wishlist:hover {
+    background: #c0392b;
+    border-color: #c0392b;
+}
+
+/* 景點列表項 - 修正定位 */
+.attraction-item {
+    position: relative;
+}
+
+/* 景點價格標籤 (列表中) */
+.attraction-price {
+    display: inline-block;
+    font-size: 11px;
+    color: #e67e22;
+    background: rgba(230,126,34,0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+    font-weight: 500;
+}
+
+/* 搜索結果價格標籤 */
+.place-price {
+    font-size: 12px;
+    color: #e67e22;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+/* Toast 通知 */
+.wishlist-toast {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    z-index: 10000;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    animation: toastIn 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wishlist-toast i {
+    color: #e74c3c;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 手機版願望清單面板 */
+@media (max-width: 768px) {
+    .wishlist-list {
+        max-height: 200px;
     }
 }

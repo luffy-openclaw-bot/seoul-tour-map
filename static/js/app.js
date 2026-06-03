@@ -75,9 +75,14 @@ function onMapClick(e) {
         .setContent(`
             <div class="coord-popup">
                 <div class="coord-latlng">📍 ${lat}, ${lng}</div>
-                <button class="search-nearby-btn" onclick="searchNearby(${lat}, ${lng})">
-                    搜尋附近資訊
-                </button>
+                <div class="coord-actions">
+                    <button class="search-nearby-btn" onclick="searchNearby(${lat}, ${lng})">
+                        <i class="fas fa-search"></i> 搜尋附近資訊
+                    </button>
+                    <button class="transport-nearby-btn" onclick="searchNearbyTransport(${lat}, ${lng})">
+                        <i class="fas fa-subway"></i> 交通資訊
+                    </button>
+                </div>
             </div>
         `)
         .openOn(map);
@@ -116,6 +121,75 @@ async function searchNearby(lat, lng) {
             : '附近未有記錄景點';
         addMessage(reply, 'bot');
     }
+}
+
+// ==================== 附近交通查詢 ====================
+async function searchNearbyTransport(lat, lng) {
+    map.closePopup();
+    addMessage(`查詢坐標 ${lat}, ${lng} 附近嘅交通資訊`, 'user');
+    showTyping();
+
+    // Find nearby subway stations (within ~1km)
+    const nearbyStations = [];
+    subwayData.lines.forEach(line => {
+        line.stations.forEach(station => {
+            const dist = map.distance([lat, lng], [station.lat, station.lng]);
+            if (dist < 1000) {
+                nearbyStations.push({
+                    name: station.name,
+                    line: line.name,
+                    lineColor: line.color,
+                    distance: Math.round(dist),
+                    transfer: station.transfer || [],
+                    nearby: station.nearby || []
+                });
+            }
+        });
+    });
+
+    // Sort by distance
+    nearbyStations.sort((a, b) => a.distance - b.distance);
+
+    // Find nearby attractions with transport info
+    const nearbyAttractions = attractionsData.filter(attr => {
+        const dist = map.distance([lat, lng], [attr.lat, attr.lng]);
+        return dist < 1500;
+    }).sort((a, b) => {
+        return map.distance([lat, lng], [a.lat, a.lng]) - map.distance([lat, lng], [b.lat, b.lng]);
+    });
+
+    let reply = '';
+
+    if (nearbyStations.length > 0) {
+        reply += `🚇 **附近地鐵站：**\n`;
+        nearbyStations.slice(0, 5).forEach(s => {
+            const transferInfo = s.transfer.length > 0 
+                ? `（可轉乘：${s.transfer.map(t => t).join('、')}）` 
+                : '';
+            const nearbyInfo = s.nearby.length > 0
+                ? ` → 附近景點：${s.nearby.join('、')}`
+                : '';
+            reply += `• **${s.name}站**（${s.line}）— ${s.distance}m ${transferInfo}${nearbyInfo}\n`;
+        });
+        reply += '\n';
+    } else {
+        reply += '🚇 1公里範圍內未有地鐵站\n\n';
+    }
+
+    if (nearbyAttractions.length > 0) {
+        reply += `🏛️ **附近景點交通：**\n`;
+        nearbyAttractions.slice(0, 4).forEach(attr => {
+            const dist = Math.round(map.distance([lat, lng], [attr.lat, attr.lng]));
+            reply += `• **${attr.name}**（${dist}m）— 地鐵：${attr.transport.subway}，步程：${attr.transport.time_from_station}\n`;
+        });
+    }
+
+    if (!reply) {
+        reply = '附近未有交通資訊記錄';
+    }
+
+    hideTyping();
+    addMessage(reply, 'bot');
 }
 
 // ==================== 載入資料 ====================
@@ -157,8 +231,16 @@ function renderAttractionList() {
             <div class="info">
                 <div class="name">${attr.name}</div>
                 <span class="category-tag" style="background:${color}">${attr.category}</span>
+                <span class="attraction-price">💰 ${attr.ticket}</span>
                 <div class="desc">${attr.description}</div>
             </div>
+            <button class="wishlist-btn ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : ''}" 
+                    data-name="${attr.name}" data-lat="${attr.lat}" data-lng="${attr.lng}" 
+                    data-category="${attr.category}" data-price="${attr.ticket}" 
+                    data-description="${attr.description.substring(0, 60)}"
+                    onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
+                <i class="${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far'} fa-heart"></i>
+            </button>
         `;
 
         item.addEventListener('click', () => {
@@ -292,6 +374,14 @@ function showAttractionDetail(attr) {
                 <a class="btn-gmaps" href="https://www.google.com/maps/search/?api=1&query=${attr.lat},${attr.lng}" target="_blank" rel="noopener">
                     <i class="fas fa-map-marker-alt"></i> Google Maps
                 </a>
+                <button class="btn-wishlist-modal ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : ''}"
+                        data-name="${attr.name}" data-lat="${attr.lat}" data-lng="${attr.lng}"
+                        data-category="${attr.category}" data-price="${attr.ticket}"
+                        data-description="${attr.description.substring(0, 60)}"
+                        onclick="toggleWishlist(this); showAttractionDetailById('${attr.id}');">
+                    <i class="${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far'} fa-heart"></i>
+                    ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? '已收藏' : '加入願望清單'}
+                </button>
             </div>
         </div>
     `;
@@ -935,7 +1025,8 @@ function getSystemContext() {
 4. locate_user (定位用戶GPS位置)：【{"action":"locate_user"}}】
 5. add_marker (搜索結果/特定位置時添加標記)：【{"action":"add_marker","params":{"lat":37.5500,"lng":126.9200,"title":"弘大","color":"#e74c3c","popup":"弘大購物區"}}】
 6. add_polygon (顯示區域範圍)：【{"action":"add_polygon","params":{"coords":[[37.56,126.98],[37.56,126.99],[37.57,126.99],[37.57,126.98]],"name":"明洞商圈","color":"#3498db"}}】
-7. clear_search_markers (清除搜索標記)：【{"action":"clear_search_markers"}}】
+7. clear_search_markers (清除搜索標記)：【{"action":"clear_search_markers"}】
+8. add_to_list (將提及嘅地點加入景點列表)：【{"action":"add_to_list","params":{"name":"地點名稱","lat":37.46,"lng":126.44,"category":"購物美食","description":"簡短描述"}}】
 
 景點ID：${attractionsData.map(a=>a.id).join(', ')}
 分類：${categories}
@@ -947,6 +1038,7 @@ ${attractionsSummary}
 - 當用家講「去XX」、「睇吓XX」等需要移動地圖時，如果XX係已知景點ID，用 focus_attraction；如果係其他地點（如機場、火車站、區域名稱），用 add_marker 加上準確坐標
 - 搜索結果在內文回答後，適宜用 add_marker 喺地圖標示位置
 - 提及區域或商圈時，可用 add_polygon 顯示範圍
+- 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須同時使用 add_to_list 將地點加入左側景點列表，以及 add_marker 喺地圖標示位置
 - 普通對答唔需要地圖指令`;
 }
 
@@ -1451,6 +1543,35 @@ async function executeMapAction(action, params) {
                 // 清除所有搜索標記
                 clearSearchMarkers();
                 break;
+            // ===== 添加到願望清單 =====
+            case 'add_to_wishlist':
+                // 將搜索結果地點添加到願望清單
+                if (params.name && params.lat !== undefined && params.lng !== undefined) {
+                    const added = WishlistManager.add({
+                        name: params.name,
+                        lat: parseFloat(params.lat),
+                        lng: parseFloat(params.lng),
+                        category: params.category || '',
+                        price: params.price || '',
+                        description: params.description || ''
+                    });
+                    if (added) {
+                        // 顯示 toast 提示
+                        const toast = document.createElement('div');
+                        toast.className = 'wishlist-toast';
+                        toast.innerHTML = `<i class="fas fa-heart" style="color:#e74c3c"></i> ${params.name} 已加入願望清單`;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 2000);
+                    }
+                    console.log(`[Map Action] Add to wishlist: ${params.name}`);
+                }
+                break;
+            // ===== 從願望清單移除 =====
+            case 'remove_from_wishlist':
+                if (params.id) {
+                    WishlistManager.remove(params.id);
+                }
+                break;
             // ===== 飛到指定坐標 =====
             case 'fly_to':
                 // 飛到指定位置並顯示名稱
@@ -1463,6 +1584,23 @@ async function executeMapAction(action, params) {
                         .setContent(`<b>${title}</b><br>📍 ${params.lat.toFixed(5)}, ${params.lng.toFixed(5)}`)
                         .openOn(map);
                     console.log(`[Map Action] Flying to ${params.lat}, ${params.lng} (${title})`);
+                }
+                break;
+            case 'add_to_list':
+                // 將地點加入景點列表並持久化
+                if (params.name && params.lat !== undefined && params.lng !== undefined) {
+                    const listPlace = {
+                        name: params.name,
+                        lat: parseFloat(params.lat),
+                        lng: parseFloat(params.lng),
+                        category: params.category || '地標觀景',
+                        description: params.description || ''
+                    };
+                    // 1. Add to visual list (using existing function)
+                    addSearchResultsToList([listPlace], 'all');
+                    // 2. Persist to localStorage
+                    persistChatPlace(listPlace);
+                    console.log(`[Map Action] Added to list: ${params.name}`);
                 }
                 break;
             default:
@@ -1569,6 +1707,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     initChat();
     bindEvents();
     initMobilePanel();
+    // 初始化願望清單面板
+    renderWishlistPanel();
+    updateWishlistCount();
+    // 恢復聊天添加的地點
+    loadChatPlaces();
     // 頁面啟動時檢查系統狀態
     checkSystemStatus();
 });
@@ -1600,8 +1743,8 @@ function addSearchMarker(lat, lng, title, color, popupContent, pulse = true) {
     const customIcon = L.divIcon({
         html: iconHtml,
         className: '',
-        iconSize: [40, 44],
-        iconAnchor: [20, 44]   // tip at bottom-center aligns with map coordinate
+        iconSize: [48, 48],
+        iconAnchor: [24, 48]   // pin tip at bottom-center = map coordinate
     });
     
     // 創建標記
@@ -2068,6 +2211,42 @@ function addSearchResultsToList(places, queryType) {
     console.log(`[Search] Added ${places.length} search results to list`);
 }
 
+// ==================== 聊天添加地點持久化 ====================
+const CHAT_PLACES_KEY = 'seoul_tour_chat_places';
+
+function persistChatPlace(place) {
+    const places = JSON.parse(localStorage.getItem(CHAT_PLACES_KEY) || '[]');
+    // 避免重複（按名稱+坐標）
+    const exists = places.some(p =>
+        p.name === place.name &&
+        Math.abs(p.lat - place.lat) < 0.0001 &&
+        Math.abs(p.lng - place.lng) < 0.0001
+    );
+    if (!exists) {
+        places.push({
+            name: place.name,
+            lat: place.lat,
+            lng: place.lng,
+            category: place.category || '地標觀景',
+            description: place.description || '',
+            addedAt: Date.now()
+        });
+        localStorage.setItem(CHAT_PLACES_KEY, JSON.stringify(places));
+    }
+}
+
+function loadChatPlaces() {
+    const places = JSON.parse(localStorage.getItem(CHAT_PLACES_KEY) || '[]');
+    if (places.length > 0) {
+        addSearchResultsToList(places, 'all');
+        console.log(`[ChatPlaces] Restored ${places.length} chat-added places`);
+    }
+}
+
+function clearChatPlaces() {
+    localStorage.removeItem(CHAT_PLACES_KEY);
+}
+
 /**
  * 跳轉到搜索結果位置
  */
@@ -2099,6 +2278,8 @@ function clearSearchResultsFromList() {
     // 同時清除地圖標記
     clearSearchMarkers();
     
+    clearChatPlaces();
+
     console.log('[Search] Cleared all search results from list');
 }
 
@@ -2109,6 +2290,240 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ==================== 願望清單（Wishlist）系統 ====================
+
+/**
+ * 願望清單管理器 — localStorage 持久化存儲
+ * 數據結構: { id: string, name, lat, lng, category, price, description, addedAt }
+ */
+const WishlistManager = {
+    STORAGE_KEY: 'seoul_tour_wishlist',
+
+    /** 獲取所有願望清單項目 */
+    getAll() {
+        try {
+            const data = localStorage.getItem(this.STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('[Wishlist] Read error:', e);
+            return [];
+        }
+    },
+
+    /** 保存願望清單 */
+    save(items) {
+        try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(items));
+        } catch (e) {
+            console.error('[Wishlist] Save error:', e);
+        }
+    },
+
+    /** 生成唯一 ID */
+    _generateId(name, lat, lng) {
+        // 用 name+坐標 作為唯一標識，避免重複
+        return `wl_${name}_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+    },
+
+    /** 添加項目到願望清單 */
+    add(item) {
+        const items = this.getAll();
+        const id = this._generateId(item.name, item.lat, item.lng);
+
+        // 檢查是否已存在
+        if (items.find(i => i.id === id)) {
+            console.log('[Wishlist] Already exists:', item.name);
+            return false;
+        }
+
+        items.push({
+            id: id,
+            name: item.name,
+            lat: item.lat,
+            lng: item.lng,
+            category: item.category || '',
+            price: item.price || '',
+            description: item.description || '',
+            addedAt: Date.now()
+        });
+
+        this.save(items);
+        console.log('[Wishlist] Added:', item.name);
+
+        // 觸發 UI 更新
+        this._notifyChange();
+        return true;
+    },
+
+    /** 從願望清單移除 */
+    remove(id) {
+        let items = this.getAll();
+        items = items.filter(i => i.id !== id);
+        this.save(items);
+        console.log('[Wishlist] Removed:', id);
+        this._notifyChange();
+    },
+
+    /** 切換願望清單狀態（有則移除，無則添加） */
+    toggle(item) {
+        const id = this._generateId(item.name, item.lat, item.lng);
+        if (this.has(item.name, item.lat, item.lng)) {
+            this.remove(id);
+            return false;
+        } else {
+            this.add(item);
+            return true;
+        }
+    },
+
+    /** 檢查是否已在願望清單 */
+    has(name, lat, lng) {
+        const id = this._generateId(name, lat, lng);
+        return this.getAll().some(i => i.id === id);
+    },
+
+    /** 獲取項目數量 */
+    count() {
+        return this.getAll().length;
+    },
+
+    /** 觸發 UI 更新事件 */
+    _notifyChange() {
+        // 更新願望清單面板
+        renderWishlistPanel();
+        // 更新景點列表中的心形按鈕狀態
+        updateAllWishlistButtons();
+        // 更新側邊欄願望清單計數
+        updateWishlistCount();
+    }
+};
+
+/**
+ * 渲染願望清單面板
+ */
+function renderWishlistPanel() {
+    const container = document.getElementById('wishlist-list');
+    const countEl = document.getElementById('wishlist-count');
+    if (!container) return;
+
+    const items = WishlistManager.getAll();
+    if (countEl) countEl.textContent = items.length > 0 ? `(${items.length})` : '';
+
+    container.innerHTML = '';
+
+    if (items.length === 0) {
+        container.innerHTML = '<div class="wishlist-empty"><i class="far fa-heart"></i> 願望清單是空的<br><small>點擊景點或搜索結果的 ❤️ 按鈕添加</small></div>';
+        return;
+    }
+
+    items.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'wishlist-item';
+        el.dataset.wishlistId = item.id;
+
+        const color = CATEGORY_COLORS[item.category] || '#667eea';
+        const priceHtml = item.price ? `<span class="wishlist-price">💰 ${item.price}</span>` : '';
+
+        el.innerHTML = `
+            <div class="wishlist-thumb" style="background:${color}20;color:${color}">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div class="wishlist-info">
+                <div class="wishlist-name">${item.name}</div>
+                <div class="wishlist-meta">
+                    <span class="wishlist-cat" style="background:${color}">${item.category}</span>
+                    ${priceHtml}
+                </div>
+            </div>
+            <button class="wishlist-remove-btn" data-wishlist-id="${item.id}" title="從願望清單移除">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        // 點擊跳轉
+        el.addEventListener('click', (e) => {
+            if (e.target.closest('.wishlist-remove-btn')) return;
+            map.flyTo([item.lat, item.lng], 16, { duration: 1.5 });
+        });
+
+        // 移除按鈕
+        const removeBtn = el.querySelector('.wishlist-remove-btn');
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            WishlistManager.remove(item.id);
+        });
+
+        container.appendChild(el);
+    });
+}
+
+/**
+ * 更新側邊欄願望清單計數
+ */
+function updateWishlistCount() {
+    const badge = document.getElementById('wishlist-count');
+    if (badge) {
+        const count = WishlistManager.count();
+        badge.textContent = count > 0 ? `(${count})` : '';
+    }
+}
+
+/**
+ * 更新所有願望清單按鈕狀態
+ */
+function updateAllWishlistButtons() {
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+        const name = btn.dataset.name;
+        const lat = parseFloat(btn.dataset.lat);
+        const lng = parseFloat(btn.dataset.lng);
+        if (name && !isNaN(lat) && !isNaN(lng)) {
+            const inList = WishlistManager.has(name, lat, lng);
+            btn.classList.toggle('in-wishlist', inList);
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = inList ? 'fas fa-heart' : 'far fa-heart';
+            }
+        }
+    });
+}
+
+/**
+ * 切換願望清單（通用按鈕 handler）
+ */
+function toggleWishlist(btn) {
+    const name = btn.dataset.name;
+    const lat = parseFloat(btn.dataset.lat);
+    const lng = parseFloat(btn.dataset.lng);
+    if (!name || isNaN(lat) || isNaN(lng)) return;
+
+    const item = {
+        name: name,
+        lat: lat,
+        lng: lng,
+        category: btn.dataset.category || '',
+        price: btn.dataset.price || '',
+        description: btn.dataset.description || ''
+    };
+
+    const added = WishlistManager.toggle(item);
+
+    // 更新按鈕外觀
+    btn.classList.toggle('in-wishlist', added);
+    const icon = btn.querySelector('i');
+    if (icon) {
+        icon.className = added ? 'fas fa-heart' : 'far fa-heart';
+    }
+
+    // 顯示提示
+    const toast = document.createElement('div');
+    toast.className = 'wishlist-toast';
+    toast.innerHTML = added
+        ? `<i class="fas fa-heart" style="color:#e74c3c"></i> 已加入願望清單`
+        : `<i class="far fa-heart"></i> 已從願望清單移除`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
 }
 
 // ==================== 系統狀態檢查 ====================

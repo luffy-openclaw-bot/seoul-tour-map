@@ -281,6 +281,7 @@ const SearchUI = {
             : '';
 
         const rating = place.rating ? `\n⭐ **評分**：${place.rating}` : '';
+        const price = place.price ? `\n💰 **價格**：${place.price}` : '';
         const tips = place.tips ? `\n💡 **貼士**：${place.tips}` : '';
         const review = place.latest_review ? `\n💬 **最新評價**：${place.latest_review}` : '';
 
@@ -291,7 +292,12 @@ const SearchUI = {
 
         // 添加標記指令（如果有座標）
         const addMarkerAction = (place.lat && place.lng)
-            ? `【{"action":"add_marker","params":{"lat":${place.lat},"lng":${place.lng},"title":"${this.escapeJson(place.name)}","color":"#e74c3c","pulse":true}}】`
+            ? `【{"action":"add_marker","params":{"lat":${place.lat},"lng":${place.lng},"title":"${this.escapeJson(place.name)}","color":"#e74c3c","pulse":true}}}】`
+            : '';
+
+        // 願望清單按鈕（JSON action tag 會被 addMessage 解析）
+        const wishlistAction = (place.lat && place.lng)
+            ? `【{"action":"add_to_wishlist","params":{"name":"${this.escapeJson(place.name)}","lat":${place.lat},"lng":${place.lng},"category":"${this.escapeJson(place.category)}","price":"${this.escapeJson(place.price || '')}","description":"${this.escapeJson(place.description ? place.description.substring(0, 60) : '')}"}}】`
             : '';
 
         // 標題：如果有座標，在標題後方加上 fly_to 連結（會被 addMessage 轉為可點擊）
@@ -299,13 +305,13 @@ const SearchUI = {
 
         return `
 ### ${index}. ${place.name} ${titleSuffix} ${flyToAction}
-**類別**：${place.category}${rating}
+**類別**：${place.category}${rating}${price}
 
 ${place.description}
 
 ${highlightsHtml ? `**亮點**：${highlightsHtml}\n` : ''}${tips}${review}
 
-${addMarkerAction}
+${wishlistAction}
 ---
 `;
     },
@@ -414,6 +420,7 @@ const SearchMap = {
                 <div class="place-category">${place.category}</div>
                 <p>${place.description.substring(0, 100)}...</p>
                 ${place.rating ? `<div class="place-rating">⭐ ${place.rating}</div>` : ''}
+                ${place.price ? `<div class="place-price">💰 ${place.price}</div>` : ''}
             </div>
         `;
 
