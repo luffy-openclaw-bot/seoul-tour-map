@@ -51,7 +51,8 @@ ODSAY_API_KEY = os.getenv('ODSAY_API_KEY', 'YOUR_ODSAY_KEY_HERE')
 
 # Hermes Agent 任務隊列設定
 HERMES_ENABLED = os.getenv('HERMES_ENABLED', 'false').lower() == 'true'
-HERMES_TASK_DIR = '/tmp/hermes_tasks'
+HERMES_TASK_DIR = os.getenv('HERMES_TASK_DIR', os.path.join(BASE_DIR, '.hermes_tasks'))
+os.makedirs(HERMES_TASK_DIR, exist_ok=True)
 HERMES_TIMEOUT = 120  # 秒
 
 # SSL context 不驗證 cert（因 Ollama Cloud cert 可能過期）
