@@ -34,6 +34,21 @@ const CATEGORY_COLORS = {
     '願望s': '#ff4757'
 };
 
+const CATEGORY_FALLBACK_IMAGES = {
+    '歷史文化': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20traditional%20Korean%20palace%20or%20temple%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+    '地標觀景': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20modern%20Seoul%20city%20landmark%20or%20skyline%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+    '購物美食': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20bustling%20Seoul%20shopping%20street%20and%20street%20food%20stalls%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
+    '夜生活文化': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20Seoul%20nightlife%2C%20neon%20lights%2C%20busy%20streets%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
+    '娛樂': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20an%20amusement%20park%20or%20entertainment%20venue%20in%20Seoul%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
+    '休閒': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20relaxing%20cafe%20or%20cultural%20space%20in%20Seoul%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
+    '自然景觀': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20beautiful%20park%20or%20nature%20trail%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+    'default': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20Seoul%20cityscape%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+};
+
+function getFallbackImage(category) {
+    return CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES['default'];
+}
+
 // ==================== 地圖初始化 ====================
 function initMap() {
     map = L.map('map', {
@@ -360,9 +375,8 @@ function renderAttractionList() {
             item.dataset.lng = place.lng;
 
             item.innerHTML = `
-                <div class="thumb-search" style="background: ${color}; color: white; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
+                <img class="thumb" src="${place.image || getFallbackImage(category)}" alt="Photo of ${place.name}" loading="lazy"
+                     onerror="this.onerror=null; this.src=getFallbackImage('${category}');">
                 <div class="info">
                     <div class="name">${place.name}</div>
                     <span class="category-tag" style="background:${color}">${category}</span>
@@ -422,8 +436,8 @@ function renderAttractionList() {
         const color = CATEGORY_COLORS[attr.category] || '#666';
 
         item.innerHTML = `
-            <img class="thumb" src="${attr.image}" alt="${attr.name}" loading="lazy"
-                 onerror="this.src='https://placehold.co/70?text=${encodeURIComponent(attr.name)}'">
+            <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" loading="lazy"
+                 onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="info">
                 <div class="name">${attr.name}</div>
                 <span class="category-tag" style="background:${color}">${attr.category}</span>
@@ -505,7 +519,7 @@ function createPopupContent(attr) {
     const color = CATEGORY_COLORS[attr.category] || '#666';
     return `
         <div class="popup-card">
-            ${attr.image ? `<img src="${attr.image}" alt="${attr.name}" onerror="this.src='https://placehold.co/300x140?text=${encodeURIComponent(attr.name)}'">` : ''}
+            <img src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="popup-info">
                 <div class="popup-name">${attr.name}</div>
                 <div class="popup-ko">${attr.name_ko}</div>
@@ -547,7 +561,7 @@ function showAttractionDetail(attr) {
     const highlights = attr.highlights.map(h => `<li>${h}</li>`).join('');
 
     body.innerHTML = `
-        <img class="modal-hero" src="${attr.image}" alt="${attr.name}" onerror="this.src='https://placehold.co/500x220?text=${encodeURIComponent(attr.name)}'">
+        <img class="modal-hero" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
         <div class="modal-info">
             <div class="modal-title">${attr.name}</div>
             <div class="modal-ko">${attr.name_ko}</div>
