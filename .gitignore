@@ -173,7 +173,11 @@ node_modules/
 package-lock.json
 .env.local
 
-# Trae
+
+# IDE / Editor Folders
 .trae/
+
+# Project Specific
+.hermes_tasks/
 
 # EOF
