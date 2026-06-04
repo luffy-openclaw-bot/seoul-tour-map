@@ -863,6 +863,22 @@ body {
     white-space: nowrap;
 }
 
+.resize-icon {
+    padding: 4px;
+    margin-right: 8px;
+    transition: transform 0.2s;
+}
+.resize-icon:hover {
+    transform: scale(1.1);
+}
+.ai-chat.collapsed .resize-icon {
+    display: none;
+}
+
+.ai-chat.expanded-tall:not(.collapsed) {
+    max-height: 80vh !important;
+}
+
 .toggle-icon {
     margin-left: auto;
     transition: transform 0.3s;
