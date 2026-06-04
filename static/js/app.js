@@ -409,13 +409,23 @@ async function loadData() {
             fetch('static/data/preset_locations.json'),
             fetch('static/data/subway.json')
         ]);
+        
+        if (!attrRes.ok) throw new Error(`HTTP error! status: ${attrRes.status}`);
+        
         const attrData = await attrRes.json();
         const subData = await subwayRes.json();
 
-        attractionsData = attrData.attractions;
+        if (attrData && Array.isArray(attrData.attractions)) {
+            attractionsData = attrData.attractions;
+        } else {
+            console.warn('警告：preset_locations.json 中的 attractions 不是有效的陣列。');
+            attractionsData = [];
+        }
+        
         subwayData = subData;
     } catch (e) {
         console.error('載入資料失敗:', e);
+        attractionsData = [];
     }
 }
 
@@ -514,10 +524,15 @@ function renderAttractionList() {
     // 2. 渲染景點列表
     let filtered = getFilteredAttractions(activeCategory);
 
+    if (filtered.length === 0 && (!currentSearchResults || currentSearchResults.length === 0)) {
+        container.innerHTML = '<div class="empty-state" style="padding: 20px; text-align: center; color: #888;">沒有找到景點資料</div>';
+        return;
+    }
+
     filtered.forEach(attr => {
         const item = document.createElement('div');
         item.className = 'attraction-item';
-        item.dataset.id = attr.id;
+        item.dataset.id = attr.id || '';
 
         const color = CATEGORY_COLORS[attr.category] || '#666';
         const customData = WishlistManager.get(attr.name, attr.lat, attr.lng);
@@ -532,20 +547,26 @@ function renderAttractionList() {
             remarkHtml = `<div class="remark-text"><i class="fas fa-comment-dots"></i> ${customData.myRemark}</div>`;
         }
 
+        const safeName = attr.name || '未知景點';
+        const safeCategory = attr.category || '未分類';
+        const safeTicket = attr.ticket || '';
+        const safeDesc = attr.description ? attr.description : '';
+        const safeDescShort = safeDesc.length > 60 ? safeDesc.substring(0, 60) + '...' : safeDesc;
+
         item.innerHTML = `
-            <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" loading="lazy"
+            <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${safeName}" loading="lazy"
                  onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="info">
-                <div class="name">${attr.name} ${badges}</div>
-                <span class="category-tag" style="background:${color}">${attr.category}</span>
-                <span class="attraction-price">💰 ${attr.ticket}</span>
-                <div class="desc">${attr.description}</div>
+                <div class="name">${safeName} ${badges}</div>
+                <span class="category-tag" style="background:${color}">${safeCategory}</span>
+                ${safeTicket ? `<span class="attraction-price">💰 ${safeTicket}</span>` : ''}
+                <div class="desc">${safeDesc}</div>
                 ${remarkHtml}
             </div>
             <button class="wishlist-btn ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : ''}" 
-                    data-name="${attr.name}" data-lat="${attr.lat}" data-lng="${attr.lng}" 
-                    data-category="${attr.category}" data-price="${attr.ticket}" 
-                    data-description="${attr.description.substring(0, 60)}"
+                    data-name="${attr.name || ''}" data-lat="${attr.lat || 0}" data-lng="${attr.lng || 0}" 
+                    data-category="${attr.category || ''}" data-price="${attr.ticket || ''}" 
+                    data-description="${safeDescShort}"
                     onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
                 <i class="${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far'} fa-heart"></i>
             </button>
@@ -1623,6 +1644,11 @@ function renderMobilePanelList() {
 
     if (countEl) countEl.textContent = (filtered.length + (currentSearchResults ? currentSearchResults.length : 0)) + ' 個項目';
 
+    if (filtered.length === 0 && (!currentSearchResults || currentSearchResults.length === 0)) {
+        container.innerHTML = '<div class="empty-state" style="padding: 20px; text-align: center; color: #888;">沒有找到景點資料</div>';
+        return;
+    }
+
     filtered.forEach(function(attr) {
         var color = CATEGORY_COLORS[attr.category] || '#666';
         var emoji = CATEGORY_EMOJIS[attr.category] || '📍';
@@ -1640,20 +1666,26 @@ function renderMobilePanelList() {
             remarkHtml = `<div class="remark-text"><i class="fas fa-comment-dots"></i> ${customData.myRemark}</div>`;
         }
 
+        const safeName = attr.name || '未知景點';
+        const safeCategory = attr.category || '未分類';
+        const safeTicket = attr.ticket || '';
+        const safeDesc = attr.description ? attr.description : '';
+        const safeDescShort = safeDesc.length > 60 ? safeDesc.substring(0, 60) + '...' : safeDesc;
+
         card.innerHTML =
             '<div class="card-emoji" style="background:' + color + '15">' + emoji + '</div>' +
             '<div class="card-info">' +
-                '<div class="card-name">' + attr.name + ' ' + badges + '</div>' +
+                '<div class="card-name">' + safeName + ' ' + badges + '</div>' +
                 '<div class="card-sub">' +
                     '<span class="card-dot" style="background:' + color + '"></span>' +
-                    attr.category + (attr.name_ko ? ' · ' + attr.name_ko : '') +
+                    safeCategory + (attr.name_ko ? ' · ' + attr.name_ko : '') +
                 '</div>' +
                 remarkHtml +
             '</div>' +
             '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : '') + '" ' +
-                'data-name="' + attr.name + '" data-lat="' + attr.lat + '" data-lng="' + attr.lng + '" ' +
-                'data-category="' + attr.category + '" data-price="' + (attr.ticket || '') + '" ' +
-                'data-description="' + (attr.description ? attr.description.substring(0, 60) : '') + '" ' +
+                'data-name="' + (attr.name || '') + '" data-lat="' + (attr.lat || 0) + '" data-lng="' + (attr.lng || 0) + '" ' +
+                'data-category="' + safeCategory + '" data-price="' + safeTicket + '" ' +
+                'data-description="' + safeDescShort + '" ' +
                 'onclick="event.stopPropagation(); toggleWishlist(this)">' +
                 '<i class="' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far') + ' fa-heart"></i>' +
             '</button>' +
