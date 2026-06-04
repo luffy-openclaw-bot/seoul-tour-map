@@ -2158,6 +2158,12 @@ body {
     display: none;
 }
 
+.sync-loading {
+    font-size: 13px;
+    color: #9ca3af;
+    margin-left: 4px;
+}
+
 /* 釘選位置列表 */
 .pinned-list {
     max-height: 300px;

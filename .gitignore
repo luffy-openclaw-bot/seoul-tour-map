@@ -169,3 +169,11 @@ tmp/
 *.sublime-workspace
 
 # EOF
+
+# Node.js
+node_modules/
+package-lock.json
+.env.local
+
+# IDE / Editor Folders
+.trae/

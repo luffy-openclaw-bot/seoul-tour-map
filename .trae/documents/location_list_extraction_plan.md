@@ -10,17 +10,19 @@
 
 ## 建議變更 (Proposed Changes)
 
-1. **簡化 AI 指令 (修改 `server.py` & `app.js`)**
-   - 更新系統提示詞（System Prompt），指示 AI 當提及具體地點時，只需輸出 `add_to_list` 單一指令，告知 AI 該指令會自動處理地圖標記和列表添加。
+**已完成的部分：**
+- **簡化 AI 指令**：已在 `server.py` 與 `app.js` 更新 System Prompt。
+- **增強前端邏輯**：已在 `app.js` 的 `executeMapAction` 中完善 `add_to_list` 的處理（包含自動打點與讀取正確分類）。
+- **實作模糊去重邏輯**：已在 `app.js` 中基於 50 米距離與名稱包含關係完成去重邏輯。
 
-2. **增強前端 `add_to_list` 處理邏輯 (修改 `app.js`)**
-   - 在 `executeMapAction` 的 `add_to_list` 分支中，讀取 `params.category`，若無則預設為 `地標觀景`（移除硬編碼的 `自訂景點`）。
-   - 在處理 `add_to_list` 時，除了呼叫 `addSearchResultsToList` 和 `persistChatPlace` 之外，自動呼叫 `addSearchMarker`，在地圖上同步產生標記。
+**待執行的剩餘步驟：**
 
-3. **實作模糊去重邏輯 (Fuzzy Match) (修改 `app.js`)**
-   - 在 `addSearchResultsToList` 和 `persistChatPlace` 中，優化 `exists` 檢查邏輯：
-     - 利用現有的 `getDistance(lat1, lon1, lat2, lon2)` 函數計算距離。
-     - 判斷標準：若兩地點距離小於 0.05 公里（50米），且名稱具有包含關係（例如 "Starbucks" 包含於 "Starbucks (明洞)"）或名稱完全相同，則視為同一地點，不重複添加。
+1. **修復 `/api/execute` 的 `SyntaxError` 報錯**
+   - **問題原因**：背景殘留了 `python -m http.server 8082` 進程，導致 `/api/execute` 的 POST 請求被錯誤攔截並返回了 404 HTML 頁面，引發前端 JSON 解析錯誤。
+   - **解決方案**：找出並終止所有佔用 8082 端口的 Python 進程，確保只有 `server.py` 運行並正確處理 API 請求。
+
+2. **執行多場景測試與驗證 (Verification)**
+   - 使用瀏覽器自動化工具（Browser Agent）或手動化測試，依序執行「驗證步驟與多場景測試」中定義的四個場景，確保所有功能（包含修復後的 API 路由）皆能正常運作。
 
 ## 假設與決策 (Assumptions & Decisions)
 - **決策**：採用「合併指令」策略以降低 AI 輸出遺漏率，由前端自動補齊 UI 效果，這是最有效提升提取準確性的方法。
