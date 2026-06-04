@@ -19,7 +19,8 @@ import re
 from datetime import datetime
 
 # Configuration
-HERMES_TASK_DIR = os.getenv('HERMES_TASK_DIR', '/tmp/hermes_tasks')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+HERMES_TASK_DIR = os.getenv('HERMES_TASK_DIR', os.path.join(BASE_DIR, '.hermes_tasks'))
 OLLAMA_API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')
 OLLAMA_API_KEY = os.getenv('OLLAMA_API_KEY', '')

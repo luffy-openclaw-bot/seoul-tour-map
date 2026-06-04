@@ -6,16 +6,20 @@
       "name_ko": "경복궁",
       "category": "歷史文化",
       "lat": 37.5796,
-      "lng": 126.9770,
+      "lng": 126.977,
       "description": "韓國最大嘅宮殿，朝鮮王朝嘅正宮。每日有守門將交接儀式，著韓服入場免費。",
-      "highlights": ["守門將交接儀式", "韓服體驗", "光化門"],
+      "highlights": [
+        "守門將交接儀式",
+        "韓服體驗",
+        "光化門"
+      ],
       "transport": {
         "subway": "地鐵3號線景福宮站5號出口",
         "time_from_station": "步行約5分鐘"
       },
       "ticket": "3000韓元（韓服免費）",
       "hours": "09:00-17:00（周二休）",
-      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%99%AF%E7%A6%8F%E5%AE%AE%20%28%EA%B2%BD%EB%B3%B5%EA%B6%81%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "建議租借韓服入場，可免門票兼影相靚"
     },
     {
@@ -26,14 +30,18 @@
       "lat": 37.5511,
       "lng": 126.9882,
       "description": "首爾地標性建築，位於南山頂，可俯瞰全首爾夜景。著名嘅情人鎖牆喺呢度。",
-      "highlights": ["夜景觀景台", "情人鎖牆", "纜車體驗"],
+      "highlights": [
+        "夜景觀景台",
+        "情人鎖牆",
+        "纜車體驗"
+      ],
       "transport": {
         "subway": "地鐵4號線明洞站3號出口",
         "time_from_station": "步行至纜車站約10分鐘"
       },
       "ticket": "觀景台11000韓元",
       "hours": "10:30-22:00",
-      "image": "https://images.unsplash.com/photo-1548115184-bc6544d06a58?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%8D%97%E5%B1%B1%E5%A1%94%EF%BC%88N%E9%A6%96%E7%88%BE%E5%A1%94%EF%BC%89%20%28N%EC%84%9C%EC%9A%B8%ED%83%80%EC%9B%8C%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "傍晚去可以睇到日景同夜景，最正"
     },
     {
@@ -44,14 +52,18 @@
       "lat": 37.5636,
       "lng": 126.9824,
       "description": "首爾最熱鬧嘅購物區，集合各大品牌、藥妝店同街頭小食。自由行必去。",
-      "highlights": ["藥妝店購物", "街頭小食", "換錢所"],
+      "highlights": [
+        "藥妝店購物",
+        "街頭小食",
+        "換錢所"
+      ],
       "transport": {
         "subway": "地鐵4號線明洞站",
         "time_from_station": "出站即到"
       },
       "ticket": "免費",
       "hours": "大部份店舖10:00-22:00",
-      "image": "https://images.unsplash.com/photo-1508669232496-04753f10638a?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%98%8E%E6%B4%9E%20%28%EB%AA%85%EB%8F%99%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "明洞換錢所匯率通常最好"
     },
     {
@@ -60,16 +72,20 @@
       "name_ko": "홍대",
       "category": "夜生活文化",
       "lat": 37.5563,
-      "lng": 126.9230,
+      "lng": 126.923,
       "description": "年輕人嘅天堂，充滿街頭表演、特色咖啡店、酒吧同潮店。夜晚特別熱鬧。",
-      "highlights": ["街頭表演", "特色咖啡店", "夜生活"],
+      "highlights": [
+        "街頭表演",
+        "特色咖啡店",
+        "夜生活"
+      ],
       "transport": {
         "subway": "地鐵2號線弘大入口站9號出口",
         "time_from_station": "步行約5分鐘"
       },
       "ticket": "免費",
       "hours": "24小時（店舖各有不同）",
-      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%BC%98%E5%A4%A7%EF%BC%88%E5%BC%98%E7%9B%8A%E5%A4%A7%E5%AD%B8%E5%8D%80%EF%BC%89%20%28%ED%99%8D%EB%8C%80%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "週末夜晚最熱鬧，街頭表演好精彩"
     },
     {
@@ -78,16 +94,20 @@
       "name_ko": "북촌한옥마을",
       "category": "歷史文化",
       "lat": 37.5826,
-      "lng": 126.9830,
+      "lng": 126.983,
       "description": "保存傳統韓屋嘅住宅區，可以體驗韓國傳統建築文化。記得保持安靜，尊重居民。",
-      "highlights": ["傳統韓屋", "韓服打卡", "文化體驗"],
+      "highlights": [
+        "傳統韓屋",
+        "韓服打卡",
+        "文化體驗"
+      ],
       "transport": {
         "subway": "地鐵3號線安國站2號出口",
         "time_from_station": "步行約10分鐘"
       },
       "ticket": "免費",
       "hours": "24小時（建議日間參觀）",
-      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%8C%97%E6%9D%91%E9%9F%93%E5%B1%8B%E6%9D%91%20%28%EB%B6%81%EC%B4%8C%ED%95%9C%EC%98%A5%EB%A7%88%EC%9D%84%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "請保持安靜，唔好大聲喧嘩，呢度係民居"
     },
     {
@@ -98,14 +118,18 @@
       "lat": 37.5665,
       "lng": 127.0094,
       "description": "由Zaha Hadid設計嘅未來感建築，夜晚LED燈光秀好靚，附近仲有東大門批發市場。",
-      "highlights": ["未來感建築", "LED玫瑰花海", "設計展覽"],
+      "highlights": [
+        "未來感建築",
+        "LED玫瑰花海",
+        "設計展覽"
+      ],
       "transport": {
         "subway": "地鐵2/4/5號線東大門歷史文化公園站",
         "time_from_station": "步行約3分鐘"
       },
       "ticket": "免費（展覽另計）",
       "hours": "24小時開放戶外",
-      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9D%B1%E5%A4%A7%E9%96%80%E8%A8%AD%E8%A8%88%E5%BB%A3%E5%A0%B4%EF%BC%88DDP%EF%BC%89%20%28%EB%8F%99%EB%8C%80%EB%AC%B8%EB%94%94%EC%9E%90%EC%9D%B8%ED%94%8C%EB%9D%BC%EC%9E%90%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "夜晚去睇LED燈光，影相超靚"
     },
     {
@@ -116,14 +140,18 @@
       "lat": 37.5744,
       "lng": 126.9858,
       "description": "傳統文化街區，有好多古董店、茶館、傳統工藝品店同人蔘雞湯餐廳。",
-      "highlights": ["傳統工藝品", "人蔘雞湯", "茶館體驗"],
+      "highlights": [
+        "傳統工藝品",
+        "人蔘雞湯",
+        "茶館體驗"
+      ],
       "transport": {
         "subway": "地鐵3號線安國站6號出口",
         "time_from_station": "步行約5分鐘"
       },
       "ticket": "免費",
       "hours": "大部份店舖10:00-20:00",
-      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E4%BB%81%E5%AF%BA%E6%B4%9E%20%28%EC%9D%B8%EC%82%AC%EB%8F%99%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "必試人蔘雞湯同韓式傳統甜點"
     },
     {
@@ -134,14 +162,18 @@
       "lat": 37.5111,
       "lng": 127.0982,
       "description": "全球最大室內主題樂園，有室內同室外兩部分，適合一家大小。",
-      "highlights": ["室內過山車", "旋轉木馬", "民俗博物館"],
+      "highlights": [
+        "室內過山車",
+        "旋轉木馬",
+        "民俗博物館"
+      ],
       "transport": {
         "subway": "地鐵2/8號線蠶室站4號出口",
         "time_from_station": "步行約3分鐘"
       },
       "ticket": "62000韓元（一日通票）",
       "hours": "10:00-21:00",
-      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%A8%82%E5%A4%A9%E4%B8%96%E7%95%8C%20%28%EB%A1%AF%EB%8D%B0%EC%9B%94%EB%93%9C%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "建議網上預先買票，平過現場買"
     },
     {
@@ -152,14 +184,18 @@
       "lat": 37.5012,
       "lng": 127.0396,
       "description": "位於江南COEX商場內嘅大型水族館，有超過4萬隻海洋生物。",
-      "highlights": ["鯊魚餵食秀", "海底隧道", "水母區"],
+      "highlights": [
+        "鯊魚餵食秀",
+        "海底隧道",
+        "水母區"
+      ],
       "transport": {
         "subway": "地鐵2號線三成站5/6號出口",
         "time_from_station": "步行約5分鐘"
       },
       "ticket": "33000韓元",
       "hours": "10:00-20:00",
-      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20COEX%E6%B0%B4%E6%97%8F%E9%A4%A8%20%28%EC%BD%94%EC%97%91%EC%8A%A4%20%EC%95%84%EC%BF%A0%EC%95%84%EB%A6%AC%EC%9B%80%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "可以順便行COEX商場同星空圖書館"
     },
     {
@@ -170,14 +206,18 @@
       "lat": 37.5096,
       "lng": 127.0538,
       "description": "位於COEX商場內嘅巨型開放式圖書館，13米高書架好壯觀，免費入場打卡。",
-      "highlights": ["13米高書架", "免費入場", "打卡熱點"],
+      "highlights": [
+        "13米高書架",
+        "免費入場",
+        "打卡熱點"
+      ],
       "transport": {
         "subway": "地鐵2號線三成站5/6號出口",
         "time_from_station": "步行約5分鐘"
       },
       "ticket": "免費",
       "hours": "10:30-22:00",
-      "image": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%98%9F%E7%A9%BA%E5%9C%96%E6%9B%B8%E9%A4%A8%20%28%EB%B3%84%EB%A7%88%EB%8B%B9%EB%8F%84%EC%84%9C%EA%B4%80%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "朝早去較少人，影相更靚"
     },
     {
@@ -188,14 +228,18 @@
       "lat": 37.5702,
       "lng": 126.9993,
       "description": "首爾最傳統嘅市場之一，以綠豆餅、生牛肉、麻藥飯卷聞名，跑男節目曾經嚟過。",
-      "highlights": ["綠豆餅", "生拌牛肉", "麻藥飯卷"],
+      "highlights": [
+        "綠豆餅",
+        "生拌牛肉",
+        "麻藥飯卷"
+      ],
       "transport": {
         "subway": "地鐵1號線鐘路5街站8號出口",
         "time_from_station": "步行約3分鐘"
       },
       "ticket": "免費",
       "hours": "09:00-18:00（美食街開到深夜）",
-      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%BB%A3%E8%97%8F%E5%B8%82%E5%A0%B4%20%28%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "必試綠豆餅同生拌牛肉，好地道"
     },
     {
@@ -206,14 +250,18 @@
       "lat": 37.5591,
       "lng": 126.9777,
       "description": "韓國歷史最悠久嘅傳統市場，以童裝、眼鏡、人蔘、海鮮乾貨聞名。",
-      "highlights": ["傳統市場", "平價商品", "地道美食"],
+      "highlights": [
+        "傳統市場",
+        "平價商品",
+        "地道美食"
+      ],
       "transport": {
         "subway": "地鐵4號線會賢站5號出口",
         "time_from_station": "步行約5分鐘"
       },
       "ticket": "免費",
       "hours": "05:00-17:00（各區不同）",
-      "image": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%8D%97%E5%A4%A7%E9%96%80%E5%B8%82%E5%A0%B4%20%28%EB%82%A8%EB%8C%80%EB%AC%B8%EC%8B%9C%EC%9E%A5%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "朝早去最熱鬧，可以食到地道早餐"
     },
     {
@@ -224,14 +272,18 @@
       "lat": 37.5693,
       "lng": 127.0056,
       "description": "穿過市中心嘅人工溪流，兩旁有步行徑，適合散步放鬆，夜晚有燈光裝飾。",
-      "highlights": ["市中心溪流", "燈光裝飾", "散步放鬆"],
+      "highlights": [
+        "市中心溪流",
+        "燈光裝飾",
+        "散步放鬆"
+      ],
       "transport": {
         "subway": "地鐵1/2號線市廳站",
         "time_from_station": "步行約3分鐘"
       },
       "ticket": "免費",
       "hours": "24小時",
-      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%B8%85%E6%BA%AA%E5%B7%9D%20%28%EC%B2%AD%EA%B3%84%EC%B2%9C%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "夜晚燈光亮起時最浪漫"
     },
     {
@@ -242,14 +294,18 @@
       "lat": 37.5345,
       "lng": 126.9946,
       "description": "國際化社區，有多國料理、酒吧同外國人聚集，夜生活豐富。",
-      "highlights": ["多國美食", "酒吧街", "國際氛圍"],
+      "highlights": [
+        "多國美食",
+        "酒吧街",
+        "國際氛圍"
+      ],
       "transport": {
         "subway": "地鐵6號線梨泰院站",
         "time_from_station": "步行約5分鐘"
       },
       "ticket": "免費",
       "hours": "24小時（店舖各有不同）",
-      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%A2%A8%E6%B3%B0%E9%99%A2%20%28%EC%9D%B4%ED%83%9C%EC%9B%90%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "想食多國料理嘅好地方"
     },
     {
@@ -257,17 +313,21 @@
       "name": "愛寶樂園",
       "name_ko": "에버랜드",
       "category": "娛樂",
-      "lat": 37.2950,
+      "lat": 37.295,
       "lng": 127.2042,
       "description": "韓國最大主題樂園，有木製過山車T Express、動物園同四季花園。位於京畿道，需時約1小時車程。",
-      "highlights": ["T Express過山車", "野生動物園", "四季花園"],
+      "highlights": [
+        "T Express過山車",
+        "野生動物園",
+        "四季花園"
+      ],
       "transport": {
         "subway": "於江南站乘5002號直通巴士約1小時",
         "time_from_station": "從市區出發約1-1.5小時"
       },
       "ticket": "62000韓元",
       "hours": "10:00-21:00",
-      "image": "https://images.unsplash.com/photo-1538669716095-09471c8c6c7a?w=400",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%84%9B%E5%AF%B6%E6%A8%82%E5%9C%92%20%28%EC%97%90%EB%B2%84%EB%9E%9C%EB%93%9C%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
       "tips": "建議平日去，假日超級多人"
     }
   ]

@@ -53,5 +53,60 @@
     "price": "免費",
     "addedAt": 1780488249857,
     "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "wl_📍 釘選位置 (37.543488, 126.961956)_37.5435_126.9620",
+    "name": "📍 釘選位置 (37.543488, 126.961956)",
+    "lat": 37.54348845864999,
+    "lng": 126.96195602416994,
+    "category": "用戶釘選",
+    "description": "用戶於地圖手動釘選的位置 (37.54348845864999, 126.96195602416994)",
+    "price": "",
+    "addedAt": 1780509172766,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "wl_明洞餃子 (Myeongdong Kyoja)_37.5630_126.9840",
+    "name": "明洞餃子 (Myeongdong Kyoja)",
+    "lat": 37.563,
+    "lng": 126.984,
+    "category": "地標觀景",
+    "description": "米芝蓮必比登推薦嘅名店，以濃郁嘅手工刀切麵同多汁嘅餃子聞名。",
+    "price": "",
+    "addedAt": 1780509444282,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "wl_📍 釘選位置 (37.568163, 126.967916)_37.5682_126.9679",
+    "name": "📍 釘選位置 (37.568163, 126.967916)",
+    "lat": 37.568162595153495,
+    "lng": 126.96791589260103,
+    "category": "用戶釘選",
+    "description": "用戶於地圖手動釘選的位置 (37.568162595153495, 126.96791589260103)",
+    "price": "",
+    "addedAt": 1780510480862,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "chat_星巴克明洞店_37.5635_126.9895",
+    "name": "星巴克明洞店",
+    "lat": 37.5635,
+    "lng": 126.9895,
+    "category": "自訂景點",
+    "description": "位於明洞的星巴克",
+    "price": "",
+    "addedAt": 1780533181096,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "chat_弘大_37.5568_126.9245",
+    "name": "弘大",
+    "lat": 37.5568,
+    "lng": 126.9245,
+    "category": "自訂景點",
+    "description": "弘益大學周邊",
+    "price": "",
+    "addedAt": 1780533181142,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
   }
 ]
