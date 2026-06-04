@@ -1125,6 +1125,25 @@ function toggleChat() {
     chat.classList.toggle('collapsed');
 }
 
+function toggleChatHeight(event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    const chat = document.getElementById('ai-chat');
+    chat.classList.toggle('expanded-tall');
+    
+    const resizeIcon = document.getElementById('resize-chat-icon');
+    if (resizeIcon) {
+        if (chat.classList.contains('expanded-tall')) {
+            resizeIcon.className = 'fas fa-compress resize-icon';
+            resizeIcon.title = '縮小對話框';
+        } else {
+            resizeIcon.className = 'fas fa-expand resize-icon';
+            resizeIcon.title = '放大對話框';
+        }
+    }
+}
+
 async function sendMessage() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
