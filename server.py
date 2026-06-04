@@ -47,6 +47,8 @@ API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
 API_KEY = os.getenv('OLLAMA_API_KEY', 'c309d7242319461783142d44f3949473.Cvsj6THEdCx3lfLBGAwYgtWx')
 MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')  # 使用 Gemma 4 31B Cloud model
 DATA_GO_KR_KEY = os.getenv('DATA_GO_KR_KEY', 'YOUR_SERVICE_KEY_HERE')
+VISIT_KOREA_API_KEY = os.getenv('VISIT_KOREA_API_KEY', 'YOUR_VISIT_KOREA_KEY_HERE')
+SEOUL_DATA_API_KEY = os.getenv('SEOUL_DATA_API_KEY', 'YOUR_SEOUL_DATA_KEY_HERE')
 ODSAY_API_KEY = os.getenv('ODSAY_API_KEY', 'YOUR_ODSAY_KEY_HERE')
 
 # Hermes Agent 任務隊列設定

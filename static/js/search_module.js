@@ -299,7 +299,15 @@ const SearchUI = {
 
             // 添加搜索來源
             markdown += `\n---\n`;
-            markdown += `📊 **數據來源**：實時網頁搜索 (DuckDuckGo) + AI 分析\n`;
+            
+            let sourceText = "實時網頁搜索 (DuckDuckGo) + AI 分析";
+            if (data.source === 'official_public_api') {
+                sourceText = "🏛️ 韓國官方公共數據 (VisitKorea / Seoul Data) + AI 總結";
+            } else if (data.source === 'ai_knowledge') {
+                sourceText = "🤖 AI 內置旅遊知識 (Gemma 31B)";
+            }
+            
+            markdown += `📊 **數據來源**：${sourceText}\n`;
             markdown += `🤖 **模型**：Gemma 31B Cloud\n`;
             
             // 自動添加到景點列表
