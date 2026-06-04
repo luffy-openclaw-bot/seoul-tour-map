@@ -2131,18 +2131,18 @@ body {
     }
 }
 
-/* ==================== 願望清單樣式 ==================== */
+/* ==================== 釘選位置樣式 ==================== */
 
-/* 願望清單面板 */
-#wishlist-panel h3 {
+/* 釘選位置面板 */
+#pinned-panel h3 {
     display: flex;
     align-items: center;
     gap: 6px;
-    color: #e74c3c;
+    color: #1e3a8a;
 }
 
-.wishlist-badge {
-    background: #e74c3c;
+.pinned-badge {
+    background: #1e3a8a;
     color: white;
     font-size: 11px;
     font-weight: 700;
@@ -2153,33 +2153,33 @@ body {
     line-height: 1.4;
 }
 
-.wishlist-badge:empty,
-.wishlist-badge[data-count="0"] {
+.pinned-badge:empty,
+.pinned-badge[data-count="0"] {
     display: none;
 }
 
-/* 願望清單列表 */
-.wishlist-list {
+/* 釘選位置列表 */
+.pinned-list {
     max-height: 300px;
     overflow-y: auto;
 }
 
-.wishlist-empty {
+.pinned-empty {
     text-align: center;
     color: #999;
     padding: 24px 12px;
     font-size: 13px;
 }
 
-.wishlist-empty i {
+.pinned-empty i {
     display: block;
     font-size: 28px;
     margin-bottom: 8px;
     color: #ddd;
 }
 
-/* 願望清單項目 */
-.wishlist-item {
+/* 釘選位置項目 */
+.pinned-item {
     display: flex;
     align-items: center;
     padding: 8px 10px;
@@ -2192,12 +2192,12 @@ body {
     gap: 8px;
 }
 
-.wishlist-item:hover {
-    border-color: #e74c3c;
-    box-shadow: 0 2px 8px rgba(231,76,60,0.12);
+.pinned-item:hover {
+    border-color: #1e3a8a;
+    box-shadow: 0 2px 8px rgba(30,58,138,0.12);
 }
 
-.wishlist-thumb {
+.pinned-thumb {
     width: 32px;
     height: 32px;
     border-radius: 8px;
@@ -2208,12 +2208,12 @@ body {
     font-size: 14px;
 }
 
-.wishlist-info {
+.pinned-info {
     flex: 1;
     min-width: 0;
 }
 
-.wishlist-name {
+.pinned-name {
     font-size: 13px;
     font-weight: 600;
     color: #333;
@@ -2222,7 +2222,7 @@ body {
     text-overflow: ellipsis;
 }
 
-.wishlist-meta {
+.pinned-meta {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -2230,7 +2230,7 @@ body {
     flex-wrap: wrap;
 }
 
-.wishlist-cat {
+.pinned-cat {
     font-size: 10px;
     color: white;
     padding: 1px 5px;
@@ -2238,13 +2238,13 @@ body {
     font-weight: 500;
 }
 
-.wishlist-price {
+.pinned-price {
     font-size: 10px;
     color: #e67e22;
     font-weight: 500;
 }
 
-.wishlist-remove-btn {
+.pinned-remove-btn {
     background: none;
     border: none;
     color: #ccc;
@@ -2255,8 +2255,8 @@ body {
     transition: color 0.2s;
 }
 
-.wishlist-remove-btn:hover {
-    color: #e74c3c;
+.pinned-remove-btn:hover {
+    color: #1e3a8a;
 }
 
 /* 景點列表中的心形按鈕 */
@@ -2378,9 +2378,9 @@ body {
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* 手機版願望清單面板 */
+/* 手機版釘選位置面板 */
 @media (max-width: 768px) {
-    .wishlist-list {
+    .pinned-list {
         max-height: 200px;
     }
 }

@@ -8,7 +8,7 @@ let markers = {};
 let subwayLines = [];
 let subwayLayerGroup;
 let routeLayerGroup;
-let wishlistLayerGroup;  // 用戶釘選標記圖層
+let pinnedLayerGroup;  // 用戶釘選標記圖層
 let searchMarkersLayerGroup;  // Chatbot 搜索標記圖層
 let attractionsData = [];
 let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面板同步
@@ -30,7 +30,8 @@ const CATEGORY_COLORS = {
     '休閒': '#1abc9c',
     '自然景觀': '#27ae60',
     '用戶釘選': '#1e3a8a',
-    '自訂景點': '#8e44ad'
+    '自訂景點': '#8e44ad',
+    '願望s': '#ff4757'
 };
 
 // ==================== 地圖初始化 ====================
@@ -64,8 +65,8 @@ function initMap() {
 
     subwayLayerGroup = L.layerGroup().addTo(map);
     routeLayerGroup = L.layerGroup().addTo(map);
-    wishlistLayerGroup = L.layerGroup().addTo(map); // 初始化用戶釘選圖層
-    searchMarkersLayerGroup = L.layerGroup().addTo(map);  // 初始化搜索標記圖層
+    pinnedLayerGroup = L.layerGroup().addTo(map); // 初始化用戶釘選圖層
+    searchMarkersLayerGroup = L.layerGroup().addTo(map); // 初始化搜索標記圖層
 
     map.on("click", onMapClick);
 }
@@ -270,18 +271,14 @@ function savePin(name, lat, lng) {
     }
 }
 
-function renderWishlistMarkers() {
-    if (!wishlistLayerGroup) return;
-    wishlistLayerGroup.clearLayers();
+function renderPinnedMarkers() {
+    if (!pinnedLayerGroup) return;
+    pinnedLayerGroup.clearLayers();
     
     const items = WishlistManager.getAll();
     
     items.forEach(item => {
-        // 只為「用戶釘選」或不在預定義景點列表中的項目添加標記
-        // 預定義景點已有自己的 markers
-        const isPredefined = attractionsData.some(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
-        
-        if (item.category === '用戶釘選' || !isPredefined) {
+        if (item.category === '用戶釘選') {
             const color = CATEGORY_COLORS['用戶釘選'] || '#1e3a8a';
             
             // 自定義 Pin 圖標
@@ -297,7 +294,7 @@ function renderWishlistMarkers() {
             });
             
             const marker = L.marker([item.lat, item.lng], { icon: customIcon })
-                .addTo(wishlistLayerGroup)
+                .addTo(pinnedLayerGroup)
                 .bindPopup(`
                     <div class="popup-card">
                         <div class="popup-info">
@@ -393,9 +390,29 @@ function renderAttractionList() {
     }
 
     // 2. 渲染景點列表
-    const filtered = activeCategory === 'all'
-        ? attractionsData
-        : attractionsData.filter(a => a.category === activeCategory);
+    let filtered;
+    if (activeCategory === 'all') {
+        filtered = attractionsData;
+    } else if (activeCategory === '願望s') {
+        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
+        filtered = wishlistItems.map(item => {
+            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
+            if (predefined) return predefined;
+            return {
+                id: item.id,
+                name: item.name,
+                name_ko: '',
+                lat: item.lat,
+                lng: item.lng,
+                category: item.category || '自訂景點',
+                image: '',
+                ticket: item.price || '',
+                description: item.description || ''
+            };
+        });
+    } else {
+        filtered = attractionsData.filter(a => a.category === activeCategory);
+    }
 
     filtered.forEach(attr => {
         const item = document.createElement('div');
@@ -435,9 +452,29 @@ function addMarkers() {
     Object.values(markers).forEach(m => map.removeLayer(m));
     markers = {};
 
-    const filtered = activeCategory === 'all'
-        ? attractionsData
-        : attractionsData.filter(a => a.category === activeCategory);
+    let filtered;
+    if (activeCategory === 'all') {
+        filtered = attractionsData;
+    } else if (activeCategory === '願望s') {
+        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
+        filtered = wishlistItems.map(item => {
+            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
+            if (predefined) return predefined;
+            return {
+                id: item.id,
+                name: item.name,
+                name_ko: '',
+                lat: item.lat,
+                lng: item.lng,
+                category: item.category || '自訂景點',
+                image: '',
+                ticket: item.price || '',
+                description: item.description || ''
+            };
+        });
+    } else {
+        filtered = attractionsData.filter(a => a.category === activeCategory);
+    }
 
     filtered.forEach(attr => {
         const color = CATEGORY_COLORS[attr.category] || '#666';
@@ -1561,7 +1598,8 @@ const CATEGORY_EMOJIS = {
     '娛樂': '🎭',
     '休閒': '☕',
     '自然景觀': '🌿',
-    '自訂景點': '📌'
+    '自訂景點': '📌',
+    '願望s': '❤️'
 };
 
 function renderMobilePanelList() {
@@ -1618,9 +1656,29 @@ function renderMobilePanelList() {
     }
 
     // 2. 渲染靜態景點
-    const filtered = activeCategory === 'all'
-        ? attractionsData
-        : attractionsData.filter(function(a) { return a.category === activeCategory; });
+    let filtered;
+    if (activeCategory === 'all') {
+        filtered = attractionsData;
+    } else if (activeCategory === '願望s') {
+        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
+        filtered = wishlistItems.map(item => {
+            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
+            if (predefined) return predefined;
+            return {
+                id: item.id,
+                name: item.name,
+                name_ko: '',
+                lat: item.lat,
+                lng: item.lng,
+                category: item.category || '自訂景點',
+                image: '',
+                ticket: item.price || '',
+                description: item.description || ''
+            };
+        });
+    } else {
+        filtered = attractionsData.filter(function(a) { return a.category === activeCategory; });
+    }
 
     if (countEl) countEl.textContent = (filtered.length + (currentSearchResults ? currentSearchResults.length : 0)) + ' 個項目';
 
@@ -2067,11 +2125,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     initChat();
     bindEvents();
     initMobilePanel();
-    // 初始化願望清單面板
-    renderWishlistPanel();
-    updateWishlistCount();
+    // 初始化釘選位置面板
+    renderPinnedPanel();
+    updatePinnedCount();
     // 渲染地圖釘選
-    renderWishlistMarkers();
+    renderPinnedMarkers();
     // 恢復聊天添加的地點
     loadChatPlaces();
     // 頁面啟動時檢查系統狀態
@@ -2922,67 +2980,77 @@ const WishlistManager = {
 
     /** 觸發 UI 更新事件 */
     _notifyChange() {
-        // 更新願望清單面板
-        renderWishlistPanel();
+        // 更新釘選位置面板
+        renderPinnedPanel();
         // 更新景點列表中的心形按鈕狀態
         updateAllWishlistButtons();
-        // 更新側邊欄願望清單計數
-        updateWishlistCount();
+        // 更新側邊欄釘選計數
+        updatePinnedCount();
         // 更新地圖上的釘選標記
-        renderWishlistMarkers();
+        renderPinnedMarkers();
+
+        // 如果當前分類是願望清單，更新景點列表
+        if (activeCategory === '願望s') {
+            renderAttractionList();
+            renderMobilePanelList();
+            addMarkers();
+        }
     }
 };
 
 /**
- * 渲染願望清單面板
+ * 渲染釘選位置面板
  */
-function renderWishlistPanel() {
-    const container = document.getElementById('wishlist-list');
-    const countEl = document.getElementById('wishlist-count');
+function renderPinnedPanel() {
+    const container = document.getElementById('pinned-list');
+    const countEl = document.getElementById('pinned-count');
     if (!container) return;
 
-    const items = WishlistManager.getAll();
-    if (countEl) countEl.textContent = items.length > 0 ? `(${items.length})` : '';
+    const allItems = WishlistManager.getAll();
+    const items = allItems.filter(item => item.category === '用戶釘選');
+    
+    if (countEl) countEl.textContent = items.length > 0 ? items.length.toString() : '0';
+    if (countEl) countEl.dataset.count = items.length;
 
     container.innerHTML = '';
 
     if (items.length === 0) {
-        container.innerHTML = '<div class="wishlist-empty"><i class="far fa-heart"></i> 願望清單是空的<br><small>點擊景點或搜索結果的 ❤️ 按鈕添加</small></div>';
+        container.innerHTML = '<div class="pinned-empty"><i class="fas fa-thumbtack"></i> 沒有釘選位置<br><small>在地圖上點擊並選擇「釘選此位置」添加</small></div>';
         return;
     }
 
     items.forEach(item => {
         const el = document.createElement('div');
-        el.className = 'wishlist-item';
+        el.className = 'pinned-item';
         el.dataset.wishlistId = item.id;
 
         const color = CATEGORY_COLORS[item.category] || '#667eea';
-        const priceHtml = item.price ? `<span class="wishlist-price">💰 ${item.price}</span>` : '';
+        const priceHtml = item.price ? `<span class="pinned-price">💰 ${item.price}</span>` : '';
 
         el.innerHTML = `
-            <div class="wishlist-thumb" style="background:${color}20;color:${color}">
+            <div class="pinned-thumb" style="background:${color}20;color:${color}">
                 <i class="fas fa-map-marker-alt"></i>
             </div>
-            <div class="wishlist-info">
-                <div class="wishlist-name">${item.name}</div>
-                <div class="wishlist-meta">
-                    <span class="wishlist-cat" style="background:${color}">${item.category}</span>
+            <div class="pinned-info">
+                <div class="pinned-name">${item.name}</div>
+                <div class="pinned-meta">
+                    <span class="pinned-cat" style="background:${color}">${item.category}</span>
                     ${priceHtml}
                 </div>
             </div>
-            <button class="wishlist-remove-btn" data-wishlist-id="${item.id}" title="從願望清單移除">
+            <button class="pinned-remove-btn" data-wishlist-id="${item.id}" title="移除釘選">
                 <i class="fas fa-times"></i>
             </button>
         `;
 
         // 點擊跳轉
         el.addEventListener('click', (e) => {
-            if (e.target.closest('.wishlist-remove-btn')) return;
+            if (e.target.closest('.pinned-remove-btn')) return;
             map.flyTo([item.lat, item.lng], 16, { duration: 1.5 });
         });
 
         // 移除按鈕
-        const removeBtn = el.querySelector('.wishlist-remove-btn');
+        const removeBtn = el.querySelector('.pinned-remove-btn');
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             WishlistManager.remove(item.id);
@@ -2993,13 +3061,15 @@ function renderWishlistPanel() {
 }
 
 /**
- * 更新側邊欄願望清單計數
+ * 更新側邊欄釘選計數
  */
-function updateWishlistCount() {
-    const badge = document.getElementById('wishlist-count');
+function updatePinnedCount() {
+    const badge = document.getElementById('pinned-count');
     if (badge) {
-        const count = WishlistManager.count();
-        badge.textContent = count > 0 ? `(${count})` : '';
+        const items = WishlistManager.getAll().filter(item => item.category === '用戶釘選');
+        const count = items.length;
+        badge.textContent = count > 0 ? count.toString() : '0';
+        badge.dataset.count = count;
     }
 }
 
