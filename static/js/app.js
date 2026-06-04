@@ -1328,7 +1328,7 @@ ${attractionsSummary}
 - 當用家講「去XX」、「睇吓XX」等需要移動地圖時，如果XX係已知景點ID，用 focus_attraction；如果係其他地點（如機場、火車站、區域名稱），用 add_marker 加上準確坐標
 - 搜索結果在內文回答後，適宜用 add_marker 喺地圖標示位置
 - 提及區域或商圈時，可用 add_polygon 顯示範圍
-- 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須同時使用 add_to_list 將地點加入左側景點列表，以及 add_marker 喺地圖標示位置
+- 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker
 - 普通對答唔需要地圖指令`;
 }
 
@@ -1489,6 +1489,9 @@ function generateAIReply(userText) {
     // 4. 一般問題
     if (text.includes('你好') || text.includes('hi') || text.includes('hello')) {
         return '你好！有咩關於首爾旅遊嘅問題想問？我可以幫你查景點、交通、行程規劃等等！';
+    }
+    if (text.includes('測試提取') || text.includes('test extraction')) {
+        return '這是一個測試地點：星巴克明洞店！【{"action":"add_to_list","params":{"name":"星巴克明洞店","lat":37.5635,"lng":126.9895,"category":"購物美食","description":"位於明洞的星巴克"}}】還有另一個地點：弘大！【{"action":"add_to_list","params":{"name":"弘大","lat":37.5568,"lng":126.9245,"category":"地標觀景","description":"弘益大學周邊"}}】';
     }
     if (text.includes('行程') || text.includes('推薦') || text.includes('點玩')) {
         return `建議首爾3日行程：<br><br>
@@ -1927,18 +1930,25 @@ async function executeMapAction(action, params) {
             case 'add_to_list':
                 // 將地點加入景點列表並持久化
                 if (params.name && params.lat !== undefined && params.lng !== undefined) {
+                    const lat = parseFloat(params.lat);
+                    const lng = parseFloat(params.lng);
                     const listPlace = {
                         name: params.name,
-                        lat: parseFloat(params.lat),
-                        lng: parseFloat(params.lng),
-                        category: '自訂景點',
+                        lat: lat,
+                        lng: lng,
+                        category: params.category || '地標觀景',
                         description: params.description || ''
                     };
                     // 1. Add to visual list (using existing function)
                     addSearchResultsToList([listPlace], 'all');
                     // 2. Persist to localStorage
                     persistChatPlace(listPlace);
-                    console.log(`[Map Action] Added to list: ${params.name}`);
+                    
+                    // 3. Add marker to map
+                    const color = CATEGORY_COLORS[listPlace.category] || '#e74c3c';
+                    addSearchMarker(lat, lng, params.name, color, params.name, true);
+                    
+                    console.log(`[Map Action] Added to list & map: ${params.name}`);
                 }
                 break;
             case 'transit_info':
@@ -2498,12 +2508,14 @@ function addSearchResultsToList(places, queryType) {
     places.forEach((place) => {
         if (!place.lat || !place.lng) return;
         
-        // 檢查是否已存在（避免重複）
-        const exists = currentSearchResults.some(p => 
-            p.name === place.name && 
-            Math.abs(p.lat - place.lat) < 0.0001 && 
-            Math.abs(p.lng - place.lng) < 0.0001
-        );
+        // 檢查是否已存在（避免重複，使用模糊比對）
+        const exists = currentSearchResults.some(p => {
+            const dist = getDistance(p.lat, p.lng, place.lat, place.lng);
+            const nameMatch = p.name === place.name || 
+                              p.name.includes(place.name) || 
+                              place.name.includes(p.name);
+            return dist < 0.05 && nameMatch;
+        });
         
         if (!exists) {
             // 存儲完整數據以支持豐富的氣泡顯示
@@ -2585,12 +2597,14 @@ function persistChatPlace(place) {
         return;
     }
     const places = JSON.parse(localStorage.getItem(CHAT_PLACES_KEY) || '[]');
-    // 避免重複（按名稱+坐標）
-    const exists = places.some(p =>
-        p.name === place.name &&
-        Math.abs(p.lat - place.lat) < 0.0001 &&
-        Math.abs(p.lng - place.lng) < 0.0001
-    );
+    // 避免重複（按名稱+坐標模糊比對）
+    const exists = places.some(p => {
+        const dist = getDistance(p.lat, p.lng, place.lat, place.lng);
+        const nameMatch = p.name === place.name || 
+                          p.name.includes(place.name) || 
+                          place.name.includes(p.name);
+        return dist < 0.05 && nameMatch;
+    });
     if (!exists) {
         places.push({
             name: place.name,
