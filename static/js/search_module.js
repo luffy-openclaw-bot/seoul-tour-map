@@ -530,8 +530,8 @@ function initLocationSearch() {
 
     // 重新綁定地圖點擊事件
     if (typeof map !== 'undefined') {
-        // 偵測是否為手機版 (Leaflet 內建偵測 或 螢幕寬度小於等於 768px)
-        const isMobile = L.Browser.mobile || window.innerWidth <= 768;
+        // 偵測是否為手機版 (Leaflet 內建偵測 或 螢幕寬度小於等於 768px 或 UA 包含行動裝置關鍵字)
+        const isMobile = L.Browser.mobile || window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         map.off('click');
         map.off('contextmenu');
