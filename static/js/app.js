@@ -261,7 +261,7 @@ function savePin(name, lat, lng) {
     const added = WishlistManager.add(item);
     
     if (added) {
-        map.closePopup();
+        if (map) map.closePopup();
         // 顯示提示
         const toast = document.createElement('div');
         toast.className = 'wishlist-toast';
@@ -800,55 +800,6 @@ document.getElementById('reset-map').addEventListener('click', () => {
     document.getElementById('toggle-traffic').classList.remove('active');
 });
 
-// ==================== AI 地圖動作執行 ====================
-async function executeMapAction(action, params) {
-    console.log('[Map Action]', action, params);
-    
-    switch (action) {
-        case 'center': {
-            const { lat, lng, zoom } = params;
-            map.setView([lat, lng], zoom || 15);
-            break;
-        }
-        case 'focus_attraction': {
-            const attr = attractionsData.find(a => a.id === params.id);
-            if (attr) {
-                focusAttraction(attr);
-            } else {
-                // 嘗試用名稱搵
-                const name = params.id;
-                const found = attractionsData.find(a => 
-                    a.name.includes(name) || a.name_ko.includes(name)
-                );
-                if (found) focusAttraction(found);
-            }
-            break;
-        }
-        case 'highlight_category': {
-            const { category } = params;
-            activeCategory = category;
-            // 觸發分類篩選 UI 更新
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.category === category) {
-                    btn.classList.add('active');
-                }
-            });
-            renderAttractionList();
-            addMarkers();
-            break;
-        }
-        case 'locate_user': {
-            locateUser();
-            break;
-        }
-        case 'show_route': {
-            const { from, to } = params;
-            showRouteOnMap(from, to);
-            break;
-        }
-    }
-}
 
 // ==================== AI 路線顯示 ====================
 function showRouteOnMap(fromName, toName) {
@@ -978,118 +929,6 @@ function bindEvents() {
 let useBackendAI = true; // 優先使用後端 AI
 
 /**
- * 執行地圖控制動作
- * 支援動作: center, focus_attraction, highlight_category, locate_user, show_route
- * @param {string} action - 動作類型
- * @param {object} params - 動作參數
- * @returns {Promise<boolean>} 執行成功與否
- */
-async function executeMapAction(action, params) {
-    console.log('Executing map action:', action, params);
-
-    switch (action) {
-        case 'center':
-            if (params.lat && params.lng) {
-                const lat = parseFloat(params.lat);
-                const lng = parseFloat(params.lng);
-                const zoom = parseInt(params.zoom) || 15;
-
-                // 飛到目的地（animate 效果）
-                map.flyTo([lat, lng], zoom, {
-                    duration: 1.5,
-                    easeLinearity: 0.25
-                });
-
-                // 更新路由結果面板顯示
-                console.log(`地圖已飛到: ${lat}, ${lng}, zoom ${zoom}`);
-            }
-            break;
-
-        case 'focus_attraction':
-            if (params.id) {
-                const attr = attractionsData.find(a => a.id === params.id);
-                if (attr) {
-                    focusAttraction(attr);
-                } else {
-                    // 嘗試用名字查找
-                    const attrByName = attractionsData.find(a =>
-                        a.name.includes(params.id) || params.id.includes(a.name)
-                    );
-                    if (attrByName) {
-                        focusAttraction(attrByName);
-                    }
-                }
-            }
-            break;
-
-        case 'highlight_category':
-            if (params.category) {
-                // 檢查是否為有效分類
-                const validCategories = Object.keys(CATEGORY_COLORS);
-                const matchedCategory = validCategories.find(c =>
-                    c === params.category || c.includes(params.category) || params.category.includes(c)
-                );
-
-                if (matchedCategory) {
-                    activeCategory = matchedCategory;
-                    // 更新 UI 按鈕狀態
-                    document.querySelectorAll('.cat-btn').forEach(btn => {
-                        btn.classList.toggle('active', btn.dataset.category === matchedCategory);
-                    });
-                    // 重新渲染
-                    renderAttractionList();
-                    addMarkers();
-                    console.log(`已篩選分類: ${matchedCategory}`);
-                }
-            }
-            break;
-
-        case 'locate_user':
-            locateUser();
-            break;
-
-        case 'show_route':
-            // 簡單顯示兩點路線
-            if (params.from && params.to) {
-                showRouteByNames(params.from, params.to);
-            }
-            break;
-
-        case 'add_marker':
-            // 添加搜索標記（用於顯示目的地）
-            if (params.lat && params.lng) {
-                const lat = parseFloat(params.lat);
-                const lng = parseFloat(params.lng);
-                const title = params.title || '目的地';
-                const color = params.color || '#e74c3c';
-                const popup = params.popup || title;
-                const pulse = params.pulse !== false; // 默認開啟脈動效果
-                
-                addSearchMarker(lat, lng, title, color, popup, pulse);
-            }
-            break;
-
-        case 'add_polygon':
-            // 添加範圍多邊形（用於顯示區域）
-            if (params.coords && Array.isArray(params.coords)) {
-                const name = params.name || '範圍';
-                const color = params.color || '#3498db';
-                addSearchPolygon(params.coords, name, color);
-            }
-            break;
-
-        case 'clear_search_markers':
-            // 清除所有搜索標記
-            clearSearchMarkers();
-            break;
-
-        default:
-            console.warn('Unknown map action:', action);
-            return false;
-    }
-
-    return true;
-}
 
 /**
  * 解析 AI 回覆中的地圖指令
@@ -2805,6 +2644,20 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * 切換加載狀態
+ */
+function toggleLoadingState(isSyncing) {
+    const loadingEl = document.getElementById('pinned-loading');
+    if (loadingEl) {
+        if (isSyncing) {
+            loadingEl.classList.remove('hidden');
+        } else {
+            loadingEl.classList.add('hidden');
+        }
+    }
+}
+
 // ==================== 願望清單（Wishlist）系統 ====================
 
 /**
@@ -2839,6 +2692,7 @@ const WishlistManager = {
     /** 同步到伺服器 */
     async syncToServer(items) {
         try {
+            toggleLoadingState(true);
             const response = await fetch('/api/sync-locations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2849,6 +2703,8 @@ const WishlistManager = {
             }
         } catch (e) {
             console.warn('[Wishlist] Sync to server failed:', e);
+        } finally {
+            toggleLoadingState(false);
         }
     },
 
@@ -3268,3 +3124,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// For testing purposes
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        WishlistManager,
+        addPinFromMap,
+        savePin,
+        renderPinnedPanel,
+        updatePinnedCount,
+        toggleLoadingState
+    };
+}
