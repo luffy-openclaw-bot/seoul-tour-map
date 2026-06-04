@@ -168,4 +168,12 @@ tmp/
 *.sublime-project
 *.sublime-workspace
 
+# Node.js / Web Development
+node_modules/
+package-lock.json
+.env.local
+
+# Trae
+.trae/
+
 # EOF
