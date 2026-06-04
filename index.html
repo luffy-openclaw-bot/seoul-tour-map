@@ -39,6 +39,13 @@
                 <div class="burger-menu-item" id="burger-toggle-lang">
                     <span><i class="fas fa-globe"></i> English 地圖</span>
                 </div>
+                <div class="burger-menu-item">
+                    <span><i class="fas fa-language"></i> 介面語言</span>
+                    <select id="mobile-lang-selector" style="margin-left: auto; padding: 2px 5px; border-radius: 5px; border: 1px solid #ccc; outline: none;">
+                        <option value="zh-Hant">繁體中文</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
                 <div class="burger-menu-item" id="burger-locate-user">
                     <span><i class="fas fa-location-arrow"></i> 我的定位</span>
                 </div>
@@ -47,6 +54,10 @@
                 </div>
             </div>
             <div class="header-actions" id="desktop-actions">
+                <select id="lang-selector" class="btn-toggle" style="padding: 5px 10px; border-radius: 20px; background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3); outline: none; cursor: pointer;">
+                    <option value="zh-Hant" style="color: black;">繁體中文</option>
+                    <option value="en" style="color: black;">English</option>
+                </select>
                 <button id="toggle-subway" class="btn-toggle" title="顯示/隱藏地鐵線">
                     <i class="fas fa-subway"></i> 地鐵線
                 </button>
@@ -73,38 +84,38 @@
                 <div class="panel">
                     <h3><i class="fas fa-filter"></i> 景點分類</h3>
                     <div class="category-filters">
-                        <button class="cat-btn active" data-category="all">
-                            <i class="fas fa-globe"></i> 全部
+                        <button class="cat-btn active" data-category="all" data-category-id="cat-all">
+                            <i class="fas fa-globe"></i> <span data-i18n-category="cat-all">全部</span>
                         </button>
-                        <button class="cat-btn" data-category="歷史文化">
-                            <i class="fas fa-landmark"></i> 歷史文化
+                        <button class="cat-btn" data-category="歷史文化" data-category-id="cat-history">
+                            <i class="fas fa-landmark"></i> <span data-i18n-category="cat-history">歷史文化</span>
                         </button>
-                        <button class="cat-btn" data-category="地標觀景">
-                            <i class="fas fa-binoculars"></i> 地標觀景
+                        <button class="cat-btn" data-category="地標觀景" data-category-id="cat-landmark">
+                            <i class="fas fa-binoculars"></i> <span data-i18n-category="cat-landmark">地標觀景</span>
                         </button>
-                        <button class="cat-btn" data-category="購物美食">
-                            <i class="fas fa-shopping-bag"></i> 購物美食
+                        <button class="cat-btn" data-category="購物美食" data-category-id="cat-shopping">
+                            <i class="fas fa-shopping-bag"></i> <span data-i18n-category="cat-shopping">購物美食</span>
                         </button>
-                        <button class="cat-btn" data-category="夜生活文化">
-                            <i class="fas fa-music"></i> 夜生活文化
+                        <button class="cat-btn" data-category="夜生活文化" data-category-id="cat-nightlife">
+                            <i class="fas fa-music"></i> <span data-i18n-category="cat-nightlife">夜生活文化</span>
                         </button>
-                        <button class="cat-btn" data-category="娛樂">
-                            <i class="fas fa-ticket-alt"></i> 娛樂
+                        <button class="cat-btn" data-category="娛樂" data-category-id="cat-entertainment">
+                            <i class="fas fa-ticket-alt"></i> <span data-i18n-category="cat-entertainment">娛樂</span>
                         </button>
-                        <button class="cat-btn" data-category="休閒">
-                            <i class="fas fa-coffee"></i> 休閒
+                        <button class="cat-btn" data-category="休閒" data-category-id="cat-leisure">
+                            <i class="fas fa-coffee"></i> <span data-i18n-category="cat-leisure">休閒</span>
                         </button>
-                        <button class="cat-btn" data-category="自然景觀">
-                            <i class="fas fa-tree"></i> 自然景觀
+                        <button class="cat-btn" data-category="自然景觀" data-category-id="cat-nature">
+                            <i class="fas fa-tree"></i> <span data-i18n-category="cat-nature">自然景觀</span>
                         </button>
-                        <button class="cat-btn" data-category="願望s">
-                            <i class="fas fa-heart"></i> 願望s
+                        <button class="cat-btn" data-category="願望s" data-category-id="cat-wishlist">
+                            <i class="fas fa-heart"></i> <span data-i18n-category="cat-wishlist">願望s</span>
                         </button>
-                        <button class="cat-btn" data-category="pinned">
-                            <i class="fas fa-thumbtack"></i> 釘選
+                        <button class="cat-btn" data-category="pinned" data-category-id="cat-pinned">
+                            <i class="fas fa-thumbtack"></i> <span data-i18n-category="cat-pinned">釘選</span>
                         </button>
-                        <button class="cat-btn" data-category="visited">
-                            <i class="fas fa-check-circle"></i> 去過
+                        <button class="cat-btn" data-category="visited" data-category-id="cat-visited">
+                            <i class="fas fa-check-circle"></i> <span data-i18n-category="cat-visited">去過</span>
                         </button>
                     </div>
                 </div>
@@ -230,17 +241,17 @@
             </div>
         </div>
         <div class="mobile-panel-tabs" id="mobile-panel-tabs">
-            <button class="mobile-tab active" data-category="all">全部</button>
-            <button class="mobile-tab" data-category="歷史文化">🏯 歷史</button>
-            <button class="mobile-tab" data-category="地標觀景">🗼 觀景</button>
-            <button class="mobile-tab" data-category="購物美食">🍜 美食</button>
-            <button class="mobile-tab" data-category="夜生活文化">🎶 夜生活</button>
-            <button class="mobile-tab" data-category="娛樂">🎭 娛樂</button>
-            <button class="mobile-tab" data-category="休閒">☕ 休閒</button>
-            <button class="mobile-tab" data-category="自然景觀">🌿 自然</button>
-            <button class="mobile-tab" data-category="願望s">❤️ 願望s</button>
-            <button class="mobile-tab" data-category="pinned">📌 釘選</button>
-            <button class="mobile-tab" data-category="visited">✅ 去過</button>
+            <button class="mobile-tab active" data-category="all" data-category-id="cat-all"><span data-i18n-category="cat-all">全部</span></button>
+            <button class="mobile-tab" data-category="歷史文化" data-category-id="cat-history">🏯 <span data-i18n-category="cat-history">歷史</span></button>
+            <button class="mobile-tab" data-category="地標觀景" data-category-id="cat-landmark">🗼 <span data-i18n-category="cat-landmark">觀景</span></button>
+            <button class="mobile-tab" data-category="購物美食" data-category-id="cat-shopping">🍜 <span data-i18n-category="cat-shopping">美食</span></button>
+            <button class="mobile-tab" data-category="夜生活文化" data-category-id="cat-nightlife">🎶 <span data-i18n-category="cat-nightlife">夜生活</span></button>
+            <button class="mobile-tab" data-category="娛樂" data-category-id="cat-entertainment">🎭 <span data-i18n-category="cat-entertainment">娛樂</span></button>
+            <button class="mobile-tab" data-category="休閒" data-category-id="cat-leisure">☕ <span data-i18n-category="cat-leisure">休閒</span></button>
+            <button class="mobile-tab" data-category="自然景觀" data-category-id="cat-nature">🌿 <span data-i18n-category="cat-nature">自然</span></button>
+            <button class="mobile-tab" data-category="願望s" data-category-id="cat-wishlist">❤️ <span data-i18n-category="cat-wishlist">願望s</span></button>
+            <button class="mobile-tab" data-category="pinned" data-category-id="cat-pinned">📌 <span data-i18n-category="cat-pinned">釘選</span></button>
+            <button class="mobile-tab" data-category="visited" data-category-id="cat-visited">✅ <span data-i18n-category="cat-visited">去過</span></button>
         </div>
         <div class="mobile-panel-list" id="mobile-panel-list">
             <!-- 動態生成 -->

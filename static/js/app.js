@@ -16,6 +16,53 @@ let subwayData = {};
 let activeCategory = 'all';
 let sidebarOpen = false;
 
+// ==================== 多國語言 (i18n) 設定 ====================
+const CATEGORY_TRANSLATIONS = {
+    'cat-all': { 'zh-Hant': '全部', 'en': 'All' },
+    'cat-history': { 'zh-Hant': '歷史文化', 'en': 'History' },
+    'cat-landmark': { 'zh-Hant': '地標觀景', 'en': 'Landmarks' },
+    'cat-shopping': { 'zh-Hant': '購物美食', 'en': 'Shopping & Food' },
+    'cat-nightlife': { 'zh-Hant': '夜生活文化', 'en': 'Nightlife' },
+    'cat-entertainment': { 'zh-Hant': '娛樂', 'en': 'Entertainment' },
+    'cat-leisure': { 'zh-Hant': '休閒', 'en': 'Leisure' },
+    'cat-nature': { 'zh-Hant': '自然景觀', 'en': 'Nature' },
+    'cat-wishlist': { 'zh-Hant': '願望s', 'en': 'Wishlist' },
+    'cat-pinned': { 'zh-Hant': '釘選', 'en': 'Pinned' },
+    'cat-visited': { 'zh-Hant': '去過', 'en': 'Visited' }
+};
+
+let currentLanguage = localStorage.getItem('seoul_tour_lang') || 'zh-Hant';
+
+function updateCategoryLanguage(lang) {
+    currentLanguage = lang;
+    localStorage.setItem('seoul_tour_lang', lang);
+    
+    // 更新下拉選單狀態
+    const desktopSelector = document.getElementById('lang-selector');
+    const mobileSelector = document.getElementById('mobile-lang-selector');
+    if (desktopSelector && desktopSelector.value !== lang) desktopSelector.value = lang;
+    if (mobileSelector && mobileSelector.value !== lang) mobileSelector.value = lang;
+
+    // 替換所有帶有 data-i18n-category 屬性的文字
+    document.querySelectorAll('[data-i18n-category]').forEach(el => {
+        const catId = el.getAttribute('data-i18n-category');
+        if (CATEGORY_TRANSLATIONS[catId] && CATEGORY_TRANSLATIONS[catId][lang]) {
+            let text = CATEGORY_TRANSLATIONS[catId][lang];
+            if (el.closest('.mobile-tab') && lang === 'zh-Hant') {
+                const shortNames = {
+                    'cat-history': '歷史',
+                    'cat-landmark': '觀景',
+                    'cat-shopping': '美食',
+                    'cat-nightlife': '夜生活',
+                    'cat-nature': '自然'
+                };
+                if (shortNames[catId]) text = shortNames[catId];
+            }
+            el.textContent = text;
+        }
+    });
+}
+
 // 對話歷史（保留最近 10 輪對話）
 let chatHistory = [];
 const MAX_HISTORY = 10;
@@ -966,6 +1013,21 @@ function bindEvents() {
     if (locateUserBtn) {
         locateUserBtn.addEventListener('click', locateUser);
     }
+
+    // 多國語言下拉選單
+    const desktopLangSelector = document.getElementById('lang-selector');
+    if (desktopLangSelector) {
+        desktopLangSelector.addEventListener('change', (e) => {
+            updateCategoryLanguage(e.target.value);
+        });
+    }
+
+    const mobileLangSelector = document.getElementById('mobile-lang-selector');
+    if (mobileLangSelector) {
+        mobileLangSelector.addEventListener('change', (e) => {
+            updateCategoryLanguage(e.target.value);
+        });
+    }
 }
 
 // ==================== AI 聊天功能 & 地圖控制 ====================
@@ -1889,8 +1951,8 @@ async function executeMapAction(action, params) {
                         category: params.category || '地標觀景',
                         description: params.description || ''
                     };
-                    // 1. Add to visual list (using existing function)
-                    addSearchResultsToList([listPlace], 'all');
+                    // 1. Add to attractions list
+                    addChatPlacesToAttractions([listPlace]);
                     // 2. Persist to localStorage
                     persistChatPlace(listPlace);
                     
@@ -2016,6 +2078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initRoutePanel();
     initChat();
     bindEvents();
+    updateCategoryLanguage(currentLanguage);
     initMobilePanel();
     // 初始化釘選位置面板
     renderPinnedPanel();
@@ -2484,6 +2547,46 @@ function addSearchResultsToList(places, queryType) {
     console.log(`[Search] Added ${places.length} search results to global state and refreshed panels`);
 }
 
+function addChatPlacesToAttractions(places) {
+    if (!places || places.length === 0) return;
+    let added = false;
+    
+    places.forEach(place => {
+        if (!place.lat || !place.lng) return;
+        
+        // 檢查是否已存在於 attractionsData
+        const exists = attractionsData.some(a => {
+            const dist = getDistance(a.lat, a.lng, place.lat, place.lng);
+            const nameMatch = a.name === place.name || 
+                              a.name.includes(place.name) || 
+                              place.name.includes(a.name);
+            return dist < 0.05 && nameMatch;
+        });
+        
+        if (!exists) {
+            attractionsData.push({
+                id: place.id || `chat_${place.name}_${place.lat.toFixed(4)}_${place.lng.toFixed(4)}`,
+                name: place.name,
+                name_ko: '',
+                lat: place.lat,
+                lng: place.lng,
+                category: place.category || '自訂景點',
+                image: place.image || '',
+                ticket: place.price || '',
+                description: place.description || ''
+            });
+            added = true;
+        }
+    });
+
+    if (added) {
+        addMarkers(); // 重新整理地圖標記
+        renderAttractionList();
+        renderMobilePanelList();
+        console.log(`[ChatPlaces] Added ${places.length} chat places to attractionsData`);
+    }
+}
+
 // ==================== 設備指紋系統 ====================
 const FingerprintManager = {
     STORAGE_KEY: 'seoul_tour_device_uuid',
@@ -2560,7 +2663,7 @@ function persistChatPlace(place) {
             name: place.name,
             lat: place.lat,
             lng: place.lng,
-            category: '自訂景點',
+            category: place.category || '自訂景點',
             description: place.description || '',
             addedAt: Date.now(),
             ownerFingerprint: FingerprintManager.getFingerprint(),
@@ -2575,7 +2678,7 @@ function persistChatPlace(place) {
 function loadChatPlaces() {
     const places = JSON.parse(localStorage.getItem(CHAT_PLACES_KEY) || '[]');
     if (places.length > 0) {
-        addSearchResultsToList(places, 'all');
+        addChatPlacesToAttractions(places);
         console.log(`[ChatPlaces] Restored ${places.length} chat-added places`);
     }
 }
