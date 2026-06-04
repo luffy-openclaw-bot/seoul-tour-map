@@ -9,14 +9,16 @@ Location Search Module - 經緯度實時周邊搜索模組
 """
 
 # Load .env file before any other imports that read env vars
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 import json
 import urllib.request
 import urllib.parse
 import os
-import ssl
 import time
 import glob
 import uuid
@@ -24,10 +26,14 @@ import subprocess
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 
-# SSL context 不驗證 cert
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
+# SSL context 不驗證 certtry:
+    import ssl
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+except ImportError:
+    ssl = None
+    ssl_context = None
 
 # 配置
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"

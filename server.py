@@ -5,8 +5,11 @@
 """
 
 # Load .env file before any other imports that read env vars
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("python-dotenv not found, skipping .env load")
 
 import http.server
 import socketserver
@@ -51,19 +54,24 @@ ODSAY_API_KEY = os.getenv('ODSAY_API_KEY', 'YOUR_ODSAY_KEY_HERE')
 
 # Hermes Agent 任務隊列設定
 HERMES_ENABLED = os.getenv('HERMES_ENABLED', 'false').lower() == 'true'
-HERMES_TASK_DIR = '/tmp/hermes_tasks'
+HERMES_TASK_DIR = os.getenv('HERMES_TASK_DIR', os.path.join(BASE_DIR, '.hermes_tasks'))
+os.makedirs(HERMES_TASK_DIR, exist_ok=True)
 HERMES_TIMEOUT = 120  # 秒
 
-# SSL context 不驗證 cert（因 Ollama Cloud cert 可能過期）
-import ssl
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
+try:
+    import ssl
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
 
-# 使用 custom opener with SSL context
-def create_urllib_opener():
-    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl_context))
-    return opener
+    def create_urllib_opener():
+        opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl_context))
+        return opener
+except ImportError:
+    ssl = None
+    ssl_context = None
+    def create_urllib_opener():
+        return urllib.request.build_opener()
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -83,6 +91,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if self.path == '/api/get-locations':
             self.handle_get_locations()
+            return
+        if self.path == '/api/stream-locations':
+            self.handle_stream_locations()
             return
 
         # 靜態文件
@@ -170,9 +181,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 9. transit_info：獲取當前地圖中心附近嘅實時巴士/地鐵資訊
    示例：「我想睇附近巴士」→【{"action":"transit_info","params":{"type":"bus"}}】
 
-10. add_to_list：將提及嘅地點永久加入景點列表
-   用途：每次提及具體地點（咖啡店、酒店、景點、餐廳等）時，除咗加地圖標記，仲要將佢加入左側景點列表，方便用戶之後搵返
-   示例：「機場有 Starbucks」→ 除咗 add_marker，仲要加【{"action":"add_to_list","params":{"name":"Starbucks（仁川機場）","lat":37.4602,"lng":126.4407,"category":"購物美食","description":"機場內連鎖咖啡店"}}】
+10. add_to_list：將提及嘅地點標示在地圖並永久加入景點列表
+   用途：每次提及具體地點（咖啡店、酒店、景點、餐廳等）時，使用此指令可自動在地圖加上標記，同時將其加入左側景點列表，方便用戶之後搵返。
+   示例：「機場有 Starbucks」→【{"action":"add_to_list","params":{"name":"Starbucks（仁川機場）","lat":37.4602,"lng":126.4407,"category":"購物美食","description":"機場內連鎖咖啡店"}}】
    參數：name（地點名稱）, lat, lng（坐標）, category（分類，用現有分類名：地標觀景/購物美食/自然公園/文化藝術/夜生活/住宿/交通）, description（簡短描述，可選）, color（顏色，可選）
 
 注意：
@@ -180,7 +191,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 - 用戶問區域（如「明洞有咩玩」），用 add_polygon 顯示範圍
 - 每次新查詢，先加 clear_search_markers 清除之前標記
 - 只喺需要移動地圖、顯示位置、顯示範圍時先用呢啲指令。唔好每個回覆都加指令。
-- 提及具體地點時（咖啡店、酒店、餐廳、景點等），必須用 add_to_list 將佢加入景點列表，同時用 add_marker 喺地圖標示位置。兩個動作組合使用。
+- 提及具體地點時（咖啡店、酒店、餐廳、景點等），必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker。
 
 【韓國交通基本知識 (Rookie Tips)】
 - T-money 卡：最方便嘅支付方式，便利店（如 GS25, CU）有售，可用於巴士、地鐵同的士。
@@ -445,6 +456,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _generate_offline_reply(self, user_message):
         """Generate offline knowledge base reply"""
+        if '測試提取' in user_message or 'test extraction' in user_message.lower():
+            return '這是一個測試地點：星巴克明洞店！【{"action":"add_to_list","params":{"name":"星巴克明洞店","lat":37.5635,"lng":126.9895,"category":"購物美食","description":"位於明洞的星巴克"}}】還有另一個地點：弘大！【{"action":"add_to_list","params":{"name":"弘大","lat":37.5568,"lng":126.9245,"category":"地標觀景","description":"弘益大學周邊"}}】'
         return 'AI 伺服器暫時未能連接，已啟用離線知識庫回答。'
 
     def handle_analyze_image(self):
@@ -1109,6 +1122,45 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_json({'success': True, 'locations': shared_data})
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    def handle_stream_locations(self):
+        """SSE endpoint for real-time location updates"""
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Connection', 'keep-alive')
+        self.send_cors_headers()
+        self.end_headers()
+
+        last_mtime = 0
+        try:
+            while True:
+                current_mtime = 0
+                if os.path.exists(SHARED_LOCATIONS_FILE):
+                    current_mtime = os.path.getmtime(SHARED_LOCATIONS_FILE)
+
+                if current_mtime > last_mtime or last_mtime == 0:
+                    with file_lock:
+                        if os.path.exists(SHARED_LOCATIONS_FILE):
+                            try:
+                                with open(SHARED_LOCATIONS_FILE, 'r', encoding='utf-8') as f:
+                                    shared_data = json.load(f)
+                            except json.JSONDecodeError:
+                                shared_data = []
+                        else:
+                            shared_data = []
+                            
+                    payload = json.dumps({'success': True, 'locations': shared_data}, ensure_ascii=False)
+                    self.wfile.write(f"data: {payload}\n\n".encode('utf-8'))
+                    self.wfile.flush()
+                    last_mtime = current_mtime if current_mtime > 0 else 1
+                
+                time.sleep(2)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            # Client disconnected gracefully
+            pass
+        except Exception as e:
+            print(f"DEBUG: handle_stream_locations error: {e}")
 
     def send_json(self, data, status=200):
         """Send JSON response, gracefully handle broken pipes"""
