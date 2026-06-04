@@ -8,7 +8,7 @@ let markers = {};
 let subwayLines = [];
 let subwayLayerGroup;
 let routeLayerGroup;
-let wishlistLayerGroup;  // 用戶釘選標記圖層
+let pinnedLayerGroup;  // 用戶釘選標記圖層
 let searchMarkersLayerGroup;  // Chatbot 搜索標記圖層
 let attractionsData = [];
 let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面板同步
@@ -29,8 +29,25 @@ const CATEGORY_COLORS = {
     '娛樂': '#e91e63',
     '休閒': '#1abc9c',
     '自然景觀': '#27ae60',
-    '用戶釘選': '#1e3a8a'
+    '用戶釘選': '#1e3a8a',
+    '自訂景點': '#8e44ad',
+    '願望s': '#ff4757'
 };
+
+const CATEGORY_FALLBACK_IMAGES = {
+    '歷史文化': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20traditional%20Korean%20palace%20or%20temple%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+    '地標觀景': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20modern%20Seoul%20city%20landmark%20or%20skyline%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+    '購物美食': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20bustling%20Seoul%20shopping%20street%20and%20street%20food%20stalls%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
+    '夜生活文化': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20Seoul%20nightlife%2C%20neon%20lights%2C%20busy%20streets%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
+    '娛樂': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20an%20amusement%20park%20or%20entertainment%20venue%20in%20Seoul%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
+    '休閒': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20relaxing%20cafe%20or%20cultural%20space%20in%20Seoul%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
+    '自然景觀': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20beautiful%20park%20or%20nature%20trail%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+    'default': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20Seoul%20cityscape%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+};
+
+function getFallbackImage(category) {
+    return CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES['default'];
+}
 
 // ==================== 地圖初始化 ====================
 function initMap() {
@@ -63,8 +80,8 @@ function initMap() {
 
     subwayLayerGroup = L.layerGroup().addTo(map);
     routeLayerGroup = L.layerGroup().addTo(map);
-    wishlistLayerGroup = L.layerGroup().addTo(map); // 初始化用戶釘選圖層
-    searchMarkersLayerGroup = L.layerGroup().addTo(map);  // 初始化搜索標記圖層
+    pinnedLayerGroup = L.layerGroup().addTo(map); // 初始化用戶釘選圖層
+    searchMarkersLayerGroup = L.layerGroup().addTo(map); // 初始化搜索標記圖層
 
     map.on("click", onMapClick);
 }
@@ -259,7 +276,7 @@ function savePin(name, lat, lng) {
     const added = WishlistManager.add(item);
     
     if (added) {
-        map.closePopup();
+        if (map) map.closePopup();
         // 顯示提示
         const toast = document.createElement('div');
         toast.className = 'wishlist-toast';
@@ -269,18 +286,14 @@ function savePin(name, lat, lng) {
     }
 }
 
-function renderWishlistMarkers() {
-    if (!wishlistLayerGroup) return;
-    wishlistLayerGroup.clearLayers();
+function renderPinnedMarkers() {
+    if (!pinnedLayerGroup) return;
+    pinnedLayerGroup.clearLayers();
     
     const items = WishlistManager.getAll();
     
     items.forEach(item => {
-        // 只為「用戶釘選」或不在預定義景點列表中的項目添加標記
-        // 預定義景點已有自己的 markers
-        const isPredefined = attractionsData.some(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
-        
-        if (item.category === '用戶釘選' || !isPredefined) {
+        if (item.category === '用戶釘選') {
             const color = CATEGORY_COLORS['用戶釘選'] || '#1e3a8a';
             
             // 自定義 Pin 圖標
@@ -296,7 +309,7 @@ function renderWishlistMarkers() {
             });
             
             const marker = L.marker([item.lat, item.lng], { icon: customIcon })
-                .addTo(wishlistLayerGroup)
+                .addTo(pinnedLayerGroup)
                 .bindPopup(`
                     <div class="popup-card">
                         <div class="popup-info">
@@ -362,9 +375,8 @@ function renderAttractionList() {
             item.dataset.lng = place.lng;
 
             item.innerHTML = `
-                <div class="thumb-search" style="background: ${color}; color: white; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
+                <img class="thumb" src="${place.image || getFallbackImage(category)}" alt="Photo of ${place.name}" loading="lazy"
+                     onerror="this.onerror=null; this.src=getFallbackImage('${category}');">
                 <div class="info">
                     <div class="name">${place.name}</div>
                     <span class="category-tag" style="background:${color}">${category}</span>
@@ -392,9 +404,29 @@ function renderAttractionList() {
     }
 
     // 2. 渲染景點列表
-    const filtered = activeCategory === 'all'
-        ? attractionsData
-        : attractionsData.filter(a => a.category === activeCategory);
+    let filtered;
+    if (activeCategory === 'all') {
+        filtered = attractionsData;
+    } else if (activeCategory === '願望s') {
+        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
+        filtered = wishlistItems.map(item => {
+            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
+            if (predefined) return predefined;
+            return {
+                id: item.id,
+                name: item.name,
+                name_ko: '',
+                lat: item.lat,
+                lng: item.lng,
+                category: item.category || '自訂景點',
+                image: '',
+                ticket: item.price || '',
+                description: item.description || ''
+            };
+        });
+    } else {
+        filtered = attractionsData.filter(a => a.category === activeCategory);
+    }
 
     filtered.forEach(attr => {
         const item = document.createElement('div');
@@ -404,8 +436,8 @@ function renderAttractionList() {
         const color = CATEGORY_COLORS[attr.category] || '#666';
 
         item.innerHTML = `
-            <img class="thumb" src="${attr.image}" alt="${attr.name}" loading="lazy"
-                 onerror="this.src='https://placehold.co/70?text=${encodeURIComponent(attr.name)}'">
+            <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" loading="lazy"
+                 onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="info">
                 <div class="name">${attr.name}</div>
                 <span class="category-tag" style="background:${color}">${attr.category}</span>
@@ -434,9 +466,29 @@ function addMarkers() {
     Object.values(markers).forEach(m => map.removeLayer(m));
     markers = {};
 
-    const filtered = activeCategory === 'all'
-        ? attractionsData
-        : attractionsData.filter(a => a.category === activeCategory);
+    let filtered;
+    if (activeCategory === 'all') {
+        filtered = attractionsData;
+    } else if (activeCategory === '願望s') {
+        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
+        filtered = wishlistItems.map(item => {
+            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
+            if (predefined) return predefined;
+            return {
+                id: item.id,
+                name: item.name,
+                name_ko: '',
+                lat: item.lat,
+                lng: item.lng,
+                category: item.category || '自訂景點',
+                image: '',
+                ticket: item.price || '',
+                description: item.description || ''
+            };
+        });
+    } else {
+        filtered = attractionsData.filter(a => a.category === activeCategory);
+    }
 
     filtered.forEach(attr => {
         const color = CATEGORY_COLORS[attr.category] || '#666';
@@ -467,7 +519,7 @@ function createPopupContent(attr) {
     const color = CATEGORY_COLORS[attr.category] || '#666';
     return `
         <div class="popup-card">
-            ${attr.image ? `<img src="${attr.image}" alt="${attr.name}" onerror="this.src='https://placehold.co/300x140?text=${encodeURIComponent(attr.name)}'">` : ''}
+            <img src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="popup-info">
                 <div class="popup-name">${attr.name}</div>
                 <div class="popup-ko">${attr.name_ko}</div>
@@ -509,7 +561,7 @@ function showAttractionDetail(attr) {
     const highlights = attr.highlights.map(h => `<li>${h}</li>`).join('');
 
     body.innerHTML = `
-        <img class="modal-hero" src="${attr.image}" alt="${attr.name}" onerror="this.src='https://placehold.co/500x220?text=${encodeURIComponent(attr.name)}'">
+        <img class="modal-hero" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
         <div class="modal-info">
             <div class="modal-title">${attr.name}</div>
             <div class="modal-ko">${attr.name_ko}</div>
@@ -762,55 +814,6 @@ document.getElementById('reset-map').addEventListener('click', () => {
     document.getElementById('toggle-traffic').classList.remove('active');
 });
 
-// ==================== AI 地圖動作執行 ====================
-async function executeMapAction(action, params) {
-    console.log('[Map Action]', action, params);
-    
-    switch (action) {
-        case 'center': {
-            const { lat, lng, zoom } = params;
-            map.setView([lat, lng], zoom || 15);
-            break;
-        }
-        case 'focus_attraction': {
-            const attr = attractionsData.find(a => a.id === params.id);
-            if (attr) {
-                focusAttraction(attr);
-            } else {
-                // 嘗試用名稱搵
-                const name = params.id;
-                const found = attractionsData.find(a => 
-                    a.name.includes(name) || a.name_ko.includes(name)
-                );
-                if (found) focusAttraction(found);
-            }
-            break;
-        }
-        case 'highlight_category': {
-            const { category } = params;
-            activeCategory = category;
-            // 觸發分類篩選 UI 更新
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.category === category) {
-                    btn.classList.add('active');
-                }
-            });
-            renderAttractionList();
-            addMarkers();
-            break;
-        }
-        case 'locate_user': {
-            locateUser();
-            break;
-        }
-        case 'show_route': {
-            const { from, to } = params;
-            showRouteOnMap(from, to);
-            break;
-        }
-    }
-}
 
 // ==================== AI 路線顯示 ====================
 function showRouteOnMap(fromName, toName) {
@@ -940,118 +943,6 @@ function bindEvents() {
 let useBackendAI = true; // 優先使用後端 AI
 
 /**
- * 執行地圖控制動作
- * 支援動作: center, focus_attraction, highlight_category, locate_user, show_route
- * @param {string} action - 動作類型
- * @param {object} params - 動作參數
- * @returns {Promise<boolean>} 執行成功與否
- */
-async function executeMapAction(action, params) {
-    console.log('Executing map action:', action, params);
-
-    switch (action) {
-        case 'center':
-            if (params.lat && params.lng) {
-                const lat = parseFloat(params.lat);
-                const lng = parseFloat(params.lng);
-                const zoom = parseInt(params.zoom) || 15;
-
-                // 飛到目的地（animate 效果）
-                map.flyTo([lat, lng], zoom, {
-                    duration: 1.5,
-                    easeLinearity: 0.25
-                });
-
-                // 更新路由結果面板顯示
-                console.log(`地圖已飛到: ${lat}, ${lng}, zoom ${zoom}`);
-            }
-            break;
-
-        case 'focus_attraction':
-            if (params.id) {
-                const attr = attractionsData.find(a => a.id === params.id);
-                if (attr) {
-                    focusAttraction(attr);
-                } else {
-                    // 嘗試用名字查找
-                    const attrByName = attractionsData.find(a =>
-                        a.name.includes(params.id) || params.id.includes(a.name)
-                    );
-                    if (attrByName) {
-                        focusAttraction(attrByName);
-                    }
-                }
-            }
-            break;
-
-        case 'highlight_category':
-            if (params.category) {
-                // 檢查是否為有效分類
-                const validCategories = Object.keys(CATEGORY_COLORS);
-                const matchedCategory = validCategories.find(c =>
-                    c === params.category || c.includes(params.category) || params.category.includes(c)
-                );
-
-                if (matchedCategory) {
-                    activeCategory = matchedCategory;
-                    // 更新 UI 按鈕狀態
-                    document.querySelectorAll('.cat-btn').forEach(btn => {
-                        btn.classList.toggle('active', btn.dataset.category === matchedCategory);
-                    });
-                    // 重新渲染
-                    renderAttractionList();
-                    addMarkers();
-                    console.log(`已篩選分類: ${matchedCategory}`);
-                }
-            }
-            break;
-
-        case 'locate_user':
-            locateUser();
-            break;
-
-        case 'show_route':
-            // 簡單顯示兩點路線
-            if (params.from && params.to) {
-                showRouteByNames(params.from, params.to);
-            }
-            break;
-
-        case 'add_marker':
-            // 添加搜索標記（用於顯示目的地）
-            if (params.lat && params.lng) {
-                const lat = parseFloat(params.lat);
-                const lng = parseFloat(params.lng);
-                const title = params.title || '目的地';
-                const color = params.color || '#e74c3c';
-                const popup = params.popup || title;
-                const pulse = params.pulse !== false; // 默認開啟脈動效果
-                
-                addSearchMarker(lat, lng, title, color, popup, pulse);
-            }
-            break;
-
-        case 'add_polygon':
-            // 添加範圍多邊形（用於顯示區域）
-            if (params.coords && Array.isArray(params.coords)) {
-                const name = params.name || '範圍';
-                const color = params.color || '#3498db';
-                addSearchPolygon(params.coords, name, color);
-            }
-            break;
-
-        case 'clear_search_markers':
-            // 清除所有搜索標記
-            clearSearchMarkers();
-            break;
-
-        default:
-            console.warn('Unknown map action:', action);
-            return false;
-    }
-
-    return true;
-}
 
 /**
  * 解析 AI 回覆中的地圖指令
@@ -1346,7 +1237,7 @@ ${attractionsSummary}
 - 當用家講「去XX」、「睇吓XX」等需要移動地圖時，如果XX係已知景點ID，用 focus_attraction；如果係其他地點（如機場、火車站、區域名稱），用 add_marker 加上準確坐標
 - 搜索結果在內文回答後，適宜用 add_marker 喺地圖標示位置
 - 提及區域或商圈時，可用 add_polygon 顯示範圍
-- 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須同時使用 add_to_list 將地點加入左側景點列表，以及 add_marker 喺地圖標示位置
+- 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker
 - 普通對答唔需要地圖指令`;
 }
 
@@ -1508,6 +1399,9 @@ function generateAIReply(userText) {
     if (text.includes('你好') || text.includes('hi') || text.includes('hello')) {
         return '你好！有咩關於首爾旅遊嘅問題想問？我可以幫你查景點、交通、行程規劃等等！';
     }
+    if (text.includes('測試提取') || text.includes('test extraction')) {
+        return '這是一個測試地點：星巴克明洞店！【{"action":"add_to_list","params":{"name":"星巴克明洞店","lat":37.5635,"lng":126.9895,"category":"購物美食","description":"位於明洞的星巴克"}}】還有另一個地點：弘大！【{"action":"add_to_list","params":{"name":"弘大","lat":37.5568,"lng":126.9245,"category":"地標觀景","description":"弘益大學周邊"}}】';
+    }
     if (text.includes('行程') || text.includes('推薦') || text.includes('點玩')) {
         return `建議首爾3日行程：<br><br>
 <strong>Day 1 - 歷史文化遊</strong><br>
@@ -1575,7 +1469,9 @@ const CATEGORY_EMOJIS = {
     '夜生活文化': '🎶',
     '娛樂': '🎭',
     '休閒': '☕',
-    '自然景觀': '🌿'
+    '自然景觀': '🌿',
+    '自訂景點': '📌',
+    '願望s': '❤️'
 };
 
 function renderMobilePanelList() {
@@ -1632,9 +1528,29 @@ function renderMobilePanelList() {
     }
 
     // 2. 渲染靜態景點
-    const filtered = activeCategory === 'all'
-        ? attractionsData
-        : attractionsData.filter(function(a) { return a.category === activeCategory; });
+    let filtered;
+    if (activeCategory === 'all') {
+        filtered = attractionsData;
+    } else if (activeCategory === '願望s') {
+        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
+        filtered = wishlistItems.map(item => {
+            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
+            if (predefined) return predefined;
+            return {
+                id: item.id,
+                name: item.name,
+                name_ko: '',
+                lat: item.lat,
+                lng: item.lng,
+                category: item.category || '自訂景點',
+                image: '',
+                ticket: item.price || '',
+                description: item.description || ''
+            };
+        });
+    } else {
+        filtered = attractionsData.filter(function(a) { return a.category === activeCategory; });
+    }
 
     if (countEl) countEl.textContent = (filtered.length + (currentSearchResults ? currentSearchResults.length : 0)) + ' 個項目';
 
@@ -1944,10 +1860,12 @@ async function executeMapAction(action, params) {
             case 'add_to_list':
                 // 將地點加入景點列表並持久化
                 if (params.name && params.lat !== undefined && params.lng !== undefined) {
+                    const lat = parseFloat(params.lat);
+                    const lng = parseFloat(params.lng);
                     const listPlace = {
                         name: params.name,
-                        lat: parseFloat(params.lat),
-                        lng: parseFloat(params.lng),
+                        lat: lat,
+                        lng: lng,
                         category: params.category || '地標觀景',
                         description: params.description || ''
                     };
@@ -1955,7 +1873,12 @@ async function executeMapAction(action, params) {
                     addSearchResultsToList([listPlace], 'all');
                     // 2. Persist to localStorage
                     persistChatPlace(listPlace);
-                    console.log(`[Map Action] Added to list: ${params.name}`);
+                    
+                    // 3. Add marker to map
+                    const color = CATEGORY_COLORS[listPlace.category] || '#e74c3c';
+                    addSearchMarker(lat, lng, params.name, color, params.name, true);
+                    
+                    console.log(`[Map Action] Added to list & map: ${params.name}`);
                 }
                 break;
             case 'transit_info':
@@ -2074,11 +1997,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     initChat();
     bindEvents();
     initMobilePanel();
-    // 初始化願望清單面板
-    renderWishlistPanel();
-    updateWishlistCount();
+    // 初始化釘選位置面板
+    renderPinnedPanel();
+    updatePinnedCount();
     // 渲染地圖釘選
-    renderWishlistMarkers();
+    renderPinnedMarkers();
     // 恢復聊天添加的地點
     loadChatPlaces();
     // 頁面啟動時檢查系統狀態
@@ -2515,12 +2438,14 @@ function addSearchResultsToList(places, queryType) {
     places.forEach((place) => {
         if (!place.lat || !place.lng) return;
         
-        // 檢查是否已存在（避免重複）
-        const exists = currentSearchResults.some(p => 
-            p.name === place.name && 
-            Math.abs(p.lat - place.lat) < 0.0001 && 
-            Math.abs(p.lng - place.lng) < 0.0001
-        );
+        // 檢查是否已存在（避免重複，使用模糊比對）
+        const exists = currentSearchResults.some(p => {
+            const dist = getDistance(p.lat, p.lng, place.lat, place.lng);
+            const nameMatch = p.name === place.name || 
+                              p.name.includes(place.name) || 
+                              place.name.includes(p.name);
+            return dist < 0.05 && nameMatch;
+        });
         
         if (!exists) {
             // 存儲完整數據以支持豐富的氣泡顯示
@@ -2602,18 +2527,20 @@ function persistChatPlace(place) {
         return;
     }
     const places = JSON.parse(localStorage.getItem(CHAT_PLACES_KEY) || '[]');
-    // 避免重複（按名稱+坐標）
-    const exists = places.some(p =>
-        p.name === place.name &&
-        Math.abs(p.lat - place.lat) < 0.0001 &&
-        Math.abs(p.lng - place.lng) < 0.0001
-    );
+    // 避免重複（按名稱+坐標模糊比對）
+    const exists = places.some(p => {
+        const dist = getDistance(p.lat, p.lng, place.lat, place.lng);
+        const nameMatch = p.name === place.name || 
+                          p.name.includes(place.name) || 
+                          place.name.includes(p.name);
+        return dist < 0.05 && nameMatch;
+    });
     if (!exists) {
         places.push({
             name: place.name,
             lat: place.lat,
             lng: place.lng,
-            category: place.category || '地標觀景',
+            category: '自訂景點',
             description: place.description || '',
             addedAt: Date.now(),
             ownerFingerprint: FingerprintManager.getFingerprint(),
@@ -2750,6 +2677,20 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * 切換加載狀態
+ */
+function toggleLoadingState(isSyncing) {
+    const loadingEl = document.getElementById('pinned-loading');
+    if (loadingEl) {
+        if (isSyncing) {
+            loadingEl.classList.remove('hidden');
+        } else {
+            loadingEl.classList.add('hidden');
+        }
+    }
+}
+
 // ==================== 願望清單（Wishlist）系統 ====================
 
 /**
@@ -2784,6 +2725,7 @@ const WishlistManager = {
     /** 同步到伺服器 */
     async syncToServer(items) {
         try {
+            toggleLoadingState(true);
             const response = await fetch('/api/sync-locations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2794,46 +2736,61 @@ const WishlistManager = {
             }
         } catch (e) {
             console.warn('[Wishlist] Sync to server failed:', e);
+        } finally {
+            toggleLoadingState(false);
         }
     },
 
-    /** 從伺服器同步 */
-    async syncFromServer() {
-        try {
-            const response = await fetch('/api/get-locations');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.locations) {
-                    const localItems = this.getAll();
-                    const localIds = new Set(localItems.map(i => i.id));
-                    
-                    let merged = [...localItems];
-                    let addedCount = 0;
-                    
-                    data.locations.forEach(remoteItem => {
-                        // 嚴格數據驗證：確保 remoteItem 有效且包含必要的經緯度
-                        if (!remoteItem.id || !remoteItem.name || 
-                            remoteItem.lat === undefined || remoteItem.lng === undefined ||
-                            isNaN(parseFloat(remoteItem.lat)) || isNaN(parseFloat(remoteItem.lng))) {
-                            console.warn('[Wishlist] Skipping invalid remote item:', remoteItem);
-                            return;
-                        }
+    /** 啟動 SSE 實時同步 */
+    startSyncStream() {
+        if (this.eventSource) {
+            this.eventSource.close();
+        }
 
-                        if (!localIds.has(remoteItem.id)) {
-                            merged.push(remoteItem);
-                            addedCount++;
-                        }
-                    });
-                    
-                    if (addedCount > 0) {
-                        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
-                        this._notifyChange();
-                        console.log(`[Wishlist] Synced ${addedCount} items from server`);
-                    }
+        this.eventSource = new EventSource('/api/stream-locations');
+
+        this.eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.success && data.locations) {
+                    this._mergeRemoteLocations(data.locations);
                 }
+            } catch (e) {
+                console.warn('[Wishlist] SSE parse error:', e);
             }
-        } catch (e) {
-            console.warn('[Wishlist] Sync from server failed:', e);
+        };
+
+        this.eventSource.onerror = (error) => {
+            console.warn('[Wishlist] SSE connection error. Browser will auto-reconnect...', error);
+        };
+    },
+
+    /** 合併遠端數據 */
+    _mergeRemoteLocations(remoteLocations) {
+        const localItems = this.getAll();
+        const localIds = new Set(localItems.map(i => i.id));
+        
+        let merged = [...localItems];
+        let addedCount = 0;
+        
+        remoteLocations.forEach(remoteItem => {
+            // 嚴格數據驗證：確保 remoteItem 有效且包含必要的經緯度
+            if (!remoteItem.id || !remoteItem.name || 
+                remoteItem.lat === undefined || remoteItem.lng === undefined ||
+                isNaN(parseFloat(remoteItem.lat)) || isNaN(parseFloat(remoteItem.lng))) {
+                return;
+            }
+
+            if (!localIds.has(remoteItem.id)) {
+                merged.push(remoteItem);
+                addedCount++;
+            }
+        });
+        
+        if (addedCount > 0) {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
+            this._notifyChange();
+            console.log(`[Wishlist] Synced ${addedCount} items from server via SSE`);
         }
     },
 
@@ -2912,67 +2869,77 @@ const WishlistManager = {
 
     /** 觸發 UI 更新事件 */
     _notifyChange() {
-        // 更新願望清單面板
-        renderWishlistPanel();
+        // 更新釘選位置面板
+        renderPinnedPanel();
         // 更新景點列表中的心形按鈕狀態
         updateAllWishlistButtons();
-        // 更新側邊欄願望清單計數
-        updateWishlistCount();
+        // 更新側邊欄釘選計數
+        updatePinnedCount();
         // 更新地圖上的釘選標記
-        renderWishlistMarkers();
+        renderPinnedMarkers();
+
+        // 如果當前分類是願望清單，更新景點列表
+        if (activeCategory === '願望s') {
+            renderAttractionList();
+            renderMobilePanelList();
+            addMarkers();
+        }
     }
 };
 
 /**
- * 渲染願望清單面板
+ * 渲染釘選位置面板
  */
-function renderWishlistPanel() {
-    const container = document.getElementById('wishlist-list');
-    const countEl = document.getElementById('wishlist-count');
+function renderPinnedPanel() {
+    const container = document.getElementById('pinned-list');
+    const countEl = document.getElementById('pinned-count');
     if (!container) return;
 
-    const items = WishlistManager.getAll();
-    if (countEl) countEl.textContent = items.length > 0 ? `(${items.length})` : '';
+    const allItems = WishlistManager.getAll();
+    const items = allItems.filter(item => item.category === '用戶釘選');
+    
+    if (countEl) countEl.textContent = items.length > 0 ? items.length.toString() : '0';
+    if (countEl) countEl.dataset.count = items.length;
 
     container.innerHTML = '';
 
     if (items.length === 0) {
-        container.innerHTML = '<div class="wishlist-empty"><i class="far fa-heart"></i> 願望清單是空的<br><small>點擊景點或搜索結果的 ❤️ 按鈕添加</small></div>';
+        container.innerHTML = '<div class="pinned-empty"><i class="fas fa-thumbtack"></i> 沒有釘選位置<br><small>在地圖上點擊並選擇「釘選此位置」添加</small></div>';
         return;
     }
 
     items.forEach(item => {
         const el = document.createElement('div');
-        el.className = 'wishlist-item';
+        el.className = 'pinned-item';
         el.dataset.wishlistId = item.id;
 
         const color = CATEGORY_COLORS[item.category] || '#667eea';
-        const priceHtml = item.price ? `<span class="wishlist-price">💰 ${item.price}</span>` : '';
+        const priceHtml = item.price ? `<span class="pinned-price">💰 ${item.price}</span>` : '';
 
         el.innerHTML = `
-            <div class="wishlist-thumb" style="background:${color}20;color:${color}">
+            <div class="pinned-thumb" style="background:${color}20;color:${color}">
                 <i class="fas fa-map-marker-alt"></i>
             </div>
-            <div class="wishlist-info">
-                <div class="wishlist-name">${item.name}</div>
-                <div class="wishlist-meta">
-                    <span class="wishlist-cat" style="background:${color}">${item.category}</span>
+            <div class="pinned-info">
+                <div class="pinned-name">${item.name}</div>
+                <div class="pinned-meta">
+                    <span class="pinned-cat" style="background:${color}">${item.category}</span>
                     ${priceHtml}
                 </div>
             </div>
-            <button class="wishlist-remove-btn" data-wishlist-id="${item.id}" title="從願望清單移除">
+            <button class="pinned-remove-btn" data-wishlist-id="${item.id}" title="移除釘選">
                 <i class="fas fa-times"></i>
             </button>
         `;
 
         // 點擊跳轉
         el.addEventListener('click', (e) => {
-            if (e.target.closest('.wishlist-remove-btn')) return;
+            if (e.target.closest('.pinned-remove-btn')) return;
             map.flyTo([item.lat, item.lng], 16, { duration: 1.5 });
         });
 
         // 移除按鈕
-        const removeBtn = el.querySelector('.wishlist-remove-btn');
+        const removeBtn = el.querySelector('.pinned-remove-btn');
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             WishlistManager.remove(item.id);
@@ -2983,13 +2950,15 @@ function renderWishlistPanel() {
 }
 
 /**
- * 更新側邊欄願望清單計數
+ * 更新側邊欄釘選計數
  */
-function updateWishlistCount() {
-    const badge = document.getElementById('wishlist-count');
+function updatePinnedCount() {
+    const badge = document.getElementById('pinned-count');
     if (badge) {
-        const count = WishlistManager.count();
-        badge.textContent = count > 0 ? `(${count})` : '';
+        const items = WishlistManager.getAll().filter(item => item.category === '用戶釘選');
+        const count = items.length;
+        badge.textContent = count > 0 ? count.toString() : '0';
+        badge.dataset.count = count;
     }
 }
 
@@ -3171,8 +3140,8 @@ async function checkSystemStatus() {
 
 // 點擊狀態指示器展開/收起詳情
 document.addEventListener('DOMContentLoaded', () => {
-    // 啟動時從伺服器同步地點
-    WishlistManager.syncFromServer();
+    // 啟動時建立 SSE 連線以實時同步地點
+    WishlistManager.startSyncStream();
     
     const statusDot = document.getElementById('system-status');
     const statusBar = document.getElementById('system-status-bar');
@@ -3188,3 +3157,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// For testing purposes
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        WishlistManager,
+        addPinFromMap,
+        savePin,
+        renderPinnedPanel,
+        updatePinnedCount,
+        toggleLoadingState
+    };
+}
