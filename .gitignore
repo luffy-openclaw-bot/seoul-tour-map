@@ -168,4 +168,14 @@ tmp/
 *.sublime-project
 *.sublime-workspace
 
+# Node.js / Web Development
+node_modules/
+.env.local
+
+# IDE / Editor Folders
+.trae/
+
+# Project Specific
+.hermes_tasks/
+
 # EOF
