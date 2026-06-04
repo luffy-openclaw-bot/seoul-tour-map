@@ -86,5 +86,27 @@
     "price": "",
     "addedAt": 1780510480862,
     "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "chat_星巴克明洞店_37.5635_126.9895",
+    "name": "星巴克明洞店",
+    "lat": 37.5635,
+    "lng": 126.9895,
+    "category": "自訂景點",
+    "description": "位於明洞的星巴克",
+    "price": "",
+    "addedAt": 1780533181096,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "chat_弘大_37.5568_126.9245",
+    "name": "弘大",
+    "lat": 37.5568,
+    "lng": 126.9245,
+    "category": "自訂景點",
+    "description": "弘益大學周邊",
+    "price": "",
+    "addedAt": 1780533181142,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
   }
 ]
