@@ -168,4 +168,24 @@ tmp/
 *.sublime-project
 *.sublime-workspace
 
+# Node.js / Web Development
+node_modules/
+package-lock.json
+.env.local
+
+
+# IDE / Editor Folders
+.trae/
+
+# Project Specific
+.hermes_tasks/
+
 # EOF
+
+# Node.js
+node_modules/
+package-lock.json
+.env.local
+
+# IDE / Editor Folders
+.trae/
