@@ -179,7 +179,7 @@ const SearchExecutor = {
                     await searchNearbyTransport(lat, lng);
                 } catch (error) {
                     console.error('Transport search error:', error);
-                    SearchUI.displayError('交通查詢出錯');
+                    SearchUI.displayError('交通查詢出錯', lat, lng, queryType);
                 }
                 return;
             }
@@ -221,7 +221,7 @@ const SearchExecutor = {
                 // 在地圖上標記結果
                 SearchMap.markResults(result.data.places, lat, lng);
             } else {
-                SearchUI.displayError(result.error || '搜索失敗');
+                SearchUI.displayError(result.error || '搜索失敗', lat, lng, queryType);
             }
 
         } catch (error) {
@@ -230,7 +230,7 @@ const SearchExecutor = {
                 return;
             }
             console.error('Search error:', error);
-            SearchUI.displayError('搜索出錯，請稍後再試');
+            SearchUI.displayError('搜索出錯，請稍後再試', lat, lng, queryType);
         } finally {
             this.abortController = null;
         }
@@ -374,9 +374,13 @@ ${wishlistAction}
     /**
      * 顯示錯誤信息
      */
-    displayError(error) {
+    displayError(error, lat, lng, queryType) {
         hideTyping();
-        addMessage(`❌ **搜索失敗**\n\n${error}\n\n請檢查網路連接或稍後再試。`, 'bot');
+        let retryBtn = '';
+        if (lat !== undefined && lng !== undefined && queryType) {
+            retryBtn = `<br><br><button class="btn-route" style="margin-top: 10px; padding: 5px 10px; border-radius: 4px; border: none; background-color: #e74c3c; color: white; cursor: pointer;" onclick="SearchExecutor.execute(${lat}, ${lng}, '${queryType}')"><i class="fas fa-redo"></i> 重試 (Try Again)</button>`;
+        }
+        addMessage(`❌ **搜索失敗**\n\n${error}\n\n請檢查網路連接或稍後再試。${retryBtn}`, 'bot');
     }
 };
 
