@@ -38,6 +38,15 @@ OLLAMA_API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
 OLLAMA_API_KEY = os.getenv('OLLAMA_API_KEY', 'c309d7242319461783142d44f3949473.Cvsj6THEdCx3lfLBGAwYgtWx')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')
 
+# Public API Keys
+DATA_GO_KR_KEY = os.getenv('DATA_GO_KR_KEY', 'YOUR_SERVICE_KEY_HERE')
+VISIT_KOREA_API_KEY = os.getenv('VISIT_KOREA_API_KEY', 'YOUR_VISIT_KOREA_KEY_HERE')
+SEOUL_DATA_API_KEY = os.getenv('SEOUL_DATA_API_KEY', 'YOUR_SEOUL_DATA_KEY_HERE')
+
+# API Endpoints
+VISIT_KOREA_URL = "https://apis.data.go.kr/B551011/KorService1"
+SEOUL_DATA_URL = "http://openapi.seoul.go.kr:8088"
+
 
 @dataclass
 class PlaceInfo:
@@ -93,6 +102,82 @@ class LocationSearcher:
         self.opener = urllib.request.build_opener(
             urllib.request.HTTPSHandler(context=ssl_context)
         )
+
+    def _fetch_visit_korea_data(self, lat: float, lng: float, query_type: str, radius: int = 2000) -> List[Dict]:
+        """
+        Fetch tourism data from VisitKorea (TourAPI 4.0)
+        """
+        if VISIT_KOREA_API_KEY == 'YOUR_VISIT_KOREA_KEY_HERE':
+            return []
+
+        # Map query_type to VisitKorea contentTypeId
+        type_map = {
+            "attractions": "12",
+            "restaurants": "39",
+            "hotels": "32",
+            "shopping": "38",
+            "all": ""
+        }
+        content_type_id = type_map.get(query_type, "")
+
+        try:
+            params = {
+                'serviceKey': VISIT_KOREA_API_KEY,
+                'numOfRows': 15,
+                'pageNo': 1,
+                'MobileOS': 'ETC',
+                'MobileApp': 'SeoulTourMap',
+                '_type': 'json',
+                'listYN': 'Y',
+                'arrange': 'O', # O=Distance
+                'mapX': lng,
+                'mapY': lat,
+                'radius': radius
+            }
+            if content_type_id:
+                params['contentTypeId'] = content_type_id
+
+            encoded_params = urllib.parse.urlencode(params, safe='/%')
+            url = f"{VISIT_KOREA_URL}/locationBasedList1?{encoded_params}"
+
+            req = urllib.request.Request(url)
+            with self.opener.open(req, timeout=10) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                items = data.get('response', {}).get('body', {}).get('items', {}).get('item', [])
+                if isinstance(items, dict): # Single item case
+                    items = [items]
+                return items
+        except Exception as e:
+            print(f"[LocationSearcher] VisitKorea API error: {e}")
+            return []
+
+    def _fetch_seoul_city_data(self, location_info: Dict) -> Dict:
+        """
+        Fetch real-time city data from Seoul Open Data Plaza
+        """
+        if SEOUL_DATA_API_KEY == 'YOUR_SEOUL_DATA_KEY_HERE':
+            return {}
+
+        # Get district (gu) name for Seoul real-time data
+        address = location_info.get('address', {})
+        gu_name = address.get('suburb', '') or address.get('district', '')
+        
+        if not gu_name or 'Seoul' not in location_info.get('full_name', ''):
+            return {}
+
+        # Basic real-time city data usually requires a specific AREA_NM
+        # For simplicity, we can fetch cultural events or nearby POIs if coordinate-based APIs exist
+        # Here we'll try to fetch cultural events as a sample
+        try:
+            # Example: Cultural events in Seoul
+            url = f"{SEOUL_DATA_URL}/{SEOUL_DATA_API_KEY}/json/culturalEventInfo/1/5/"
+            req = urllib.request.Request(url)
+            with self.opener.open(req, timeout=10) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                return data.get('culturalEventInfo', {})
+        except Exception as e:
+            print(f"[LocationSearcher] Seoul Data Plaza error: {e}")
+            return {}
     
     def search(self, lat: float, lng: float, query_type: str = "all", radius: int = 2000) -> Dict:
         """
@@ -108,32 +193,48 @@ class LocationSearcher:
             dict: 標準化搜索結果
         """
         try:
+            print(f"[LocationSearcher] Starting search for {lat}, {lng} (type: {query_type})")
             # Step 1: 逆地理編碼獲取地址
             location_info = self._reverse_geocode(lat, lng)
             if not location_info:
+                print("[LocationSearcher] Failed to get location info")
                 return self._error_response("無法獲取位置資訊")
             
             location_name = location_info.get('display_name', f"{lat}, {lng}")
+            print(f"[LocationSearcher] Location identified: {location_name}")
             
-            # Step 2: 構建搜索查詢
-            search_query = self._build_query(location_name, query_type)
+            # Step 2: Fetch data from public APIs (VisitKorea, Seoul Data)
+            # API-First Enrichment approach
+            print("[LocationSearcher] Fetching public API data...")
+            api_data = {
+                'visit_korea': self._fetch_visit_korea_data(lat, lng, query_type, radius),
+                'seoul_city': self._fetch_seoul_city_data(location_info)
+            }
+            print(f"[LocationSearcher] API fetch complete. VK items: {len(api_data['visit_korea'])}, Seoul data: {bool(api_data['seoul_city'])}")
             
-            # Step 3: 直接使用 AI 知識庫分析（跳過 web search，因 worker 使用不同命名協議）
-            # AI 內置豐富旅遊知識，比脆弱的實時搜索更可靠
+            # Step 3: AI Result Analysis
+            # Pass API data as context for AI to summarize and enrich
+            print("[LocationSearcher] Analyzing with AI...")
             places = self._analyze_with_ai(
-                {'results': '', 'urls': []}, query_type, location_name, lat, lng
+                api_data, query_type, location_name, lat, lng
             )
+            print(f"[LocationSearcher] AI analysis complete. Found {len(places)} places.")
             
-            # Step 4: 構建返回結果
+            # Step 4: Determine data source label
+            source_label = "ai_knowledge"
+            if api_data['visit_korea'] or api_data['seoul_city']:
+                source_label = "official_public_api"
+            
+            # Step 5: Build final result
             result = SearchResult(
                 location_name=location_name,
                 places=places,
                 summary=self._generate_summary(location_name, places, query_type),
-                source="ai_knowledge",
-                search_query=search_query,
+                source=source_label,
+                search_query=self._build_query(location_name, query_type),
                 search_urls=[]
             )
-            
+            print("[LocationSearcher] Search completed successfully")
             return self._success_response(result)
             
         except Exception as e:
@@ -308,24 +409,32 @@ class LocationSearcher:
         print(f"[LocationSearcher] Timeout waiting for task: {task_id}")
         return None
     
-    def _analyze_with_ai(self, search_results: Dict, query_type: str, location_name: str,
+    def _analyze_with_ai(self, api_data: Dict, query_type: str, location_name: str,
                           lat: float = None, lng: float = None) -> List[PlaceInfo]:
         """
-        使用 Ollama AI 分析搜索結果
-        如果無搜索結果，AI 會基於知識庫回答
+        使用 Ollama AI 分析 API 數據或基於知識庫推薦
         """
-        results_text = search_results.get('results', '')
+        visit_korea_items = api_data.get('visit_korea', [])
+        seoul_city_data = api_data.get('seoul_city', {})
         
         try:
             # 構建 AI 分析請求
-            system_prompt = self._get_analysis_prompt(query_type, location_name, bool(results_text))
+            system_prompt = self._get_analysis_prompt(query_type, location_name, bool(visit_korea_items))
             
             user_content = f"位置：{location_name}\n搜索中心坐標：({lat:.5f}, {lng:.5f})" if lat and lng else f"位置：{location_name}"
             user_content += "\n\n"
-            if results_text:
-                user_content += f"搜索結果：\n{results_text[:8000]}"
-            else:
-                user_content += "無實時搜索結果，請基於你的旅遊知識推薦此地點周邊的景點。"
+            
+            if visit_korea_items:
+                user_content += "【VisitKorea 官方數據】:\n"
+                for item in visit_korea_items:
+                    user_content += f"- 名稱: {item.get('title')}, 地址: {item.get('addr1')}, 坐標: ({item.get('mapy')}, {item.get('mapx')})\n"
+            
+            if seoul_city_data:
+                user_content += "\n【首爾實時城市數據/活動】:\n"
+                user_content += json.dumps(seoul_city_data, ensure_ascii=False)[:1000]
+            
+            if not visit_korea_items and not seoul_city_data:
+                user_content += "無實時 API 數據，請基於你的旅遊知識推薦此地點周邊的景點。"
             
             payload = {
                 "model": OLLAMA_MODEL,
@@ -370,7 +479,9 @@ class LocationSearcher:
         
         data_source_note = ""
         if not has_search_results:
-            data_source_note = "\n\n注意：由於實時搜索暫時不可用，請基於你對首爾的旅遊知識庫推薦附近地點。"
+            data_source_note = "\n\n注意：由於實時 API 數據暫時不可用，請基於你對首爾的旅遊知識庫推薦附近地點。"
+        else:
+            data_source_note = "\n\n注意：請優先使用提供的【VisitKorea】或【首爾城市數據】進行分析，並將其轉化為用戶友好的廣東話描述。"
         
         return f"""你係韓國旅遊資訊分析專家。{data_source_note}
 
