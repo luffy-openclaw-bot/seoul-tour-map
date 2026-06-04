@@ -516,6 +516,11 @@ function initLocationSearch() {
 
     // 定義新的 onMapClick
     window.onMapClick = function(e) {
+        // 如果有原始事件，防止預設行為（如手機長按彈出系統選單）
+        if (e.originalEvent) {
+            L.DomEvent.preventDefault(e.originalEvent);
+        }
+
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
 
@@ -525,8 +530,22 @@ function initLocationSearch() {
 
     // 重新綁定地圖點擊事件
     if (typeof map !== 'undefined') {
+        // 偵測是否為手機版 (Leaflet 內建偵測 或 螢幕寬度小於等於 768px)
+        const isMobile = L.Browser.mobile || window.innerWidth <= 768;
+
         map.off('click');
-        map.on('click', window.onMapClick);
+        map.off('contextmenu');
+
+        if (isMobile) {
+            // 手機版：使用 contextmenu (對應長按) 觸發
+            map.on('contextmenu', window.onMapClick);
+            console.log('[Search Module] Mobile mode: use long press for search menu');
+        } else {
+            // 電腦版：維持點擊觸發，並同時支援右鍵觸發
+            map.on('click', window.onMapClick);
+            map.on('contextmenu', window.onMapClick);
+            console.log('[Search Module] Desktop mode: use click or right-click for search menu');
+        }
     }
 
     console.log('[Search Module] Location search initialized');

@@ -92,7 +92,7 @@ export OLLAMA_MODEL="kimi-k2.6"
 python3 server.py
 ```
 
-打開瀏覽器訪問：`http://localhost:8080`
+打開瀏覽器訪問：`http://localhost:8082`
 
 ## 📁 項目結構
 
