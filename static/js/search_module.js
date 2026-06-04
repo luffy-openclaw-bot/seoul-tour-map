@@ -44,8 +44,8 @@ const SearchPopup = {
                     <a href="${googleMapsUrl}" target="_blank" class="google-maps-btn" onclick="event.stopPropagation()">
                         <i class="fas fa-map"></i> Google Maps
                     </a>
-                    <button class="pin-location-btn-mini" onclick="addPinFromMap(${lat}, ${lng}); SearchPopup.close();" title="釘選此位置">
-                        <i class="fas fa-thumbtack"></i> 釘選
+                    <button class="pin-location-btn-mini" onclick="openSaveLocationModal(${lat}, ${lng}); SearchPopup.close();" title="儲存此位置">
+                        <i class="fas fa-save"></i> 儲存
                     </button>
                 </div>
                 <div class="search-type-grid">

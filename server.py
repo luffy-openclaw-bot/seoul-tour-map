@@ -242,7 +242,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             radius = data.get('radius', 2000)  # 預設 2km
 
             # 讀取景點數據
-            attractions_file = os.path.join(self.workdir, 'static/data/attractions.json')
+            attractions_file = os.path.join(self.workdir, 'static/data/preset_locations.json')
             with open(attractions_file, 'r', encoding='utf-8') as f:
                 attractions_data = json.load(f)
 
@@ -520,7 +520,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # =========================================================================
             attractions_list = []  # Initialize to avoid scope issues
             try:
-                attractions_file = os.path.join(self.workdir, 'static/data/attractions.json')
+                attractions_file = os.path.join(self.workdir, 'static/data/preset_locations.json')
                 with open(attractions_file, 'r', encoding='utf-8') as f:
                     attractions_list = json.load(f).get('attractions', [])
                     attractions_info = '\n'.join([
@@ -676,7 +676,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     import math
                     fallback_attrs = []
                     try:
-                        attractions_file = os.path.join(self.workdir, 'static/data/attractions.json')
+                        attractions_file = os.path.join(self.workdir, 'static/data/preset_locations.json')
                         with open(attractions_file, 'r', encoding='utf-8') as f:
                             fallback_attrs = json.load(f).get('attractions', [])
                     except:
@@ -1075,7 +1075,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         'description': str(loc.get('description', '')),
                         'price': str(loc.get('price', '')),
                         'addedAt': loc.get('addedAt', int(time.time() * 1000)),
-                        'ownerFingerprint': str(loc.get('ownerFingerprint', 'unknown'))
+                        'ownerFingerprint': str(loc.get('ownerFingerprint', 'unknown')),
+                        'wish': bool(loc.get('wish', False)),
+                        'pinned': bool(loc.get('pinned', False)),
+                        'visited': bool(loc.get('visited', False)),
+                        'myRemark': str(loc.get('myRemark', ''))
                     }
                     validated_locations.append(validated_loc)
                 except (ValueError, TypeError):
@@ -1091,23 +1095,34 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         except json.JSONDecodeError:
                             shared_data = []
                 
-                # 合併數據，基於 ID 去重
-                existing_ids = {loc['id'] for loc in shared_data}
-                added_count = 0
+                # 合併數據，基於 ID 去重與更新
+                existing_map = {loc['id']: i for i, loc in enumerate(shared_data)}
+                changed = False
                 for loc in validated_locations:
-                    if loc['id'] not in existing_ids:
+                    if loc['id'] not in existing_map:
                         shared_data.append(loc)
-                        added_count += 1
+                        existing_map[loc['id']] = len(shared_data) - 1
+                        changed = True
+                    else:
+                        idx = existing_map[loc['id']]
+                        # Check if fields changed
+                        old_loc = shared_data[idx]
+                        if (old_loc.get('wish') != loc['wish'] or
+                            old_loc.get('pinned') != loc['pinned'] or
+                            old_loc.get('visited') != loc['visited'] or
+                            old_loc.get('myRemark') != loc['myRemark']):
+                            shared_data[idx] = loc
+                            changed = True
                 
-                if added_count > 0:
+                if changed:
                     # 原子寫入
                     temp_file = SHARED_LOCATIONS_FILE + '.tmp'
                     with open(temp_file, 'w', encoding='utf-8') as f:
                         json.dump(shared_data, f, ensure_ascii=False, indent=2)
                     os.replace(temp_file, SHARED_LOCATIONS_FILE)
-                    print(f"DEBUG: Saved {added_count} new locations to {SHARED_LOCATIONS_FILE}")
+                    print(f"DEBUG: Saved changes to {SHARED_LOCATIONS_FILE}")
                 
-            self.send_json({'success': True, 'count': len(shared_data), 'added': added_count})
+            self.send_json({'success': True, 'count': len(shared_data), 'updated': changed})
         except Exception as e:
             print(f"DEBUG: handle_sync_locations error: {e}")
             self.send_json({'success': False, 'error': str(e)}, status=500)

@@ -136,7 +136,7 @@ seoul-tour-map/
 
 ## 📝 擴展建議
 
-1. **加入更多景點**：編輯 `static/data/attractions.json`
+1. **加入更多景點**：編輯 `static/data/preset_locations.json`
 2. **接入外部 API**：
    - Google Places API（景點資料）
    - Naver Map API（真實路線規劃）

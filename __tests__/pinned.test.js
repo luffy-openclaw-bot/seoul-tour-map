@@ -60,7 +60,7 @@ global.activeCategory = 'all';
 
 // Load module
 const app = require('../static/js/app.js');
-const { WishlistManager, savePin, renderPinnedPanel, updatePinnedCount, toggleLoadingState } = app;
+const { WishlistManager, saveLocationData, renderPinnedPanel, updatePinnedCount, toggleLoadingState } = app;
 
 describe('Pinned Location Logic', () => {
     beforeEach(() => {
@@ -80,18 +80,20 @@ describe('Pinned Location Logic', () => {
         expect(loading.classList.contains('hidden')).toBe(true);
     });
 
-    test('savePin adds item to WishlistManager with category "用戶釘選"', () => {
-        savePin('My Pin', 37.123, 127.456);
+    test('saveLocationData adds item to WishlistManager with category "自訂景點" and pinned true', () => {
+        saveLocationData('My Pin', 37.123, 127.456, false, true, false, 'remark');
         
         const items = WishlistManager.getAll();
         expect(items.length).toBe(1);
         expect(items[0].name).toBe('My Pin');
-        expect(items[0].category).toBe('用戶釘選');
+        expect(items[0].category).toBe('自訂景點');
+        expect(items[0].pinned).toBe(true);
+        expect(items[0].myRemark).toBe('remark');
     });
 
     test('updatePinnedCount correctly reflects pinned locations only', () => {
         // Add a pinned location
-        savePin('Pin 1', 37.1, 127.1);
+        saveLocationData('Pin 1', 37.1, 127.1, false, true, false, '');
         
         // Add a regular wishlist item
         WishlistManager.add({
@@ -108,7 +110,7 @@ describe('Pinned Location Logic', () => {
 
     test('renderPinnedPanel only renders pinned locations', () => {
         // Add one pinned and one regular item
-        savePin('Pin 1', 37.1, 127.1);
+        saveLocationData('Pin 1', 37.1, 127.1, false, true, false, '');
         WishlistManager.add({
             name: 'Regular Wishlist',
             lat: 37.2,
@@ -126,7 +128,7 @@ describe('Pinned Location Logic', () => {
     });
 
     test('removing a pinned location works correctly', () => {
-        savePin('Pin 1', 37.1, 127.1);
+        saveLocationData('Pin 1', 37.1, 127.1, false, true, false, '');
         const item = WishlistManager.getAll()[0];
         
         WishlistManager.remove(item.id);

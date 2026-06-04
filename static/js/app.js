@@ -97,8 +97,8 @@ function onMapClick(e) {
             <div class="coord-popup">
                 <div class="coord-latlng">📍 ${lat}, ${lng}</div>
                 <div class="coord-actions">
-                    <button class="pin-location-btn" onclick="addPinFromMap(${lat}, ${lng})">
-                        <i class="fas fa-thumbtack"></i> 釘選此位置
+                    <button class="pin-location-btn" onclick="openSaveLocationModal(${lat}, ${lng})">
+                        <i class="fas fa-save"></i> 儲存此位置
                     </button>
                     <button class="search-nearby-btn" onclick="searchNearby(${lat}, ${lng})">
                         <i class="fas fa-search"></i> 搜尋附近資訊
@@ -216,22 +216,47 @@ async function searchNearbyTransport(lat, lng) {
     addMessage(reply, 'bot');
 }
 
-// ==================== 用戶釘選功能 ====================
-function addPinFromMap(lat, lng) {
+// ==================== 用戶儲存位置功能 ====================
+function openSaveLocationModal(lat, lng, initialName = '') {
     const modal = document.getElementById('modal');
     const body = document.getElementById('modal-body');
-    const defaultName = `📍 釘選位置 (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
+    const defaultName = initialName || `📍 釘選位置 (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
     
+    // Check if location already exists to pre-fill
+    const existing = WishlistManager.get(defaultName, lat, lng);
+    const isWish = existing ? existing.wish : false;
+    const isPinned = existing ? existing.pinned : true; // Default to pinned if new
+    const isVisited = existing ? existing.visited : false;
+    const myRemark = existing ? (existing.myRemark || '') : '';
+
     body.innerHTML = `
         <div class="modal-info">
-            <div class="modal-title">釘選此位置</div>
+            <div class="modal-title">儲存位置</div>
             <div class="modal-section">
-                <p>請輸入此位置的名稱：</p>
-                <input type="text" id="pin-name-input" class="pin-input" placeholder="${defaultName}" value="${defaultName}">
+                <p>名稱：</p>
+                <input type="text" id="save-name-input" class="pin-input" placeholder="${defaultName}" value="${defaultName}">
+            </div>
+            <div class="modal-section save-toggles">
+                <label class="toggle-label">
+                    <input type="checkbox" id="save-wish-check" ${isWish ? 'checked' : ''}>
+                    <i class="fas fa-heart" style="color: #e74c3c;"></i> 想去 (Wish)
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="save-pinned-check" ${isPinned ? 'checked' : ''}>
+                    <i class="fas fa-thumbtack" style="color: #3498db;"></i> 釘選 (Pinned)
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="save-visited-check" ${isVisited ? 'checked' : ''}>
+                    <i class="fas fa-check-circle" style="color: #2ecc71;"></i> 去過 (Visited)
+                </label>
+            </div>
+            <div class="modal-section">
+                <p>備註 (Remark)：</p>
+                <textarea id="save-remark-input" class="pin-input" rows="3" placeholder="加入你的備註...">${myRemark}</textarea>
             </div>
             <div class="modal-actions">
-                <button class="btn-route" id="confirm-pin-btn">
-                    <i class="fas fa-check"></i> 確定
+                <button class="btn-route" id="confirm-save-btn">
+                    <i class="fas fa-check"></i> 儲存
                 </button>
                 <button class="btn-wishlist-modal" onclick="closeModal()">
                     <i class="fas fa-times"></i> 取消
@@ -243,34 +268,38 @@ function addPinFromMap(lat, lng) {
     modal.classList.remove('hidden');
     
     // 自動聚焦輸入框並選中文字
-    const input = document.getElementById('pin-name-input');
+    const input = document.getElementById('save-name-input');
     setTimeout(() => {
-        input.focus();
-        input.select();
+        if (!initialName) {
+            input.focus();
+            input.select();
+        }
     }, 100);
 
     // 綁定確認按鈕
-    document.getElementById('confirm-pin-btn').onclick = () => {
+    document.getElementById('confirm-save-btn').onclick = () => {
         const name = input.value.trim() || defaultName;
-        savePin(name, lat, lng);
+        const wish = document.getElementById('save-wish-check').checked;
+        const pinned = document.getElementById('save-pinned-check').checked;
+        const visited = document.getElementById('save-visited-check').checked;
+        const remark = document.getElementById('save-remark-input').value.trim();
+        
+        saveLocationData(name, lat, lng, wish, pinned, visited, remark);
         closeModal();
-    };
-
-    // 支援 Enter 鍵確認
-    input.onkeypress = (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('confirm-pin-btn').click();
-        }
     };
 }
 
-function savePin(name, lat, lng) {
+function saveLocationData(name, lat, lng, wish, pinned, visited, remark) {
     const item = {
         name: name,
         lat: lat,
         lng: lng,
-        category: '用戶釘選',
-        description: `用戶於地圖手動釘選的位置 (${lat}, ${lng})`
+        category: '自訂景點',
+        description: `用戶手動儲存的位置 (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+        wish: wish,
+        pinned: pinned,
+        visited: visited,
+        myRemark: remark
     };
     
     const added = WishlistManager.add(item);
@@ -280,7 +309,7 @@ function savePin(name, lat, lng) {
         // 顯示提示
         const toast = document.createElement('div');
         toast.className = 'wishlist-toast';
-        toast.innerHTML = `<i class="fas fa-thumbtack" style="color:#1e3a8a"></i> 已成功釘選「${name}」`;
+        toast.innerHTML = `<i class="fas fa-save" style="color:#2ecc71"></i> 已儲存「${name}」`;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
     }
@@ -293,8 +322,8 @@ function renderPinnedMarkers() {
     const items = WishlistManager.getAll();
     
     items.forEach(item => {
-        if (item.category === '用戶釘選') {
-            const color = CATEGORY_COLORS['用戶釘選'] || '#1e3a8a';
+        if (item.pinned) {
+            const color = CATEGORY_COLORS['自訂景點'] || '#1e3a8a';
             
             // 自定義 Pin 圖標
             const iconHtml = `<div class="pin-marker">
@@ -314,7 +343,7 @@ function renderPinnedMarkers() {
                     <div class="popup-card">
                         <div class="popup-info">
                             <div class="popup-name">${item.name}</div>
-                            <span class="popup-cat" style="background:${color}">用戶釘選</span>
+                            <span class="popup-cat" style="background:${color}">${item.category || '釘選位置'}</span>
                             <div class="popup-desc">坐標：${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
                             <button class="popup-btn" style="background:#e74c3c" onclick="WishlistManager.remove('${item.id}')">
                                 移除釘選
@@ -330,7 +359,7 @@ function renderPinnedMarkers() {
 async function loadData() {
     try {
         const [attrRes, subwayRes] = await Promise.all([
-            fetch('static/data/attractions.json'),
+            fetch('static/data/preset_locations.json'),
             fetch('static/data/subway.json')
         ]);
         const attrData = await attrRes.json();
@@ -340,6 +369,38 @@ async function loadData() {
         subwayData = subData;
     } catch (e) {
         console.error('載入資料失敗:', e);
+    }
+}
+
+function getFilteredAttractions(category) {
+    if (category === 'all') {
+        return attractionsData;
+    } else if (category === '願望s' || category === 'pinned' || category === 'visited') {
+        let items = WishlistManager.getAll();
+        if (category === '願望s') {
+            items = items.filter(item => item.wish);
+        } else if (category === 'pinned') {
+            items = items.filter(item => item.pinned);
+        } else if (category === 'visited') {
+            items = items.filter(item => item.visited);
+        }
+        return items.map(item => {
+            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
+            if (predefined) return predefined;
+            return {
+                id: item.id,
+                name: item.name,
+                name_ko: '',
+                lat: item.lat,
+                lng: item.lng,
+                category: item.category || '自訂景點',
+                image: '',
+                ticket: item.price || '',
+                description: item.description || ''
+            };
+        });
+    } else {
+        return attractionsData.filter(a => a.category === category);
     }
 }
 
@@ -404,29 +465,7 @@ function renderAttractionList() {
     }
 
     // 2. 渲染景點列表
-    let filtered;
-    if (activeCategory === 'all') {
-        filtered = attractionsData;
-    } else if (activeCategory === '願望s') {
-        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
-        filtered = wishlistItems.map(item => {
-            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
-            if (predefined) return predefined;
-            return {
-                id: item.id,
-                name: item.name,
-                name_ko: '',
-                lat: item.lat,
-                lng: item.lng,
-                category: item.category || '自訂景點',
-                image: '',
-                ticket: item.price || '',
-                description: item.description || ''
-            };
-        });
-    } else {
-        filtered = attractionsData.filter(a => a.category === activeCategory);
-    }
+    let filtered = getFilteredAttractions(activeCategory);
 
     filtered.forEach(attr => {
         const item = document.createElement('div');
@@ -434,15 +473,27 @@ function renderAttractionList() {
         item.dataset.id = attr.id;
 
         const color = CATEGORY_COLORS[attr.category] || '#666';
+        const customData = WishlistManager.get(attr.name, attr.lat, attr.lng);
+        
+        let badges = '';
+        if (customData?.wish) badges += '<span class="badge-icon" title="想去">❤️</span>';
+        if (customData?.pinned) badges += '<span class="badge-icon" title="釘選">📌</span>';
+        if (customData?.visited) badges += '<span class="badge-icon" title="去過">✅</span>';
+
+        let remarkHtml = '';
+        if (customData?.myRemark) {
+            remarkHtml = `<div class="remark-text"><i class="fas fa-comment-dots"></i> ${customData.myRemark}</div>`;
+        }
 
         item.innerHTML = `
             <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" loading="lazy"
                  onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="info">
-                <div class="name">${attr.name}</div>
+                <div class="name">${attr.name} ${badges}</div>
                 <span class="category-tag" style="background:${color}">${attr.category}</span>
                 <span class="attraction-price">💰 ${attr.ticket}</span>
                 <div class="desc">${attr.description}</div>
+                ${remarkHtml}
             </div>
             <button class="wishlist-btn ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : ''}" 
                     data-name="${attr.name}" data-lat="${attr.lat}" data-lng="${attr.lng}" 
@@ -466,29 +517,7 @@ function addMarkers() {
     Object.values(markers).forEach(m => map.removeLayer(m));
     markers = {};
 
-    let filtered;
-    if (activeCategory === 'all') {
-        filtered = attractionsData;
-    } else if (activeCategory === '願望s') {
-        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
-        filtered = wishlistItems.map(item => {
-            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
-            if (predefined) return predefined;
-            return {
-                id: item.id,
-                name: item.name,
-                name_ko: '',
-                lat: item.lat,
-                lng: item.lng,
-                category: item.category || '自訂景點',
-                image: '',
-                ticket: item.price || '',
-                description: item.description || ''
-            };
-        });
-    } else {
-        filtered = attractionsData.filter(a => a.category === activeCategory);
-    }
+    let filtered = getFilteredAttractions(activeCategory);
 
     filtered.forEach(attr => {
         const color = CATEGORY_COLORS[attr.category] || '#666';
@@ -1528,29 +1557,7 @@ function renderMobilePanelList() {
     }
 
     // 2. 渲染靜態景點
-    let filtered;
-    if (activeCategory === 'all') {
-        filtered = attractionsData;
-    } else if (activeCategory === '願望s') {
-        const wishlistItems = WishlistManager.getAll().filter(item => item.category !== '用戶釘選');
-        filtered = wishlistItems.map(item => {
-            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
-            if (predefined) return predefined;
-            return {
-                id: item.id,
-                name: item.name,
-                name_ko: '',
-                lat: item.lat,
-                lng: item.lng,
-                category: item.category || '自訂景點',
-                image: '',
-                ticket: item.price || '',
-                description: item.description || ''
-            };
-        });
-    } else {
-        filtered = attractionsData.filter(function(a) { return a.category === activeCategory; });
-    }
+    let filtered = getFilteredAttractions(activeCategory);
 
     if (countEl) countEl.textContent = (filtered.length + (currentSearchResults ? currentSearchResults.length : 0)) + ' 個項目';
 
@@ -1559,19 +1566,32 @@ function renderMobilePanelList() {
         var emoji = CATEGORY_EMOJIS[attr.category] || '📍';
         var card = document.createElement('div');
         card.className = 'mobile-attraction-card';
+        
+        const customData = WishlistManager.get(attr.name, attr.lat, attr.lng);
+        let badges = '';
+        if (customData?.wish) badges += '<span class="badge-icon" title="想去">❤️</span>';
+        if (customData?.pinned) badges += '<span class="badge-icon" title="釘選">📌</span>';
+        if (customData?.visited) badges += '<span class="badge-icon" title="去過">✅</span>';
+
+        let remarkHtml = '';
+        if (customData?.myRemark) {
+            remarkHtml = `<div class="remark-text"><i class="fas fa-comment-dots"></i> ${customData.myRemark}</div>`;
+        }
+
         card.innerHTML =
             '<div class="card-emoji" style="background:' + color + '15">' + emoji + '</div>' +
             '<div class="card-info">' +
-                '<div class="card-name">' + attr.name + '</div>' +
+                '<div class="card-name">' + attr.name + ' ' + badges + '</div>' +
                 '<div class="card-sub">' +
                     '<span class="card-dot" style="background:' + color + '"></span>' +
-                    attr.category + ' · ' + attr.name_ko +
+                    attr.category + (attr.name_ko ? ' · ' + attr.name_ko : '') +
                 '</div>' +
+                remarkHtml +
             '</div>' +
             '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : '') + '" ' +
                 'data-name="' + attr.name + '" data-lat="' + attr.lat + '" data-lng="' + attr.lng + '" ' +
-                'data-category="' + attr.category + '" data-price="' + attr.ticket + '" ' +
-                'data-description="' + attr.description.substring(0, 60) + '" ' +
+                'data-category="' + attr.category + '" data-price="' + (attr.ticket || '') + '" ' +
+                'data-description="' + (attr.description ? attr.description.substring(0, 60) : '') + '" ' +
                 'onclick="event.stopPropagation(); toggleWishlist(this)">' +
                 '<i class="' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far') + ' fa-heart"></i>' +
             '</button>' +
@@ -2768,10 +2788,10 @@ const WishlistManager = {
     /** 合併遠端數據 */
     _mergeRemoteLocations(remoteLocations) {
         const localItems = this.getAll();
-        const localIds = new Set(localItems.map(i => i.id));
+        const localMap = new Map(localItems.map(i => [i.id, i]));
         
-        let merged = [...localItems];
-        let addedCount = 0;
+        let merged = [];
+        let changed = false;
         
         remoteLocations.forEach(remoteItem => {
             // 嚴格數據驗證：確保 remoteItem 有效且包含必要的經緯度
@@ -2781,16 +2801,32 @@ const WishlistManager = {
                 return;
             }
 
-            if (!localIds.has(remoteItem.id)) {
+            if (!localMap.has(remoteItem.id)) {
                 merged.push(remoteItem);
-                addedCount++;
+                changed = true;
+            } else {
+                const localItem = localMap.get(remoteItem.id);
+                // 檢查是否有更新
+                if (localItem.wish !== remoteItem.wish ||
+                    localItem.pinned !== remoteItem.pinned ||
+                    localItem.visited !== remoteItem.visited ||
+                    localItem.myRemark !== remoteItem.myRemark) {
+                    merged.push(remoteItem);
+                    changed = true;
+                } else {
+                    merged.push(localItem);
+                }
+                localMap.delete(remoteItem.id);
             }
         });
+
+        // 將本地有但遠端沒有的項目也加回去（雖然伺服器應該會返回全部）
+        localMap.forEach(item => merged.push(item));
         
-        if (addedCount > 0) {
+        if (changed) {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
             this._notifyChange();
-            console.log(`[Wishlist] Synced ${addedCount} items from server via SSE`);
+            console.log(`[Wishlist] Synced changes from server via SSE`);
         }
     },
 
@@ -2800,7 +2836,7 @@ const WishlistManager = {
         return `wl_${name}_${lat.toFixed(4)}_${lng.toFixed(4)}`;
     },
 
-    /** 添加項目到願望清單 */
+    /** 添加或更新項目 */
     add(item) {
         if (!item.name || item.lat === undefined || item.lng === undefined) {
             console.error('[Wishlist] Cannot add invalid item:', item);
@@ -2809,28 +2845,41 @@ const WishlistManager = {
         const items = this.getAll();
         const id = this._generateId(item.name, item.lat, item.lng);
 
-        // 檢查是否已存在
-        if (items.find(i => i.id === id)) {
-            console.log('[Wishlist] Already exists:', item.name);
-            return false;
+        const existingIdx = items.findIndex(i => i.id === id);
+        if (existingIdx >= 0) {
+            // Update existing
+            items[existingIdx] = {
+                ...items[existingIdx],
+                wish: item.wish !== undefined ? item.wish : items[existingIdx].wish,
+                pinned: item.pinned !== undefined ? item.pinned : items[existingIdx].pinned,
+                visited: item.visited !== undefined ? item.visited : items[existingIdx].visited,
+                myRemark: item.myRemark !== undefined ? item.myRemark : (items[existingIdx].myRemark || ''),
+                category: item.category || items[existingIdx].category,
+                price: item.price || items[existingIdx].price,
+                description: item.description || items[existingIdx].description
+            };
+            console.log('[Wishlist] Updated:', item.name);
+        } else {
+            // Add new
+            items.push({
+                id: id,
+                name: item.name,
+                lat: item.lat,
+                lng: item.lng,
+                category: item.category || '',
+                price: item.price || '',
+                description: item.description || '',
+                addedAt: Date.now(),
+                ownerFingerprint: FingerprintManager.getFingerprint(),
+                wish: item.wish || false,
+                pinned: item.pinned || false,
+                visited: item.visited || false,
+                myRemark: item.myRemark || ''
+            });
+            console.log('[Wishlist] Added:', item.name);
         }
 
-        items.push({
-            id: id,
-            name: item.name,
-            lat: item.lat,
-            lng: item.lng,
-            category: item.category || '',
-            price: item.price || '',
-            description: item.description || '',
-            addedAt: Date.now(),
-            ownerFingerprint: FingerprintManager.getFingerprint()
-        });
-
         this.save(items);
-        console.log('[Wishlist] Added:', item.name);
-
-        // 觸發 UI 更新
         this._notifyChange();
         return true;
     },
@@ -2844,22 +2893,35 @@ const WishlistManager = {
         this._notifyChange();
     },
 
-    /** 切換願望清單狀態（有則移除，無則添加） */
+    /** 獲取指定地點 */
+    get(name, lat, lng) {
+        const id = this._generateId(name, lat, lng);
+        return this.getAll().find(i => i.id === id);
+    },
+
+    /** 切換願望清單狀態（切換 wish 屬性） */
     toggle(item) {
         const id = this._generateId(item.name, item.lat, item.lng);
-        if (this.has(item.name, item.lat, item.lng)) {
-            this.remove(id);
-            return false;
-        } else {
-            this.add(item);
-            return true;
+        const existing = this.get(item.name, item.lat, item.lng);
+        
+        let newWishState = true;
+        if (existing) {
+            newWishState = !existing.wish;
         }
+
+        item.wish = newWishState;
+        this.add(item); // add will update existing
+        
+        // 如果所有屬性都為 false 且沒有備註，可以考慮移除（此處保留為歷史紀錄亦可）
+        // 為了簡單起見，我們保留該紀錄
+        
+        return newWishState;
     },
 
     /** 檢查是否已在願望清單 */
     has(name, lat, lng) {
-        const id = this._generateId(name, lat, lng);
-        return this.getAll().some(i => i.id === id);
+        const item = this.get(name, lat, lng);
+        return item ? !!item.wish : false;
     },
 
     /** 獲取項目數量 */
@@ -2878,8 +2940,8 @@ const WishlistManager = {
         // 更新地圖上的釘選標記
         renderPinnedMarkers();
 
-        // 如果當前分類是願望清單，更新景點列表
-        if (activeCategory === '願望s') {
+        // 如果當前分類是願望清單、釘選或去過，更新景點列表
+        if (activeCategory === '願望s' || activeCategory === 'pinned' || activeCategory === 'visited') {
             renderAttractionList();
             renderMobilePanelList();
             addMarkers();
@@ -2896,7 +2958,7 @@ function renderPinnedPanel() {
     if (!container) return;
 
     const allItems = WishlistManager.getAll();
-    const items = allItems.filter(item => item.category === '用戶釘選');
+    const items = allItems.filter(item => item.pinned);
     
     if (countEl) countEl.textContent = items.length > 0 ? items.length.toString() : '0';
     if (countEl) countEl.dataset.count = items.length;
@@ -2955,7 +3017,7 @@ function renderPinnedPanel() {
 function updatePinnedCount() {
     const badge = document.getElementById('pinned-count');
     if (badge) {
-        const items = WishlistManager.getAll().filter(item => item.category === '用戶釘選');
+        const items = WishlistManager.getAll().filter(item => item.pinned);
         const count = items.length;
         badge.textContent = count > 0 ? count.toString() : '0';
         badge.dataset.count = count;
@@ -3162,8 +3224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         WishlistManager,
-        addPinFromMap,
-        savePin,
+        saveLocationData,
         renderPinnedPanel,
         updatePinnedCount,
         toggleLoadingState
