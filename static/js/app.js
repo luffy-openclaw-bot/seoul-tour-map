@@ -392,6 +392,9 @@ function renderPinnedMarkers() {
                             <div class="popup-name">${item.name}</div>
                             <span class="popup-cat" style="background:${color}">${item.category || '釘選位置'}</span>
                             <div class="popup-desc">坐標：${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+                            <button class="popup-btn" style="background:#f39c12; margin-bottom: 5px;" onclick="openSaveLocationModal(${item.lat}, ${item.lng}, '${item.name.replace(/'/g, "\\'")}')">
+                                編輯備註
+                            </button>
                             <button class="popup-btn" style="background:#e74c3c" onclick="WishlistManager.remove('${item.id}')">
                                 移除釘選
                             </button>
@@ -709,6 +712,9 @@ function showAttractionDetail(attr) {
                         onclick="toggleWishlist(this); showAttractionDetailById('${attr.id}');">
                     <i class="${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far'} fa-heart"></i>
                     ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? '已收藏' : '加入願望清單'}
+                </button>
+                <button class="btn-route" style="background-color: #f39c12; margin-top: 10px; width: 100%;" onclick="openSaveLocationModal(${attr.lat}, ${attr.lng}, '${attr.name.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-edit"></i> 加入/編輯備註
                 </button>
             </div>
         </div>
@@ -3124,6 +3130,9 @@ function renderPinnedPanel() {
                     ${priceHtml}
                 </div>
             </div>
+            <button class="pinned-edit-btn" data-wishlist-id="${item.id}" title="編輯備註" style="background: none; border: none; cursor: pointer; color: #666; margin-right: 5px;">
+                <i class="fas fa-edit"></i>
+            </button>
             <button class="pinned-remove-btn" data-wishlist-id="${item.id}" title="移除釘選">
                 <i class="fas fa-times"></i>
             </button>
@@ -3131,8 +3140,15 @@ function renderPinnedPanel() {
 
         // 點擊跳轉
         el.addEventListener('click', (e) => {
-            if (e.target.closest('.pinned-remove-btn')) return;
+            if (e.target.closest('.pinned-remove-btn') || e.target.closest('.pinned-edit-btn')) return;
             map.flyTo([item.lat, item.lng], 16, { duration: 1.5 });
+        });
+
+        // 編輯按鈕
+        const editBtn = el.querySelector('.pinned-edit-btn');
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openSaveLocationModal(item.lat, item.lng, item.name);
         });
 
         // 移除按鈕

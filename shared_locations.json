@@ -108,5 +108,16 @@
     "price": "",
     "addedAt": 1780533181142,
     "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+  },
+  {
+    "id": "wl_仁寺洞_37.5744_126.9858",
+    "name": "仁寺洞",
+    "lat": 37.5744,
+    "lng": 126.9858,
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.57440, 126.98580)",
+    "price": "",
+    "addedAt": 1780629509500,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV"
   }
 ]
