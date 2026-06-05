@@ -2409,3 +2409,63 @@ body {
     border-left: 3px solid #667eea;
     font-style: italic;
 }
+
+/* 景點列表搜尋框 */
+.panel-search-container, .mobile-panel-search-container {
+    position: relative;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.panel-search-container input, .mobile-panel-search-container input {
+    width: 100%;
+    padding: 8px 30px 8px 32px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+    background: #f9f9f9;
+}
+
+.panel-search-container input:focus, .mobile-panel-search-container input:focus {
+    border-color: #667eea;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.panel-search-container .search-icon, .mobile-panel-search-container .search-icon {
+    position: absolute;
+    left: 10px;
+    color: #888;
+    font-size: 14px;
+}
+
+.panel-search-container .search-clear, .mobile-panel-search-container .search-clear {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+}
+
+.panel-search-container .search-clear:hover, .mobile-panel-search-container .search-clear:hover {
+    color: #666;
+}
+
+.panel-search-container .search-loading, .mobile-panel-search-container .search-loading {
+    position: absolute;
+    right: 35px;
+    color: #667eea;
+    font-size: 14px;
+}
+
+.mobile-panel-search-container {
+    padding: 0 16px 12px 16px;
+    margin-bottom: 0;
+}
+

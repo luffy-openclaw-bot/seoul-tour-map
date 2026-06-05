@@ -462,6 +462,63 @@ async function loadData() {
     }
 }
 
+let panelSearchQuery = '';
+let panelSearchTimeout = null;
+
+function setPanelSearchQuery(query) {
+    panelSearchQuery = query;
+}
+
+function handlePanelSearchInput(e) {
+    const query = e.target.value;
+    
+    // Show loading spinners
+    document.getElementById('desktop-search-loading')?.classList.remove('hidden');
+    document.getElementById('mobile-search-loading')?.classList.remove('hidden');
+    
+    // Sync both inputs
+    const desktopInput = document.getElementById('desktop-search-input');
+    const mobileInput = document.getElementById('mobile-search-input');
+    if (desktopInput && desktopInput !== e.target) desktopInput.value = query;
+    if (mobileInput && mobileInput !== e.target) mobileInput.value = query;
+
+    // Show/hide clear buttons
+    const desktopClear = document.getElementById('desktop-search-clear');
+    const mobileClear = document.getElementById('mobile-search-clear');
+    if (query) {
+        desktopClear?.classList.remove('hidden');
+        mobileClear?.classList.remove('hidden');
+    } else {
+        desktopClear?.classList.add('hidden');
+        mobileClear?.classList.add('hidden');
+    }
+
+    if (panelSearchTimeout) clearTimeout(panelSearchTimeout);
+    panelSearchTimeout = setTimeout(() => {
+        panelSearchQuery = query;
+        renderAttractionList();
+        renderMobilePanelList();
+        
+        // Hide loading spinners
+        document.getElementById('desktop-search-loading')?.classList.add('hidden');
+        document.getElementById('mobile-search-loading')?.classList.add('hidden');
+    }, 300);
+}
+
+function clearPanelSearch() {
+    const desktopInput = document.getElementById('desktop-search-input');
+    const mobileInput = document.getElementById('mobile-search-input');
+    if (desktopInput) desktopInput.value = '';
+    if (mobileInput) mobileInput.value = '';
+    
+    document.getElementById('desktop-search-clear')?.classList.add('hidden');
+    document.getElementById('mobile-search-clear')?.classList.add('hidden');
+    
+    panelSearchQuery = '';
+    renderAttractionList();
+    renderMobilePanelList();
+}
+
 function getFilteredAttractions(category) {
     // 獲取所有自訂/同步的景點
     const customItems = WishlistManager.getAll().map(item => {
@@ -487,10 +544,28 @@ function getFilteredAttractions(category) {
         }
     });
 
+    let items = combined;
+
+    if (panelSearchQuery && panelSearchQuery.trim() !== '') {
+        const query = panelSearchQuery.toLowerCase().trim();
+        items = items.filter(item => {
+            const name = (item.name || '').toLowerCase();
+            const localName = (item.local_name || '').toLowerCase();
+            const desc = (item.description || '').toLowerCase();
+            const cat = (item.category || '').toLowerCase();
+            const ticket = (item.ticket || '').toLowerCase();
+            
+            return name.includes(query) || 
+                   localName.includes(query) || 
+                   desc.includes(query) || 
+                   cat.includes(query) || 
+                   ticket.includes(query);
+        });
+    }
+
     if (category === 'all') {
-        return combined;
+        return items;
     } else if (category === '願望s' || category === 'pinned' || category === 'visited') {
-        let items = combined;
         if (category === '願望s') {
             items = items.filter(item => {
                 const w = WishlistManager.get(item.name, item.lat, item.lng);
@@ -509,7 +584,7 @@ function getFilteredAttractions(category) {
         }
         return items;
     } else {
-        return combined.filter(a => a.category === category);
+        return items.filter(a => a.category === category);
     }
 }
 
@@ -2425,6 +2500,13 @@ function locateUserAndReport() {
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     await loadData();
+    
+    // Setup search input listeners
+    document.getElementById('desktop-search-input')?.addEventListener('input', handlePanelSearchInput);
+    document.getElementById('mobile-search-input')?.addEventListener('input', handlePanelSearchInput);
+    document.getElementById('desktop-search-clear')?.addEventListener('click', clearPanelSearch);
+    document.getElementById('mobile-search-clear')?.addEventListener('click', clearPanelSearch);
+    
     renderAttractionList();
     addMarkers();
     initRoutePanel();
@@ -3696,6 +3778,13 @@ if (typeof module !== 'undefined' && module.exports) {
         loadChatHistory,
         executeMapAction,
         getChatHistory: () => chatHistory,
-        CHAT_HISTORY_KEY
+        CHAT_HISTORY_KEY,
+        getFilteredAttractions,
+        setPanelSearchQuery,
+        handlePanelSearchInput,
+        clearPanelSearch,
+        CATEGORY_COLORS,
+        CATEGORY_EMOJIS,
+        setAttractionsDataForTest: (data) => { attractionsData = data; }
     };
 }
