@@ -208,5 +208,35 @@
     "pinned": false,
     "visited": false,
     "myRemark": ""
+  },
+  {
+    "id": "wl_廣藏市場_37.5702_126.9993",
+    "name": "廣藏市場",
+    "lat": 37.5702,
+    "lng": 126.9993,
+    "category": "購物美食",
+    "description": "首爾最傳統嘅市場之一，以綠豆餅、生牛肉、麻藥飯卷聞名，跑男節目曾經嚟過。",
+    "price": "免費",
+    "addedAt": 1780633248887,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKExpbnV4OyBBbmRy",
+    "wish": true,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
+  },
+  {
+    "id": "wl_廣藏市場 day1_37.5702_126.9993",
+    "name": "廣藏市場 day1",
+    "lat": 37.5702,
+    "lng": 126.9993,
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.57020, 126.99930)",
+    "price": "",
+    "addedAt": 1780633884073,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKExpbnV4OyBBbmRy",
+    "wish": true,
+    "pinned": false,
+    "visited": false,
+    "myRemark": "買被"
   }
 ]

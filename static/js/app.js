@@ -65,6 +65,37 @@ function updateCategoryLanguage(lang) {
 // 對話歷史（保留最近 10 輪對話）
 let chatHistory = [];
 const MAX_HISTORY = 10;
+const CHAT_HISTORY_KEY = 'seoul_tour_chat_history';
+
+function saveChatHistory() {
+    try {
+        localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
+    } catch (e) {
+        console.error('Failed to save chat history', e);
+    }
+}
+
+function loadChatHistory() {
+    try {
+        const saved = localStorage.getItem(CHAT_HISTORY_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                const container = document.getElementById('chat-messages');
+                if (container) {
+                    container.innerHTML = '';
+                    chatHistory = []; // Reset and rebuild through addMessage
+                    parsed.forEach(msg => {
+                        const sender = msg.role === 'assistant' ? 'bot' : 'user';
+                        addMessage(msg.content, sender, true);
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load chat history', e);
+    }
+}
 
 // 分類顏色對應
 const CATEGORY_COLORS = {
@@ -603,34 +634,89 @@ function renderAttractionList() {
 
 // ==================== 地圖標記 ====================
 function addMarkers() {
+    if (!map) return;
     Object.values(markers).forEach(m => map.removeLayer(m));
     markers = {};
 
     let filtered = getFilteredAttractions(activeCategory);
 
+    // Group by exact lat, lng
+    const grouped = {};
     filtered.forEach(attr => {
-        const color = CATEGORY_COLORS[attr.category] || '#666';
-
-        // 自訂圖標
-        const iconHtml = `<div class="custom-marker" style="border-color:${color};background:${color}">
-            <i class="fas fa-map-marker-alt" style="font-size:16px"></i>
-        </div>`;
-
-        const customIcon = L.divIcon({
-            html: iconHtml,
-            className: '',
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
-        });
-
-        const marker = L.marker([attr.lat, attr.lng], { icon: customIcon })
-            .addTo(map)
-            .bindPopup(createPopupContent(attr));
-
-        // 點擊 marker 只顯示 popup 氣泡，唔彈出 modal 對話框
-
-        markers[attr.id] = marker;
+        const key = `${attr.lat},${attr.lng}`;
+        if (!grouped[key]) {
+            grouped[key] = [];
+        }
+        grouped[key].push(attr);
     });
+
+    Object.values(grouped).forEach(group => {
+        if (group.length === 1) {
+            const attr = group[0];
+            const color = CATEGORY_COLORS[attr.category] || '#666';
+
+            // 自訂圖標
+            const iconHtml = `<div class="custom-marker" style="border-color:${color};background:${color}">
+                <i class="fas fa-map-marker-alt" style="font-size:16px"></i>
+            </div>`;
+
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: '',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+
+            const marker = L.marker([attr.lat, attr.lng], { icon: customIcon })
+                .addTo(map)
+                .bindPopup(createPopupContent(attr));
+
+            // 點擊 marker 只顯示 popup 氣泡，唔彈出 modal 對話框
+            markers[attr.id] = marker;
+        } else {
+            const firstAttr = group[0];
+            // Use the first item's color for the marker
+            const color = CATEGORY_COLORS[firstAttr.category] || '#666';
+
+            // 自訂圖標 (with badge)
+            const iconHtml = `<div class="custom-marker" style="border-color:${color};background:${color}">
+                <i class="fas fa-map-marker-alt" style="font-size:16px"></i>
+                <div class="multi-badge">${group.length}</div>
+            </div>`;
+
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: '',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+
+            const marker = L.marker([firstAttr.lat, firstAttr.lng], { icon: customIcon })
+                .addTo(map)
+                .bindPopup(createMultiPopupContent(group));
+
+            // Map all IDs in this group to the same marker
+            group.forEach(attr => {
+                markers[attr.id] = marker;
+            });
+        }
+    });
+}
+
+function createMultiPopupContent(group) {
+    let html = `<div class="multi-popup-container">
+        <div class="multi-popup-header">📍 這裡有 ${group.length} 個景點</div>
+        <div class="multi-popup-list">`;
+    
+    group.forEach((attr, index) => {
+        html += createPopupContent(attr);
+        if (index < group.length - 1) {
+            html += `<hr class="multi-popup-divider">`;
+        }
+    });
+
+    html += `</div></div>`;
+    return html;
 }
 
 function createPopupContent(attr) {
@@ -1094,6 +1180,16 @@ function bindEvents() {
     }
 }
 
+// 應用程式生命週期事件監聽（確保切換至背景時儲存聊天記錄）
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        saveChatHistory();
+    }
+});
+window.addEventListener('pagehide', () => {
+    saveChatHistory();
+});
+
 // ==================== AI 聊天功能 & 地圖控制 ====================
 let useBackendAI = true; // 優先使用後端 AI
 
@@ -1396,7 +1492,7 @@ ${attractionsSummary}
 - 普通對答唔需要地圖指令`;
 }
 
-function addMessage(text, sender) {
+function addMessage(text, sender, isRestore = false) {
     const container = document.getElementById('chat-messages');
     const div = document.createElement('div');
     div.className = `message ${sender}`;
@@ -1472,20 +1568,28 @@ function addMessage(text, sender) {
         });
 
         // Auto-execute add_marker and other actions
-        autoActions.forEach(cmd => {
-            const actName = cmd.action || cmd.type;
-            const actParams = cmd.params || {};
-            executeMapAction(actName, actParams);
-        });
+        if (!isRestore) {
+            autoActions.forEach(cmd => {
+                const actName = cmd.action || cmd.type;
+                const actParams = cmd.params || {};
+                executeMapAction(actName, actParams);
+            });
+        }
     }
 
     container.scrollTop = container.scrollHeight;
     
-    // 儲存到對話歷史
-    chatHistory.push({ role: sender === 'bot' ? 'assistant' : 'user', content: text });
-    // 保留最近 N 輪對話
-    if (chatHistory.length > MAX_HISTORY * 2) {
-        chatHistory = chatHistory.slice(-MAX_HISTORY * 2);
+    if (!isRestore) {
+        // 儲存到對話歷史
+        chatHistory.push({ role: sender === 'bot' ? 'assistant' : 'user', content: text });
+        // 保留最近 N 輪對話
+        if (chatHistory.length > MAX_HISTORY * 2) {
+            chatHistory = chatHistory.slice(-MAX_HISTORY * 2);
+        }
+        saveChatHistory();
+    } else {
+        // 恢復時，我們仍然需要重建 chatHistory 陣列
+        chatHistory.push({ role: sender === 'bot' ? 'assistant' : 'user', content: text });
     }
 }
 
@@ -1611,6 +1715,7 @@ function generateAIReply(userText) {
 // ==================== 初始化聊天 ====================
 function initChat() {
     // 預設已經喺 HTML 有歡迎訊息
+    loadChatHistory();
 }
 
 // ==================== 手機版底部景點列表面板 ====================
@@ -3375,6 +3480,11 @@ if (typeof module !== 'undefined' && module.exports) {
         saveLocationData,
         renderPinnedPanel,
         updatePinnedCount,
-        toggleLoadingState
+        toggleLoadingState,
+        addMessage,
+        saveChatHistory,
+        loadChatHistory,
+        getChatHistory: () => chatHistory,
+        CHAT_HISTORY_KEY
     };
 }

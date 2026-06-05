@@ -439,6 +439,7 @@ body {
 
 /* 自訂 Marker */
 .custom-marker {
+    position: relative;
     background: white;
     border-radius: 50%;
     width: 36px;
@@ -451,6 +452,69 @@ body {
     font-size: 14px;
     font-weight: bold;
     color: white;
+}
+
+.multi-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+.multi-popup-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.multi-popup-header {
+    font-size: 15px;
+    font-weight: bold;
+    color: #111827;
+    padding: 12px 16px 8px;
+    border-bottom: 2px solid #f3f4f6;
+    margin-bottom: 0;
+    background: #f9fafb;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.multi-popup-list {
+    max-height: 350px;
+    overflow-y: auto;
+    padding: 0;
+}
+
+/* Custom scrollbar for multi-popup */
+.multi-popup-list::-webkit-scrollbar {
+    width: 6px;
+}
+.multi-popup-list::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+}
+.multi-popup-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1; 
+    border-radius: 4px;
+}
+.multi-popup-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8; 
+}
+
+.multi-popup-divider {
+    border: none;
+    height: 1px;
+    background: #e5e7eb;
+    margin: 0;
 }
 
 /* 用戶釘選標記 */
