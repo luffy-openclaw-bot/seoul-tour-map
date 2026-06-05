@@ -15,6 +15,32 @@ let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面�
 let subwayData = {};
 let activeCategory = 'all';
 
+// ==================== Radius Filter 狀態 ====================
+let radiusState = {
+    active: false,
+    lat: null,
+    lng: null,
+    radiusMeters: 0,
+    circleLayer: null,
+    pickingMap: false
+};
+
+// ==================== 距離計算 (Haversine) ====================
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // metres
+    const phi1 = lat1 * Math.PI/180;
+    const phi2 = lat2 * Math.PI/180;
+    const deltaPhi = (lat2-lat1) * Math.PI/180;
+    const deltaLambda = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+            Math.cos(phi1) * Math.cos(phi2) *
+            Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c;
+}
+
 // ==================== 地圖選擇設定 ====================
 const MapManager = {
     currentLat: null,
@@ -225,6 +251,22 @@ function initMap() {
 
 // ==================== 地圖點擊搜尋 ====================
 function onMapClick(e) {
+    if (radiusState.pickingMap) {
+        document.getElementById('radius-lat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('radius-lng').value = e.latlng.lng.toFixed(6);
+        radiusState.pickingMap = false;
+        document.getElementById('map').style.cursor = '';
+        const pickBtn = document.getElementById('btn-radius-pick-map');
+        if (pickBtn) {
+            pickBtn.style.backgroundColor = '';
+            pickBtn.style.color = '';
+        }
+        if (document.getElementById('radius-val').value) {
+            applyRadiusFilter();
+        }
+        return;
+    }
+
     const lat = e.latlng.lat.toFixed(6);
     const lng = e.latlng.lng.toFixed(6);
     
@@ -581,6 +623,108 @@ function clearPanelSearch() {
     addMarkers();
 }
 
+// ==================== Radius Filter Logic ====================
+function toggleRadiusPanel() {
+    const panel = document.getElementById('radius-panel');
+    if (panel) {
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
+            const routePanel = document.getElementById('route-panel');
+            if (routePanel) routePanel.classList.add('hidden');
+        }
+    }
+}
+
+function parseRadiusSlashCommand(argsText) {
+    if (!argsText) {
+        toggleRadiusPanel();
+        return;
+    }
+    const parts = argsText.trim().split(/\s+/);
+    if (parts.length >= 3) {
+        const lat = parseFloat(parts[0]);
+        const lng = parseFloat(parts[1]);
+        const distStr = parts[2];
+        let radius = parseFloat(distStr);
+        let unit = distStr.toLowerCase().includes('mi') ? 'mi' : 'km';
+        
+        if (!isNaN(lat) && !isNaN(lng) && !isNaN(radius)) {
+            document.getElementById('radius-lat').value = lat;
+            document.getElementById('radius-lng').value = lng;
+            document.getElementById('radius-val').value = radius;
+            document.getElementById('radius-unit').value = unit;
+            
+            const panel = document.getElementById('radius-panel');
+            if (panel && panel.classList.contains('hidden')) {
+                toggleRadiusPanel();
+            }
+            applyRadiusFilter();
+            return;
+        }
+    }
+    addMessage('⚠️ /radius 指令格式錯誤。請使用: /radius [緯度] [經度] [距離][單位]，例如: /radius 37.56 126.97 5km，或就咁輸入 /radius 開啟面板', 'bot');
+}
+
+function applyRadiusFilter() {
+    const lat = parseFloat(document.getElementById('radius-lat').value);
+    const lng = parseFloat(document.getElementById('radius-lng').value);
+    const val = parseFloat(document.getElementById('radius-val').value);
+    const unit = document.getElementById('radius-unit').value;
+
+    if (isNaN(lat) || isNaN(lng) || isNaN(val) || val <= 0) {
+        return;
+    }
+    
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        alert('緯度必須在 -90 到 90 之間，經度必須在 -180 到 180 之間');
+        return;
+    }
+
+    radiusState.active = true;
+    radiusState.lat = lat;
+    radiusState.lng = lng;
+    radiusState.radiusMeters = unit === 'mi' ? val * 1609.344 : val * 1000;
+
+    updateRadiusVisuals();
+    
+    renderAttractionList();
+    renderMobilePanelList();
+    addMarkers();
+}
+
+function clearRadiusFilter() {
+    radiusState.active = false;
+    document.getElementById('radius-lat').value = '';
+    document.getElementById('radius-lng').value = '';
+    document.getElementById('radius-val').value = '';
+    
+    if (radiusState.circleLayer && map) {
+        map.removeLayer(radiusState.circleLayer);
+        radiusState.circleLayer = null;
+    }
+    
+    renderAttractionList();
+    renderMobilePanelList();
+    addMarkers();
+}
+
+function updateRadiusVisuals() {
+    if (!map || !radiusState.active) return;
+    
+    if (radiusState.circleLayer) {
+        map.removeLayer(radiusState.circleLayer);
+    }
+    
+    radiusState.circleLayer = L.circle([radiusState.lat, radiusState.lng], {
+        color: '#e74c3c',
+        fillColor: '#f39c12',
+        fillOpacity: 0.2,
+        radius: radiusState.radiusMeters
+    }).addTo(map);
+    
+    map.fitBounds(radiusState.circleLayer.getBounds());
+}
+
 function getFilteredAttractions(category) {
     // 獲取所有自訂/同步的景點
     const customItems = WishlistManager.getAll().map(item => {
@@ -616,12 +760,20 @@ function getFilteredAttractions(category) {
             const desc = (item.description || '').toLowerCase();
             const cat = (item.category || '').toLowerCase();
             const ticket = (item.ticket || '').toLowerCase();
-            
+
             return name.includes(query) || 
-                   localName.includes(query) || 
-                   desc.includes(query) || 
-                   cat.includes(query) || 
+                   localName.includes(query) ||
+                   desc.includes(query) ||
+                   cat.includes(query) ||
                    ticket.includes(query);
+        });
+    }
+
+    if (radiusState.active) {
+        items = items.filter(item => {
+            if (item.lat == null || item.lng == null) return false;
+            const dist = calculateHaversineDistance(radiusState.lat, radiusState.lng, item.lat, item.lng);
+            return dist <= radiusState.radiusMeters;
         });
     }
 
@@ -1343,12 +1495,50 @@ function bindEvents() {
         });
     }
 
-    const mobileLangSelector = document.getElementById('mobile-lang-selector');
+    const mobileLangSelector = document.getElementById('mobile-lang-selector'); 
     if (mobileLangSelector) {
         mobileLangSelector.addEventListener('change', (e) => {
             updateCategoryLanguage(e.target.value);
         });
     }
+
+    // Radius Filter 事件
+    const btnRadiusApply = document.getElementById('btn-radius-apply');
+    const btnRadiusClear = document.getElementById('btn-radius-clear');
+    const btnRadiusPickMap = document.getElementById('btn-radius-pick-map');
+    
+    if (btnRadiusApply) btnRadiusApply.addEventListener('click', applyRadiusFilter);
+    if (btnRadiusClear) btnRadiusClear.addEventListener('click', clearRadiusFilter);
+    if (btnRadiusPickMap) {
+        btnRadiusPickMap.addEventListener('click', () => {
+            radiusState.pickingMap = !radiusState.pickingMap;
+            if (radiusState.pickingMap) {
+                document.getElementById('map').style.cursor = 'crosshair';
+                btnRadiusPickMap.style.backgroundColor = '#2c3e50';
+                btnRadiusPickMap.style.color = '#fff';
+            } else {
+                document.getElementById('map').style.cursor = '';
+                btnRadiusPickMap.style.backgroundColor = '';
+                btnRadiusPickMap.style.color = '';
+            }
+        });
+    }
+
+    let radiusDebounceTimer;
+    ['radius-lat', 'radius-lng', 'radius-val', 'radius-unit'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                clearTimeout(radiusDebounceTimer);
+                radiusDebounceTimer = setTimeout(() => {
+                    const val = document.getElementById('radius-val').value;
+                    if (document.getElementById('radius-lat').value && document.getElementById('radius-lng').value && val && val > 0) {
+                        applyRadiusFilter();
+                    }
+                }, 500);
+            });
+        }
+    });
 }
 
 // 應用程式生命週期事件監聽（確保切換至背景時儲存聊天記錄）
@@ -1479,9 +1669,13 @@ async function sendMessage() {
 
     // 檢查 Slash Commands
     if (text.startsWith('/')) {
-        const command = text.split(' ')[0].toLowerCase();
+        const parts = text.split(' ');
+        const command = parts[0].toLowerCase();
         if (command === '/transit') {
             handleTransitCommand();
+            return;
+        } else if (command === '/radius') {
+            parseRadiusSlashCommand(parts.slice(1).join(' '));
             return;
         }
     }
@@ -3848,8 +4042,13 @@ if (typeof module !== 'undefined' && module.exports) {
         clearPanelSearch,
         CATEGORY_COLORS,
         CATEGORY_EMOJIS,
-        setAttractionsDataForTest: (data) => { attractionsData = data; },
+        setAttractionsDataForTest: (data) => { attractionsData = data; },       
         setMapForTest: (testMap) => { map = testMap; },
-        addMarkers
+        addMarkers,
+        calculateHaversineDistance,
+        radiusState,
+        applyRadiusFilter,
+        clearRadiusFilter,
+        parseRadiusSlashCommand
     };
 }
