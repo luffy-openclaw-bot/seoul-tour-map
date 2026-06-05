@@ -15,6 +15,66 @@ let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面�
 let subwayData = {};
 let activeCategory = 'all';
 
+// ==================== 地圖選擇設定 ====================
+const MapManager = {
+    currentLat: null,
+    currentLng: null,
+    currentName: null,
+
+    getPreference() {
+        return localStorage.getItem('tour_map_preference');
+    },
+
+    setPreference(pref) {
+        if (!pref) return;
+        localStorage.setItem('tour_map_preference', pref);
+        // Sync dropdowns
+        const desktopSelector = document.getElementById('map-selector');
+        const mobileSelector = document.getElementById('mobile-map-selector');
+        if (desktopSelector) desktopSelector.value = pref;
+        if (mobileSelector) mobileSelector.value = pref;
+    },
+
+    openMap(lat, lng, name = '') {
+        const pref = this.getPreference();
+        if (pref) {
+            this.executeMapOpen(pref, lat, lng, name);
+        } else {
+            // Save state for modal
+            this.currentLat = lat;
+            this.currentLng = lng;
+            this.currentName = name;
+            // Show modal
+            const modal = document.getElementById('map-selection-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+    },
+
+    executeMapOpen(pref, lat = this.currentLat, lng = this.currentLng, name = this.currentName) {
+        this.setPreference(pref);
+        const modal = document.getElementById('map-selection-modal');
+        if (modal) modal.classList.add('hidden');
+
+        let url = '';
+        if (pref === 'google') {
+            url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        } else if (pref === 'naver') {
+            url = `https://map.naver.com/p/search/${lat},${lng}`;
+        }
+
+        if (url) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    },
+
+    init() {
+        const pref = this.getPreference();
+        if (pref) {
+            this.setPreference(pref);
+        }
+    }
+};
+
 // ==================== 多國語言 (i18n) 設定 ====================
 const CATEGORY_TRANSLATIONS = {
     'cat-all': { 'zh-Hant': '全部', 'en': 'All' },
@@ -936,9 +996,9 @@ function showAttractionDetail(attr) {
                 <button class="btn-route" onclick="planRouteTo('${attr.id}')">
                     <i class="fas fa-route"></i> 規劃路線
                 </button>
-                <a class="btn-gmaps" href="https://www.google.com/maps/search/?api=1&query=${attr.lat},${attr.lng}" target="_blank" rel="noopener">
-                    <i class="fas fa-map-marker-alt"></i> Google Maps
-                </a>
+                <button class="btn-open-map" onclick="MapManager.openMap(${attr.lat}, ${attr.lng}, '${attr.name.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-map-marker-alt"></i> 開啟地圖
+                </button>
                 <button class="btn-wishlist-modal ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : ''}"
                         data-name="${attr.name}" data-lat="${attr.lat}" data-lng="${attr.lng}"
                         data-category="${attr.category}" data-price="${attr.ticket}"
@@ -2498,6 +2558,7 @@ function locateUserAndReport() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    MapManager.init();
     initMap();
     await loadData();
     

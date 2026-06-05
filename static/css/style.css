@@ -852,9 +852,42 @@ body {
 }
 
 .ai-chat.collapsed {
-    max-height: 50px;
-    width: 200px;
-    right: -125px;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    border-radius: 50%;
+    right: 20px;
+}
+
+.ai-chat.collapsed .chat-header {
+    position: relative;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.ai-chat.collapsed .chat-title {
+    display: none;
+}
+
+.ai-chat.collapsed .chat-header i:first-child {
+    font-size: 24px;
+}
+
+.ai-chat.collapsed .toggle-icon {
+    display: none;
+}
+
+.ai-chat.collapsed .chat-header .status-indicator {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    left: auto;
+    font-size: 10px;
+    margin-left: 0;
 }
 
 .ai-chat.collapsed .chat-body {
@@ -1012,9 +1045,7 @@ body {
     color: #e74c3c;
 }
 
-.ai-chat.collapsed .toggle-icon {
-    transform: rotate(180deg);
-}
+
 
 .chat-body {
     flex: 1;
@@ -1396,7 +1427,7 @@ body {
     opacity: 0.9;
 }
 
-.btn-gmaps {
+.btn-open-map {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1412,7 +1443,7 @@ body {
     transition: all 0.2s;
 }
 
-.btn-gmaps:hover {
+.btn-open-map:hover {
     background: #3367D6;
 }
 
@@ -1516,54 +1547,11 @@ body {
             font-size: 14px;
         }
 
-        .ai-chat.collapsed {
-            min-width: 100px;
-            max-width: 160px;
-        }
+
     }
 }
 
-/* ==================== 超小螢幕 FAB 圖標模式（≤360px） ==================== */
-@media (max-width: 360px) {
-    .ai-chat.collapsed {
-        width: 48px !important;
-        height: 48px !important;
-        min-width: 48px;
-        max-width: 48px;
-        border-radius: 50%;
-        bottom: 66px !important;  /* 避開底部面板 + margin */
-        right: 12px;
-    }
 
-    .ai-chat.collapsed .chat-header {
-        padding: 0;
-        justify-content: center;
-        gap: 0;
-        height: 48px;
-        border-radius: 50%;
-    }
-
-    .ai-chat.collapsed .chat-title {
-        display: none;  /* FAB 隱藏文字 */
-    }
-
-    .ai-chat.collapsed .chat-header i:first-child {
-        font-size: 20px;
-    }
-
-    .ai-chat.collapsed .toggle-icon {
-        display: none;  /* FAB 不需要 chevron */
-    }
-
-    /* FAB 模式：狀態指示器回到機器人圖標上（badge 風格，因標題隱藏） */
-    .ai-chat.collapsed .chat-header .status-indicator {
-        position: absolute;
-        top: 2px;
-        left: 28px;
-        font-size: 8px;
-        margin-left: 0;
-    }
-}
 
 /* 滾動條美化 */
 ::-webkit-scrollbar {
@@ -1629,12 +1617,7 @@ body {
         flex-shrink: 0;
     }
 
-    /* collapsed 寬度自適應 */
-    .ai-chat.collapsed {
-        width: auto;
-        min-width: 120px;
-        max-width: 200px;
-    }
+
 }
 
 /* 全局 z-index 定義 */
