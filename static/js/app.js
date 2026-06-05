@@ -634,11 +634,15 @@ function clearPanelSearch() {
 // ==================== Radius Filter Logic ====================
 function toggleRadiusPanel() {
     const panel = document.getElementById('radius-panel');
+    const toggleBtn = document.getElementById('toggle-radius-filter');
     if (panel) {
         panel.classList.toggle('hidden');
         if (!panel.classList.contains('hidden')) {
             const routePanel = document.getElementById('route-panel');
             if (routePanel) routePanel.classList.add('hidden');
+            if (toggleBtn) toggleBtn.classList.add('active');
+        } else {
+            if (toggleBtn) toggleBtn.classList.remove('active');
         }
     }
 }
@@ -1514,7 +1518,9 @@ function bindEvents() {
     const btnRadiusApply = document.getElementById('btn-radius-apply');
     const btnRadiusClear = document.getElementById('btn-radius-clear');
     const btnRadiusPickMap = document.getElementById('btn-radius-pick-map');
+    const toggleRadiusBtn = document.getElementById('toggle-radius-filter');
     
+    if (toggleRadiusBtn) toggleRadiusBtn.addEventListener('click', toggleRadiusPanel);
     if (btnRadiusApply) btnRadiusApply.addEventListener('click', applyRadiusFilter);
     if (btnRadiusClear) btnRadiusClear.addEventListener('click', clearRadiusFilter);
     if (btnRadiusPickMap) {
@@ -3147,6 +3153,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (desktopBtn) desktopBtn.click();
         });
     }
+
+    // 範圍篩選 Toggle（手機版）
+    const burgerRadius = document.getElementById('burger-toggle-radius');
+    if (burgerRadius) {
+        burgerRadius.addEventListener('click', function() {
+            const desktopBtn = document.getElementById('toggle-radius-filter');
+            if (desktopBtn) desktopBtn.click();
+        });
+    }
     
     // English 地圖（手機版）
     const burgerLang = document.getElementById('burger-toggle-lang');
@@ -3181,6 +3196,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 監聽桌面版按鈕狀態，同步更新 Burger Menu
     const subwayBtn = document.getElementById('toggle-subway');
     const trafficBtn = document.getElementById('toggle-traffic');
+    const radiusBtn = document.getElementById('toggle-radius-filter');
     
     if (subwayBtn && burgerSubway) {
         const subwayObserver = new MutationObserver(function() {
@@ -3194,6 +3210,13 @@ document.addEventListener('DOMContentLoaded', function() {
             updateBurgerToggleState(burgerTraffic, trafficBtn.classList.contains('active'));
         });
         trafficObserver.observe(trafficBtn, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    if (radiusBtn && burgerRadius) {
+        const radiusObserver = new MutationObserver(function() {
+            updateBurgerToggleState(burgerRadius, radiusBtn.classList.contains('active'));
+        });
+        radiusObserver.observe(radiusBtn, { attributes: true, attributeFilter: ['class'] });
     }
 });
 
