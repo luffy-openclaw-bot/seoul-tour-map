@@ -14,7 +14,6 @@ let attractionsData = [];
 let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面板同步
 let subwayData = {};
 let activeCategory = 'all';
-let sidebarOpen = false;
 
 // ==================== 多國語言 (i18n) 設定 ====================
 const CATEGORY_TRANSLATIONS = {
@@ -1003,8 +1002,6 @@ function bindEvents() {
         });
     });
 
-    // 手機版側邊欄開關（由 initSidebarToggle 處理）
-
     // 點擊彈窗外部關閉
     document.getElementById('modal').addEventListener('click', (e) => {
         if (e.target.id === 'modal') closeModal();
@@ -1800,43 +1797,6 @@ function toggleMobilePanel(expanded) {
     }
 }
 
-// ==================== 手機側邊欄開關 ====================
-function closeSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const toggleBtn = document.getElementById('sidebar-toggle');
-    const overlay = document.querySelector('.sidebar-overlay');
-    
-    sidebarOpen = false;
-    if (sidebar) sidebar.classList.remove('open');
-    if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-bars"></i> 景點';
-    if (overlay) overlay.classList.remove('active');
-}
-
-function initSidebarToggle() {
-    const toggleBtn = document.getElementById('sidebar-toggle');
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-
-    if (toggleBtn && sidebar) {
-        toggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            sidebarOpen = !sidebarOpen;
-            sidebar.classList.toggle('open', sidebarOpen);
-            toggleBtn.innerHTML = sidebarOpen 
-                ? '<i class="fas fa-times"></i> 關閉'
-                : '<i class="fas fa-bars"></i> 景點';
-            if (overlay) {
-                overlay.classList.toggle('active', sidebarOpen);
-            }
-        });
-
-        if (overlay) {
-            overlay.addEventListener('click', () => {
-                closeSidebar();
-            });
-        }
-    }
-}
 
 // ==================== AI 地圖控制指令執行 ====================
 async function executeMapAction(action, params) {
@@ -2109,7 +2069,6 @@ function locateUser() {
 }
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
-    initSidebarToggle();
     await loadData();
     renderAttractionList();
     addMarkers();
