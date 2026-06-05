@@ -558,6 +558,7 @@ function handlePanelSearchInput(e) {
         panelSearchQuery = query;
         renderAttractionList();
         renderMobilePanelList();
+        addMarkers();
         
         // Hide loading spinners
         document.getElementById('desktop-search-loading')?.classList.add('hidden');
@@ -577,6 +578,7 @@ function clearPanelSearch() {
     panelSearchQuery = '';
     renderAttractionList();
     renderMobilePanelList();
+    addMarkers();
 }
 
 function getFilteredAttractions(category) {
@@ -3846,6 +3848,8 @@ if (typeof module !== 'undefined' && module.exports) {
         clearPanelSearch,
         CATEGORY_COLORS,
         CATEGORY_EMOJIS,
-        setAttractionsDataForTest: (data) => { attractionsData = data; }
+        setAttractionsDataForTest: (data) => { attractionsData = data; },
+        setMapForTest: (testMap) => { map = testMap; },
+        addMarkers
     };
 }

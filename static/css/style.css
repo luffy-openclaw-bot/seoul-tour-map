@@ -852,12 +852,12 @@ body {
 }
 
 .ai-chat.collapsed {
-    width: 56px;
-    height: 56px;
-    min-width: 56px;
-    max-width: 56px;
-    border-radius: 50%;
-    right: 20px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    border-radius: 24px 0 0 24px;
+    right: 0;
 }
 
 .ai-chat.collapsed .chat-header {
@@ -866,7 +866,7 @@ body {
     justify-content: center;
     gap: 0;
     height: 100%;
-    border-radius: 50%;
+    border-radius: 24px 0 0 24px;
 }
 
 .ai-chat.collapsed .chat-title {
@@ -874,7 +874,7 @@ body {
 }
 
 .ai-chat.collapsed .chat-header i:first-child {
-    font-size: 24px;
+    font-size: 20px;
 }
 
 .ai-chat.collapsed .toggle-icon {
@@ -883,8 +883,8 @@ body {
 
 .ai-chat.collapsed .chat-header .status-indicator {
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: 4px;
+    right: 4px;
     left: auto;
     font-size: 10px;
     margin-left: 0;
@@ -2395,13 +2395,17 @@ body {
 
 /* 景點列表搜尋框 */
 .panel-search-container, .mobile-panel-search-container {
-    position: relative;
     margin-bottom: 12px;
+}
+
+.search-input-wrapper {
+    position: relative;
+    width: 100%;
     display: flex;
     align-items: center;
 }
 
-.panel-search-container input, .mobile-panel-search-container input {
+.search-input-wrapper input {
     width: 100%;
     padding: 8px 30px 8px 32px;
     border: 1px solid #ddd;
@@ -2412,20 +2416,23 @@ body {
     background: #f9f9f9;
 }
 
-.panel-search-container input:focus, .mobile-panel-search-container input:focus {
+.search-input-wrapper input:focus {
     border-color: #667eea;
     background: #fff;
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
-.panel-search-container .search-icon, .mobile-panel-search-container .search-icon {
+.search-input-wrapper .search-icon {
     position: absolute;
     left: 10px;
     color: #888;
     font-size: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
 }
 
-.panel-search-container .search-clear, .mobile-panel-search-container .search-clear {
+.search-input-wrapper .search-clear {
     position: absolute;
     right: 10px;
     background: none;
@@ -2434,17 +2441,23 @@ body {
     cursor: pointer;
     font-size: 14px;
     padding: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
 }
 
-.panel-search-container .search-clear:hover, .mobile-panel-search-container .search-clear:hover {
+.search-input-wrapper .search-clear:hover {
     color: #666;
 }
 
-.panel-search-container .search-loading, .mobile-panel-search-container .search-loading {
+.search-input-wrapper .search-loading {
     position: absolute;
     right: 35px;
     color: #667eea;
     font-size: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
 }
 
 .mobile-panel-search-container {

@@ -79,16 +79,16 @@ global.attractionsData = [
 global.CATEGORY_COLORS = { '地標觀景': '#1e3a8a', '歷史文化': '#e74c3c', '購物美食': '#f39c12' };
 global.CATEGORY_EMOJIS = { '地標觀景': '🗼', '歷史文化': '🏯', '購物美食': '🍜' };
 global.FingerprintManager = { getFingerprint: () => 'test-fp' };
-
 // Load the module
 const app = require('../static/js/app.js');
-const { getFilteredAttractions, setPanelSearchQuery, handlePanelSearchInput, clearPanelSearch, WishlistManager, setAttractionsDataForTest } = app;
+const { getFilteredAttractions, setPanelSearchQuery, handlePanelSearchInput, clearPanelSearch, WishlistManager, setAttractionsDataForTest, setMapForTest } = app;
 
 setAttractionsDataForTest([
     { name: 'Seoul Tower', local_name: '서울타워', category: '地標觀景', description: 'Tall tower in Seoul', ticket: '10000 KRW', lat: 37.5, lng: 127.0 },
     { name: 'Gyeongbokgung', local_name: '경복궁', category: '歷史文化', description: 'Ancient palace', ticket: '3000 KRW', lat: 37.6, lng: 126.9 },
     { name: 'Myeongdong', local_name: '명동', category: '購物美食', description: 'Shopping street', ticket: 'Free', lat: 37.56, lng: 126.98 }
 ]);
+setMapForTest(global.map);
 
 // Use fake timers for debounce testing
 jest.useFakeTimers();
@@ -175,11 +175,14 @@ describe('Location Panel Search - Integration Tests', () => {
         expect(mobileInput.value).toBe('Tower');
         expect(desktopClear.classList.contains('hidden')).toBe(false);
         
+        global.L.marker.mockClear();
+
         // Fast forward 300ms debounce
         jest.advanceTimersByTime(300);
 
         // Loading should be hidden after debounce
         expect(desktopLoading.classList.contains('hidden')).toBe(true);
+        expect(global.L.marker).toHaveBeenCalled();
     });
 
     test('Clearing search should reset inputs, hide clear buttons, and reset query', () => {
@@ -188,11 +191,13 @@ describe('Location Panel Search - Integration Tests', () => {
 
         desktopInput.value = 'Tower';
         desktopClear.classList.remove('hidden');
+        global.L.marker.mockClear();
 
         clearPanelSearch();
 
         expect(desktopInput.value).toBe('');
         expect(desktopClear.classList.contains('hidden')).toBe(true);
+        expect(global.L.marker).toHaveBeenCalled();
         
         // Verify getFilteredAttractions uses empty query now
         const results = getFilteredAttractions('all');
