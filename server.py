@@ -269,7 +269,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 if dist <= radius:
                     nearby.append({
                         'name': attr.get('name'),
-                        'name_ko': attr.get('name_ko'),
+                        'local_name': attr.get('local_name'),
                         'category': attr.get('category'),
                         'distance': round(dist),
                         'description': attr.get('description', '')[:100]
@@ -283,7 +283,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             else:
                 reply = f"**附近 {len(nearby)} 個景點：**\n\n"
                 for i, attr in enumerate(nearby[:5], 1):  # 只顯示最近 5 個
-                    reply += f"**{i}. {attr['name']}** ({attr['name_ko']})\n"
+                    reply += f"**{i}. {attr['name']}** ({attr['local_name']})\n"
                     reply += f"   - 類別：{attr['category']}\n"
                     reply += f"   - 距離：約 {attr['distance']} 米\n"
                     reply += f"   - 簡介：{attr['description']}...\n\n"
@@ -528,7 +528,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 with open(attractions_file, 'r', encoding='utf-8') as f:
                     attractions_list = json.load(f).get('attractions', [])
                     attractions_info = '\n'.join([
-                        f"- {a['name']}({a['name_ko']}): lat={a['lat']}, lng={a['lng']}, {a['description'][:50]}..."
+                        f"- {a['name']}({a['local_name']}): lat={a['lat']}, lng={a['lng']}, {a['description'][:50]}..."
                         for a in attractions_list[:20]
                     ])
             except:
@@ -546,7 +546,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     dist = math.sqrt((a['lat'] - exif_gps['lat'])**2 + (a['lng'] - exif_gps['lng'])**2)
                     nearest_attrs.append((dist, a))
                 nearest_attrs.sort(key=lambda x: x[0])
-                nearby_hint = ', '.join([f"{a['name']}({a['name_ko']})" for _, a in nearest_attrs[:5]])
+                nearby_hint = ', '.join([f"{a['name']}({a['local_name']})" for _, a in nearest_attrs[:5]])
                 gps_hint = f"\n\n【重要提示】呢張相嘅 GPS 坐標係 ({exif_gps['lat']:.4f}, {exif_gps['lng']:.4f})，附近最近嘅景點係：{nearby_hint}。請用呢個 GPS 坐標作為參考。"
             
             vision_prompt = f"""你係一個首爾旅遊景點識別專家。請仔細觀察呢張圖片，判斷呢係邊個首爾景點。
@@ -557,7 +557,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 請以 JSON 格式回覆：
 {{
     "landmark_name": "景點中文名稱",
-    "landmark_name_ko": "韓文名稱",
+    "landmark_local_name": "韓文名稱",
     "confidence": 0.85,
     "lat": 37.5796,
     "lng": 126.9770,
@@ -660,7 +660,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             'title': analysis.get('landmark_name', '可能位置'),
                             'color': '#e74c3c',
                             'popup': f"<b>{analysis.get('landmark_name', '未知地點')}</b><br>"
-                                     f"{analysis.get('landmark_name_ko', '')}<br>"
+                                     f"{analysis.get('landmark_local_name', '')}<br>"
                                      f"信心度: {float(analysis.get('confidence', 0)):.0%}<br>"
                                      f"{analysis.get('description', '')}"
                                      f"{'<br>📡 GPS定位' if exif_gps else ''}",
@@ -700,7 +700,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             'success': True,
                             'analysis': {
                                 'landmark_name': f"{nearest['name']} (GPS推算)",
-                                'landmark_name_ko': nearest['name_ko'],
+                                'landmark_local_name': nearest['local_name'],
                                 'confidence': 0.5,
                                 'lat': nearest['lat'],
                                 'lng': nearest['lng'],
@@ -716,7 +716,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                     'lng': nearest['lng'],
                                     'title': nearest['name'],
                                     'color': '#3498db',
-                                    'popup': f"<b>{nearest['name']} (GPS推算)</b><br>{nearest['name_ko']}<br>📡 從GPS定位推算<br>信心度: 50%",
+                                    'popup': f"<b>{nearest['name']} (GPS推算)</b><br>{nearest['local_name']}<br>📡 從GPS定位推算<br>信心度: 50%",
                                     'pulse': True
                                 }
                             }
@@ -727,7 +727,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             'success': True,
                             'analysis': {
                                 'landmark_name': f'GPS位置 ({exif_gps["lat"]:.4f}, {exif_gps["lng"]:.4f})',
-                                'landmark_name_ko': '',
+                                'landmark_local_name': '',
                                 'confidence': 0.3,
                                 'lat': exif_gps['lat'],
                                 'lng': exif_gps['lng'],

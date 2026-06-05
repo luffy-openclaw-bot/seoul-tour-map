@@ -198,7 +198,7 @@ async function searchNearby(lat, lng) {
     const nearbyAttractions = attractionsData.filter(attr => {
         const dist = map.distance([lat, lng], [attr.lat, attr.lng]);
         return dist < 2000;
-    }).map(attr => `${attr.name} (${attr.name_ko}) - ${attr.category}`).join('\n');
+    }).map(attr => `${attr.name} (${attr.local_name}) - ${attr.category}`).join('\n');
     
     try {
         const response = await fetch('/api/nearby', {
@@ -468,7 +468,7 @@ function getFilteredAttractions(category) {
         return {
             id: item.id,
             name: item.name,
-            name_ko: '',
+            local_name: '',
             lat: item.lat,
             lng: item.lng,
             category: item.category || '自訂景點',
@@ -726,7 +726,7 @@ function createPopupContent(attr) {
             <img src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="popup-info">
                 <div class="popup-name">${attr.name}</div>
-                <div class="popup-ko">${attr.name_ko}</div>
+                <div class="popup-ko">${attr.local_name}</div>
                 <span class="popup-cat" style="background:${color}">${attr.category}</span>
                 <div class="popup-desc">${attr.description.substring(0, 80)}...</div>
                 <button class="popup-btn" onclick="showAttractionDetailById('${attr.id}')">
@@ -761,7 +761,7 @@ function showAttractionDetailById(id) {
             attr = {
                 id: customItem.id,
                 name: customItem.name,
-                name_ko: '',
+                local_name: '',
                 lat: customItem.lat,
                 lng: customItem.lng,
                 category: customItem.category || '自訂景點',
@@ -789,7 +789,7 @@ function showAttractionDetail(attr) {
         <img class="modal-hero" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
         <div class="modal-info">
             <div class="modal-title">${attr.name}</div>
-            <div class="modal-ko">${attr.name_ko}</div>
+            <div class="modal-ko">${attr.local_name}</div>
             <span class="modal-cat" style="background:${color}">${attr.category}</span>
 
             <div class="modal-section">
@@ -803,24 +803,51 @@ function showAttractionDetail(attr) {
             </div>
 
             <div class="modal-section">
+                <h4><i class="fas fa-utensils"></i> 當地美食推薦</h4>
+                <p>${attr.local_cuisine ? (Array.isArray(attr.local_cuisine) ? attr.local_cuisine.join('、') : attr.local_cuisine) : '無'}</p>
+            </div>
+
+            <div class="modal-section">
+                <h4><i class="fas fa-calendar-alt"></i> 最佳旅遊季節</h4>
+                <p>${attr.best_seasons ? (Array.isArray(attr.best_seasons) ? attr.best_seasons.join('、') : attr.best_seasons) : '四季皆宜'}</p>
+            </div>
+
+            <div class="modal-section">
+                <h4><i class="fas fa-clock"></i> 建議逗留時間</h4>
+                <p>${attr.stay_duration || '無'}</p>
+            </div>
+
+            <div class="modal-section">
+                <h4><i class="fas fa-comment-dots"></i> 旅客真實評價</h4>
+                <p>${attr.visitor_insights || '無'}</p>
+            </div>
+
+            <div class="modal-section">
                 <h4><i class="fas fa-subway"></i> 交通資訊</h4>
-                <p><strong>地鐵：</strong>${attr.transport.subway}</p>
-                <p><strong>步程：</strong>${attr.transport.time_from_station}</p>
+                <p><strong>交通：</strong>${attr.transport ? attr.transport.subway : '無'}</p>
+                <p><strong>步程：</strong>${attr.transport ? attr.transport.time_from_station : '無'}</p>
             </div>
 
             <div class="modal-section">
                 <h4><i class="fas fa-ticket-alt"></i> 門票</h4>
-                <p>${attr.ticket}</p>
+                <p>${attr.ticket || '無'}</p>
             </div>
 
             <div class="modal-section">
                 <h4><i class="fas fa-clock"></i> 開放時間</h4>
-                <p>${attr.hours}</p>
+                <p>${attr.hours || '無'}</p>
             </div>
 
             <div class="modal-tips">
                 <i class="fas fa-lightbulb"></i>
-                <strong>小貼士：</strong>${attr.tips}
+                <strong>小貼士：</strong>${attr.tips || '無'}
+            </div>
+            
+            <div class="modal-section">
+                <h4><i class="fas fa-link"></i> 參考來源</h4>
+                <div style="font-size: 0.9em; word-break: break-all;">
+                    ${attr.source_urls ? attr.source_urls.map(url => `<a href="${url}" target="_blank" style="color: #3498db; text-decoration: none; display: block; margin-bottom: 4px;">${url}</a>`).join('') : '無'}
+                </div>
             </div>
 
             <div class="modal-actions">
@@ -1010,7 +1037,7 @@ document.getElementById('toggle-subway').addEventListener('click', function() {
                         weight: 1,
                         fillOpacity: 1
                     }).addTo(subwayLayerGroup)
-                    .bindPopup(`<b>${station.name}站</b><br>${station.name_ko}<br>${line.name}`);
+                    .bindPopup(`<b>${station.name}站</b><br>${station.local_name}<br>${line.name}`);
                 });
             }
         });
@@ -1047,10 +1074,10 @@ document.getElementById('reset-map').addEventListener('click', () => {
 function showRouteOnMap(fromName, toName) {
     // 嘗試用名稱或ID搵景點
     const fromAttr = attractionsData.find(a => 
-        a.id === fromName || a.name.includes(fromName) || a.name_ko.includes(fromName)
+        a.id === fromName || a.name.includes(fromName) || a.local_name.includes(fromName)
     );
     const toAttr = attractionsData.find(a => 
-        a.id === toName || a.name.includes(toName) || a.name_ko.includes(toName)
+        a.id === toName || a.name.includes(toName) || a.local_name.includes(toName)
     );
     
     if (!fromAttr || !toAttr) {
@@ -1242,7 +1269,7 @@ function showRouteByNames(fromName, toName) {
         // 再試名稱包含
         attr = attractionsData.find(a =>
             a.name.includes(name) || name.includes(a.name) ||
-            a.name_ko.includes(name) || name.includes(a.name_ko)
+            a.local_name.includes(name) || name.includes(a.local_name)
         );
         return attr;
     };
@@ -1456,7 +1483,7 @@ async function fetchAIReply(userText) {
 function getSystemContext() {
     // 提供當前景點資料作為 AI 上下文
     const attractionsSummary = attractionsData.map(a =>
-        `- ${a.name}(${a.name_ko}) [ID:${a.id}: ${a.lat},${a.lng}]: ${a.category}，${a.description.substring(0, 30)}...`
+        `- ${a.name}(${a.local_name}) [ID:${a.id}: ${a.lat},${a.lng}]: ${a.category}，${a.description.substring(0, 30)}...`
     ).join('\n');
 
     // 可用分類
@@ -1621,7 +1648,7 @@ function generateAIReply(userText) {
 
     // 1. 景點查詢
     for (const attr of attractionsData) {
-        if (text.includes(attr.name.toLowerCase()) || text.includes(attr.name_ko.toLowerCase())) {
+        if (text.includes(attr.name.toLowerCase()) || text.includes(attr.local_name.toLowerCase())) {
             if (text.includes('門票') || text.includes('幾錢')) {
                 return `「${attr.name}」門票係 <strong>${attr.ticket}</strong>。`;
             }
@@ -1826,7 +1853,7 @@ function renderMobilePanelList() {
                 '<div class="card-name">' + safeName + ' ' + badges + '</div>' +
                 '<div class="card-sub">' +
                     '<span class="card-dot" style="background:' + color + '"></span>' +
-                    safeCategory + (attr.name_ko ? ' · ' + attr.name_ko : '') +
+                    safeCategory + (attr.local_name ? ' · ' + attr.local_name : '') +
                 '</div>' +
                 remarkHtml +
             '</div>' +
@@ -2489,8 +2516,8 @@ async function analyzeUploadedImage() {
             // 構建 AI 回覆
             let reply = `📍 **圖片分析結果**\n\n`;
             reply += `**可能地點：** ${analysis.landmark_name || '未知地點'}`;
-            if (analysis.landmark_name_ko) {
-                reply += ` (${analysis.landmark_name_ko})`;
+            if (analysis.landmark_local_name) {
+                reply += ` (${analysis.landmark_local_name})`;
             }
             reply += `\n\n`;
             
@@ -2709,7 +2736,7 @@ function addChatPlacesToAttractions(places) {
             attractionsData.push({
                 id: place.id || `chat_${place.name}_${place.lat.toFixed(4)}_${place.lng.toFixed(4)}`,
                 name: place.name,
-                name_ko: '',
+                local_name: '',
                 lat: place.lat,
                 lng: place.lng,
                 category: place.category || '自訂景點',

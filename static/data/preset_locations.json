@@ -3,7 +3,6 @@
     {
       "id": "gyeongbokgung",
       "name": "景福宮",
-      "name_ko": "경복궁",
       "category": "歷史文化",
       "lat": 37.5796,
       "lng": 126.977,
@@ -20,12 +19,24 @@
       "ticket": "3000韓元（韓服免費）",
       "hours": "09:00-17:00（周二休）",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%99%AF%E7%A6%8F%E5%AE%AE%20%28%EA%B2%BD%EB%B3%B5%EA%B6%81%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "建議租借韓服入場，可免門票兼影相靚"
+      "tips": "建議租借韓服入場，可免門票兼影相靚",
+      "local_name": "경복궁",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "namsan-tower",
       "name": "南山塔（N首爾塔）",
-      "name_ko": "N서울타워",
       "category": "地標觀景",
       "lat": 37.5511,
       "lng": 126.9882,
@@ -42,12 +53,24 @@
       "ticket": "觀景台11000韓元",
       "hours": "10:30-22:00",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%8D%97%E5%B1%B1%E5%A1%94%EF%BC%88N%E9%A6%96%E7%88%BE%E5%A1%94%EF%BC%89%20%28N%EC%84%9C%EC%9A%B8%ED%83%80%EC%9B%8C%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "傍晚去可以睇到日景同夜景，最正"
+      "tips": "傍晚去可以睇到日景同夜景，最正",
+      "local_name": "N서울타워",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "myeongdong",
       "name": "明洞",
-      "name_ko": "명동",
       "category": "購物美食",
       "lat": 37.5636,
       "lng": 126.9824,
@@ -64,12 +87,24 @@
       "ticket": "免費",
       "hours": "大部份店舖10:00-22:00",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%98%8E%E6%B4%9E%20%28%EB%AA%85%EB%8F%99%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "明洞換錢所匯率通常最好"
+      "tips": "明洞換錢所匯率通常最好",
+      "local_name": "명동",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "hongdae",
       "name": "弘大（弘益大學區）",
-      "name_ko": "홍대",
       "category": "夜生活文化",
       "lat": 37.5563,
       "lng": 126.923,
@@ -86,12 +121,24 @@
       "ticket": "免費",
       "hours": "24小時（店舖各有不同）",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%BC%98%E5%A4%A7%EF%BC%88%E5%BC%98%E7%9B%8A%E5%A4%A7%E5%AD%B8%E5%8D%80%EF%BC%89%20%28%ED%99%8D%EB%8C%80%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "週末夜晚最熱鬧，街頭表演好精彩"
+      "tips": "週末夜晚最熱鬧，街頭表演好精彩",
+      "local_name": "홍대",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "bukchon",
       "name": "北村韓屋村",
-      "name_ko": "북촌한옥마을",
       "category": "歷史文化",
       "lat": 37.5826,
       "lng": 126.983,
@@ -108,12 +155,24 @@
       "ticket": "免費",
       "hours": "24小時（建議日間參觀）",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%8C%97%E6%9D%91%E9%9F%93%E5%B1%8B%E6%9D%91%20%28%EB%B6%81%EC%B4%8C%ED%95%9C%EC%98%A5%EB%A7%88%EC%9D%84%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "請保持安靜，唔好大聲喧嘩，呢度係民居"
+      "tips": "請保持安靜，唔好大聲喧嘩，呢度係民居",
+      "local_name": "북촌한옥마을",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "dongdaemun",
       "name": "東大門設計廣場（DDP）",
-      "name_ko": "동대문디자인플라자",
       "category": "地標觀景",
       "lat": 37.5665,
       "lng": 127.0094,
@@ -130,12 +189,24 @@
       "ticket": "免費（展覽另計）",
       "hours": "24小時開放戶外",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9D%B1%E5%A4%A7%E9%96%80%E8%A8%AD%E8%A8%88%E5%BB%A3%E5%A0%B4%EF%BC%88DDP%EF%BC%89%20%28%EB%8F%99%EB%8C%80%EB%AC%B8%EB%94%94%EC%9E%90%EC%9D%B8%ED%94%8C%EB%9D%BC%EC%9E%90%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "夜晚去睇LED燈光，影相超靚"
+      "tips": "夜晚去睇LED燈光，影相超靚",
+      "local_name": "동대문디자인플라자",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "insadong",
       "name": "仁寺洞",
-      "name_ko": "인사동",
       "category": "購物美食",
       "lat": 37.5744,
       "lng": 126.9858,
@@ -152,12 +223,24 @@
       "ticket": "免費",
       "hours": "大部份店舖10:00-20:00",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E4%BB%81%E5%AF%BA%E6%B4%9E%20%28%EC%9D%B8%EC%82%AC%EB%8F%99%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "必試人蔘雞湯同韓式傳統甜點"
+      "tips": "必試人蔘雞湯同韓式傳統甜點",
+      "local_name": "인사동",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "lotte-world",
       "name": "樂天世界",
-      "name_ko": "롯데월드",
       "category": "娛樂",
       "lat": 37.5111,
       "lng": 127.0982,
@@ -174,12 +257,24 @@
       "ticket": "62000韓元（一日通票）",
       "hours": "10:00-21:00",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%A8%82%E5%A4%A9%E4%B8%96%E7%95%8C%20%28%EB%A1%AF%EB%8D%B0%EC%9B%94%EB%93%9C%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "建議網上預先買票，平過現場買"
+      "tips": "建議網上預先買票，平過現場買",
+      "local_name": "롯데월드",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "coex-aquarium",
       "name": "COEX水族館",
-      "name_ko": "코엑스 아쿠아리움",
       "category": "娛樂",
       "lat": 37.5012,
       "lng": 127.0396,
@@ -196,12 +291,24 @@
       "ticket": "33000韓元",
       "hours": "10:00-20:00",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20COEX%E6%B0%B4%E6%97%8F%E9%A4%A8%20%28%EC%BD%94%EC%97%91%EC%8A%A4%20%EC%95%84%EC%BF%A0%EC%95%84%EB%A6%AC%EC%9B%80%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "可以順便行COEX商場同星空圖書館"
+      "tips": "可以順便行COEX商場同星空圖書館",
+      "local_name": "코엑스 아쿠아리움",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "starfield-library",
       "name": "星空圖書館",
-      "name_ko": "별마당도서관",
       "category": "休閒",
       "lat": 37.5096,
       "lng": 127.0538,
@@ -218,12 +325,24 @@
       "ticket": "免費",
       "hours": "10:30-22:00",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%98%9F%E7%A9%BA%E5%9C%96%E6%9B%B8%E9%A4%A8%20%28%EB%B3%84%EB%A7%88%EB%8B%B9%EB%8F%84%EC%84%9C%EA%B4%80%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "朝早去較少人，影相更靚"
+      "tips": "朝早去較少人，影相更靚",
+      "local_name": "별마당도서관",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "gwangjang-market",
       "name": "廣藏市場",
-      "name_ko": "광장시장",
       "category": "購物美食",
       "lat": 37.5702,
       "lng": 126.9993,
@@ -240,12 +359,24 @@
       "ticket": "免費",
       "hours": "09:00-18:00（美食街開到深夜）",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%BB%A3%E8%97%8F%E5%B8%82%E5%A0%B4%20%28%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "必試綠豆餅同生拌牛肉，好地道"
+      "tips": "必試綠豆餅同生拌牛肉，好地道",
+      "local_name": "광장시장",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "namdaemun",
       "name": "南大門市場",
-      "name_ko": "남대문시장",
       "category": "購物美食",
       "lat": 37.5591,
       "lng": 126.9777,
@@ -262,12 +393,24 @@
       "ticket": "免費",
       "hours": "05:00-17:00（各區不同）",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%8D%97%E5%A4%A7%E9%96%80%E5%B8%82%E5%A0%B4%20%28%EB%82%A8%EB%8C%80%EB%AC%B8%EC%8B%9C%EC%9E%A5%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "朝早去最熱鬧，可以食到地道早餐"
+      "tips": "朝早去最熱鬧，可以食到地道早餐",
+      "local_name": "남대문시장",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "cheonggyecheon",
       "name": "清溪川",
-      "name_ko": "청계천",
       "category": "自然景觀",
       "lat": 37.5693,
       "lng": 127.0056,
@@ -284,12 +427,24 @@
       "ticket": "免費",
       "hours": "24小時",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%B8%85%E6%BA%AA%E5%B7%9D%20%28%EC%B2%AD%EA%B3%84%EC%B2%9C%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "夜晚燈光亮起時最浪漫"
+      "tips": "夜晚燈光亮起時最浪漫",
+      "local_name": "청계천",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "itaewon",
       "name": "梨泰院",
-      "name_ko": "이태원",
       "category": "夜生活文化",
       "lat": 37.5345,
       "lng": 126.9946,
@@ -306,12 +461,24 @@
       "ticket": "免費",
       "hours": "24小時（店舖各有不同）",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%A2%A8%E6%B3%B0%E9%99%A2%20%28%EC%9D%B4%ED%83%9C%EC%9B%90%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "想食多國料理嘅好地方"
+      "tips": "想食多國料理嘅好地方",
+      "local_name": "이태원",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
     },
     {
       "id": "everland",
       "name": "愛寶樂園",
-      "name_ko": "에버랜드",
       "category": "娛樂",
       "lat": 37.295,
       "lng": 127.2042,
@@ -328,7 +495,1920 @@
       "ticket": "62000韓元",
       "hours": "10:00-21:00",
       "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%84%9B%E5%AF%B6%E6%A8%82%E5%9C%92%20%28%EC%97%90%EB%B2%84%EB%9E%9C%EB%93%9C%29%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
-      "tips": "建議平日去，假日超級多人"
+      "tips": "建議平日去，假日超級多人",
+      "local_name": "에버랜드",
+      "local_cuisine": [
+        "韓國街頭小食"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-3 小時",
+      "visitor_insights": "非常受歡迎的景點，建議避開週末人潮。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/"
+      ]
+    },
+    {
+      "id": "haeundae-beach",
+      "name": "海雲台海水浴場",
+      "local_name": "해운대해수욕장",
+      "category": "自然景觀",
+      "lat": 35.1587,
+      "lng": 129.1604,
+      "description": "韓國最著名的海灘，夏季度假勝地。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "釜山市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%B5%B7%E9%9B%B2%E5%8F%B0%E6%B5%B7%E6%B0%B4%E6%B5%B4%E5%A0%B4%20%28%ED%95%B4%EC%9A%B4%EB%8C%80%ED%95%B4%EC%88%98%EC%9A%95%EC%9E%A5%29%20in%20%E9%87%9C%E5%B1%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "釜山特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "gamcheon-culture-village",
+      "name": "甘川文化村",
+      "local_name": "감천문화마을",
+      "category": "歷史文化",
+      "lat": 35.0975,
+      "lng": 129.0106,
+      "description": "被譽為釜山的馬丘比丘，彩色房屋依山而建。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "釜山市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E7%94%98%E5%B7%9D%E6%96%87%E5%8C%96%E6%9D%91%20%28%EA%B0%90%EC%B2%9C%EB%AC%B8%ED%99%94%EB%A7%88%EC%9D%84%29%20in%20%E9%87%9C%E5%B1%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "釜山特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "seongsan-ilchulbong",
+      "name": "城山日出峰",
+      "local_name": "성산일출봉",
+      "category": "自然景觀",
+      "lat": 33.4586,
+      "lng": 126.9422,
+      "description": "世界自然遺產，看日出的絕佳火山口。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "濟州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%9F%8E%E5%B1%B1%E6%97%A5%E5%87%BA%E5%B3%B0%20%28%EC%84%B1%EC%82%B0%EC%9D%BC%EC%B6%9C%EB%B4%89%29%20in%20%E6%BF%9F%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "濟州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "bulguksa",
+      "name": "佛國寺",
+      "local_name": "불국사",
+      "category": "歷史文化",
+      "lat": 35.79,
+      "lng": 129.332,
+      "description": "新羅時代的代表性寺廟，世界文化遺產。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "慶州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E4%BD%9B%E5%9C%8B%E5%AF%BA%20%28%EB%B6%88%EA%B5%AD%EC%82%AC%29%20in%20%E6%85%B6%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "慶州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "jeonju-hanok-village",
+      "name": "全州韓屋村",
+      "local_name": "전주한옥마을",
+      "category": "歷史文化",
+      "lat": 35.8147,
+      "lng": 127.1526,
+      "description": "韓國最大傳統韓屋村，全州拌飯發源地。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "全州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%85%A8%E5%B7%9E%E9%9F%93%E5%B1%8B%E6%9D%91%20%28%EC%A0%84%EC%A3%BC%ED%95%9C%EC%98%A5%EB%A7%88%EC%9D%84%29%20in%20%E5%85%A8%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "全州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "nami-island",
+      "name": "南怡島",
+      "local_name": "남이섬",
+      "category": "自然景觀",
+      "lat": 37.79,
+      "lng": 127.525,
+      "description": "《冬季戀歌》拍攝地，四季風景如畫。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "春川市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%8D%97%E6%80%A1%E5%B3%B6%20%28%EB%82%A8%EC%9D%B4%EC%84%AC%29%20in%20%E6%98%A5%E5%B7%9D%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "春川特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "suwon-hwaseong",
+      "name": "水原華城",
+      "local_name": "수원화성",
+      "category": "歷史文化",
+      "lat": 37.2885,
+      "lng": 127.0141,
+      "description": "朝鮮時代的壯麗堡壘，世界文化遺產。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "水原市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%B0%B4%E5%8E%9F%E8%8F%AF%E5%9F%8E%20%28%EC%88%98%EC%9B%90%ED%99%94%EC%84%B1%29%20in%20%E6%B0%B4%E5%8E%9F%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "水原特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "hwaseong-haenggung",
+      "name": "華城行宮",
+      "local_name": "화성행궁",
+      "category": "歷史文化",
+      "lat": 37.2828,
+      "lng": 127.0119,
+      "description": "韓國規模最大的行宮，韓劇《大長今》拍攝地。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "水原市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E8%8F%AF%E5%9F%8E%E8%A1%8C%E5%AE%AE%20%28%ED%99%94%EC%84%B1%ED%96%89%EA%B6%81%29%20in%20%E6%B0%B4%E5%8E%9F%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "水原特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "taejeongdae",
+      "name": "太宗臺",
+      "local_name": "태종대",
+      "category": "自然景觀",
+      "lat": 35.0531,
+      "lng": 129.0874,
+      "description": "釜山著名海岸景觀，懸崖峭壁與松林交織。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "釜山市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%A4%AA%E5%AE%97%E8%87%BA%20%28%ED%83%9C%EC%A2%85%EB%8C%80%29%20in%20%E9%87%9C%E5%B1%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "釜山特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "haedong-yonggungsa",
+      "name": "海東龍宮寺",
+      "local_name": "해동용궁사",
+      "category": "歷史文化",
+      "lat": 35.1884,
+      "lng": 129.2233,
+      "description": "韓國唯一建在海邊的寺廟，風景獨特。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "釜山市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%B5%B7%E6%9D%B1%E9%BE%8D%E5%AE%AE%E5%AF%BA%20%28%ED%95%B4%EB%8F%99%EC%9A%A9%EA%B6%81%EC%82%AC%29%20in%20%E9%87%9C%E5%B1%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "釜山特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "gwangalli-beach",
+      "name": "廣安里海水浴場",
+      "local_name": "광안리해수욕장",
+      "category": "自然景觀",
+      "lat": 35.1532,
+      "lng": 129.1186,
+      "description": "以廣安大橋夜景聞名的美麗海灘。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "釜山市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%BB%A3%E5%AE%89%E9%87%8C%E6%B5%B7%E6%B0%B4%E6%B5%B4%E5%A0%B4%20%28%EA%B4%91%EC%95%88%EB%A6%AC%ED%95%B4%EC%88%98%EC%9A%95%EC%9E%A5%29%20in%20%E9%87%9C%E5%B1%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "釜山特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "jagachi-market",
+      "name": "札嘎其市場",
+      "local_name": "자갈치시장",
+      "category": "購物美食",
+      "lat": 35.0968,
+      "lng": 129.0305,
+      "description": "韓國最大的海鮮市場，品嚐新鮮海鮮必去。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "釜山市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9C%AD%E5%98%8E%E5%85%B6%E5%B8%82%E5%A0%B4%20%28%EC%9E%90%EA%B0%88%EC%B9%98%EC%8B%9C%EC%9E%A5%29%20in%20%E9%87%9C%E5%B1%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "釜山特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "songdo-cable-car",
+      "name": "松島海上纜車",
+      "local_name": "송도해상케이블카",
+      "category": "地標觀景",
+      "lat": 35.0762,
+      "lng": 129.0225,
+      "description": "橫跨海面的觀景纜車，水晶車廂可俯瞰大海。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "釜山市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9D%BE%E5%B3%B6%E6%B5%B7%E4%B8%8A%E7%BA%9C%E8%BB%8A%20%28%EC%86%A1%EB%8F%84%ED%95%B4%EC%83%81%EC%BC%80%EC%9D%B4%EB%B8%94%EC%B9%B4%29%20in%20%E9%87%9C%E5%B1%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "釜山特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "hallasan",
+      "name": "漢拏山",
+      "local_name": "한라산",
+      "category": "自然景觀",
+      "lat": 33.3615,
+      "lng": 126.5292,
+      "description": "韓國最高峰，濟州島的中心，登山愛好者天堂。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "濟州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%BC%A2%E6%8B%8F%E5%B1%B1%20%28%ED%95%9C%EB%9D%BC%EC%82%B0%29%20in%20%E6%BF%9F%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "濟州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "manjanggul",
+      "name": "萬丈窟",
+      "local_name": "만장굴",
+      "category": "自然景觀",
+      "lat": 33.5284,
+      "lng": 126.7716,
+      "description": "世界最長的熔岩洞窟之一，內部景觀奇特。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "濟州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E8%90%AC%E4%B8%88%E7%AA%9F%20%28%EB%A7%8C%EC%9E%A5%EA%B5%B4%29%20in%20%E6%BF%9F%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "濟州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "jeongbang-waterfall",
+      "name": "正房瀑布",
+      "local_name": "정방폭포",
+      "category": "自然景觀",
+      "lat": 33.2448,
+      "lng": 126.5718,
+      "description": "亞洲唯一直接落入海中的瀑布。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "濟州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%AD%A3%E6%88%BF%E7%80%91%E5%B8%83%20%28%EC%A0%95%EB%B0%A9%ED%8F%AD%ED%8F%AC%29%20in%20%E6%BF%9F%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "濟州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "jusangjeolli",
+      "name": "柱狀節理帶",
+      "local_name": "주상절리대",
+      "category": "自然景觀",
+      "lat": 33.2376,
+      "lng": 126.4249,
+      "description": "大自然雕刻的六角形岩石柱，壯觀的海岸地貌。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "濟州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9F%B1%E7%8B%80%E7%AF%80%E7%90%86%E5%B8%B6%20%28%EC%A3%BC%EC%83%81%EC%A0%88%EB%A6%AC%EB%8C%80%29%20in%20%E6%BF%9F%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "濟州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "o-sulloc-tea-museum",
+      "name": "雪綠茶博物館",
+      "local_name": "오설록티뮤지엄",
+      "category": "休閒",
+      "lat": 33.3059,
+      "lng": 126.2895,
+      "description": "韓國最大茶文化博物館，周邊有廣闊綠茶園。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "濟州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E9%9B%AA%E7%B6%A0%E8%8C%B6%E5%8D%9A%E7%89%A9%E9%A4%A8%20%28%EC%98%A4%EC%84%A4%EB%A1%9D%ED%8B%B0%EB%AE%A4%EC%A7%80%EC%97%84%29%20in%20%E6%BF%9F%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "濟州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "udo-island",
+      "name": "牛島",
+      "local_name": "우도",
+      "category": "自然景觀",
+      "lat": 33.5042,
+      "lng": 126.9538,
+      "description": "濟州島東部的美麗離島，適合騎單車環島。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "濟州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E7%89%9B%E5%B3%B6%20%28%EC%9A%B0%EB%8F%84%29%20in%20%E6%BF%9F%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "濟州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "donggung-wolji",
+      "name": "東宮與月池",
+      "local_name": "동궁과 월지",
+      "category": "歷史文化",
+      "lat": 35.8348,
+      "lng": 129.2266,
+      "description": "新羅王宮的離宮，夜景倒影極為迷人。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "慶州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9D%B1%E5%AE%AE%E8%88%87%E6%9C%88%E6%B1%A0%20%28%EB%8F%99%EA%B6%81%EA%B3%BC%20%EC%9B%94%EC%A7%80%29%20in%20%E6%85%B6%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "慶州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "daereungwon",
+      "name": "大陵苑",
+      "local_name": "대릉원",
+      "category": "歷史文化",
+      "lat": 35.8378,
+      "lng": 129.2115,
+      "description": "新羅時代的王陵群，天馬塚所在地。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "慶州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%A4%A7%E9%99%B5%E8%8B%91%20%28%EB%8C%80%EB%A6%89%EC%9B%90%29%20in%20%E6%85%B6%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "慶州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "seokguram",
+      "name": "石窟庵",
+      "local_name": "석굴암",
+      "category": "歷史文化",
+      "lat": 35.7949,
+      "lng": 129.3493,
+      "description": "與佛國寺同為世界文化遺產，內部有精美佛像。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "慶州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E7%9F%B3%E7%AA%9F%E5%BA%B5%20%28%EC%84%9D%EA%B5%B4%EC%95%94%29%20in%20%E6%85%B6%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "慶州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "gyeongju-national-museum",
+      "name": "慶州國立博物館",
+      "local_name": "국립경주박물관",
+      "category": "歷史文化",
+      "lat": 35.829,
+      "lng": 129.2274,
+      "description": "展示新羅千年歷史文物的最重要博物館。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "慶州市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%85%B6%E5%B7%9E%E5%9C%8B%E7%AB%8B%E5%8D%9A%E7%89%A9%E9%A4%A8%20%28%EA%B5%AD%EB%A6%BD%EA%B2%BD%EC%A3%BC%EB%B0%95%EB%AC%BC%EA%B4%80%29%20in%20%E6%85%B6%E5%B7%9E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "慶州特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "suncheon-bay-garden",
+      "name": "順天灣國家園林",
+      "local_name": "순천만국가정원",
+      "category": "自然景觀",
+      "lat": 34.9272,
+      "lng": 127.505,
+      "description": "韓國第一個國家園林，展示多國特色花園。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "順天市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E9%A0%86%E5%A4%A9%E7%81%A3%E5%9C%8B%E5%AE%B6%E5%9C%92%E6%9E%97%20%28%EC%88%9C%EC%B2%9C%EB%A7%8C%EA%B5%AD%EA%B0%80%EC%A0%95%EC%9B%90%29%20in%20%E9%A0%86%E5%A4%A9%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "順天特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "suncheon-bay-wetland",
+      "name": "順天灣濕地",
+      "local_name": "순천만습지",
+      "category": "自然景觀",
+      "lat": 34.8877,
+      "lng": 127.4988,
+      "description": "世界五大沿岸濕地之一，秋季蘆葦蕩極美。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "順天市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E9%A0%86%E5%A4%A9%E7%81%A3%E6%BF%95%E5%9C%B0%20%28%EC%88%9C%EC%B2%9C%EB%A7%8C%EC%8A%B5%EC%A7%80%29%20in%20%E9%A0%86%E5%A4%A9%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "順天特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "boseong-green-tea",
+      "name": "寶城綠茶園",
+      "local_name": "보성녹차밭",
+      "category": "自然景觀",
+      "lat": 34.7214,
+      "lng": 127.062,
+      "description": "韓國最著名的階梯式綠茶園，景色如畫。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "寶城市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%AF%B6%E5%9F%8E%E7%B6%A0%E8%8C%B6%E5%9C%92%20%28%EB%B3%B4%EC%84%B1%EB%85%B9%EC%B0%A8%EB%B0%AD%29%20in%20%E5%AF%B6%E5%9F%8E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "寶城特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "yeosu-cable-car",
+      "name": "麗水海上纜車",
+      "local_name": "여수해상케이블카",
+      "category": "地標觀景",
+      "lat": 34.7314,
+      "lng": 127.7386,
+      "description": "連接突山島與陸地的跨海纜車，夜景浪漫。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "麗水市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E9%BA%97%E6%B0%B4%E6%B5%B7%E4%B8%8A%E7%BA%9C%E8%BB%8A%20%28%EC%97%AC%EC%88%98%ED%95%B4%EC%83%81%EC%BC%80%EC%9D%B4%EB%B8%94%EC%B9%B4%29%20in%20%E9%BA%97%E6%B0%B4%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "麗水特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "odongdo",
+      "name": "梧桐島",
+      "local_name": "오동도",
+      "category": "自然景觀",
+      "lat": 34.7431,
+      "lng": 127.7681,
+      "description": "以冬柏花聞名的美麗小島，可步行或乘小火車前往。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "麗水市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%A2%A7%E6%A1%90%E5%B3%B6%20%28%EC%98%A4%EB%8F%99%EB%8F%84%29%20in%20%E9%BA%97%E6%B0%B4%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "麗水特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "andong-hahoe",
+      "name": "安東河回村",
+      "local_name": "안동하회마을",
+      "category": "歷史文化",
+      "lat": 36.5388,
+      "lng": 128.5186,
+      "description": "韓國代表性傳統氏族村落，英國女王曾造訪。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "安東市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%AE%89%E6%9D%B1%E6%B2%B3%E5%9B%9E%E6%9D%91%20%28%EC%95%88%EB%8F%99%ED%95%98%ED%9A%8C%EB%A7%88%EC%9D%84%29%20in%20%E5%AE%89%E6%9D%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "安東特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "dosan-seowon",
+      "name": "陶山書院",
+      "local_name": "도산서원",
+      "category": "歷史文化",
+      "lat": 36.7266,
+      "lng": 128.8475,
+      "description": "為紀念朝鮮大儒李退溪而建，韓國儒學聖地。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "安東市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E9%99%B6%E5%B1%B1%E6%9B%B8%E9%99%A2%20%28%EB%8F%84%EC%82%B0%EC%84%9C%EC%9B%90%29%20in%20%E5%AE%89%E6%9D%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "安東特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "sokcho-beach",
+      "name": "束草海水浴場",
+      "local_name": "속초해수욕장",
+      "category": "自然景觀",
+      "lat": 38.1904,
+      "lng": 128.6027,
+      "description": "江原道熱門海灘，沙質細軟，海水清澈。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "束草市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9D%9F%E8%8D%89%E6%B5%B7%E6%B0%B4%E6%B5%B4%E5%A0%B4%20%28%EC%86%8D%EC%B4%88%ED%95%B4%EC%88%98%EC%9A%95%EC%9E%A5%29%20in%20%E6%9D%9F%E8%8D%89%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "束草特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "seoraksan",
+      "name": "雪嶽山國立公園",
+      "local_name": "설악산국립공원",
+      "category": "自然景觀",
+      "lat": 38.1196,
+      "lng": 128.4655,
+      "description": "韓國最美名山之一，秋季賞楓首選。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "束草市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E9%9B%AA%E5%B6%BD%E5%B1%B1%E5%9C%8B%E7%AB%8B%E5%85%AC%E5%9C%92%20%28%EC%84%A4%EC%95%85%EC%82%B0%EA%B5%AD%EB%A6%BD%EA%B3%B5%EC%9B%90%29%20in%20%E6%9D%9F%E8%8D%89%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "束草特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "sinheungsa",
+      "name": "新興寺",
+      "local_name": "신흥사",
+      "category": "歷史文化",
+      "lat": 38.1738,
+      "lng": 128.4877,
+      "description": "位於雪嶽山內的古老寺廟，有巨大的青銅大佛。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "束草市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%96%B0%E8%88%88%E5%AF%BA%20%28%EC%8B%A0%ED%9D%A5%EC%82%AC%29%20in%20%E6%9D%9F%E8%8D%89%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "束草特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "naksansa",
+      "name": "洛山寺",
+      "local_name": "낙산사",
+      "category": "歷史文化",
+      "lat": 38.125,
+      "lng": 128.6288,
+      "description": "建於東海岸懸崖上的千年古剎，觀音聖地。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "襄陽市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%B4%9B%E5%B1%B1%E5%AF%BA%20%28%EB%82%99%EC%82%B0%EC%82%AC%29%20in%20%E8%A5%84%E9%99%BD%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "襄陽特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "gangneung-coffee",
+      "name": "安木海邊咖啡街",
+      "local_name": "안목해변 커피거리",
+      "category": "休閒",
+      "lat": 37.7719,
+      "lng": 128.9472,
+      "description": "沿著海岸線開設的特色咖啡店，咖啡愛好者必訪。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "江陵市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%AE%89%E6%9C%A8%E6%B5%B7%E9%82%8A%E5%92%96%E5%95%A1%E8%A1%97%20%28%EC%95%88%EB%AA%A9%ED%95%B4%EB%B3%80%20%EC%BB%A4%ED%94%BC%EA%B1%B0%EB%A6%AC%29%20in%20%E6%B1%9F%E9%99%B5%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "江陵特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "ojukheon",
+      "name": "烏竹軒",
+      "local_name": "오죽헌",
+      "category": "歷史文化",
+      "lat": 37.7797,
+      "lng": 128.8797,
+      "description": "申師任堂與李栗谷的故居，韓國古老木造建築。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "江陵市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E7%83%8F%E7%AB%B9%E8%BB%92%20%28%EC%98%A4%EC%A3%BD%ED%97%8C%29%20in%20%E6%B1%9F%E9%99%B5%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "江陵特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "haslla-art-world",
+      "name": "哈斯拉藝術世界",
+      "local_name": "하슬라아트월드",
+      "category": "文化藝術",
+      "lat": 37.7061,
+      "lng": 129.0125,
+      "description": "結合自然與藝術的綜合藝術主題公園。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "江陵市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%93%88%E6%96%AF%E6%8B%89%E8%97%9D%E8%A1%93%E4%B8%96%E7%95%8C%20%28%ED%95%98%EC%8A%AC%EB%9D%BC%EC%95%84%ED%8A%B8%EC%9B%94%EB%93%9C%29%20in%20%E6%B1%9F%E9%99%B5%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "江陵特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "daegwallyeong",
+      "name": "大關嶺羊群牧場",
+      "local_name": "대관령양떼목장",
+      "category": "自然景觀",
+      "lat": 37.6946,
+      "lng": 128.7562,
+      "description": "被譽為韓國的阿爾卑斯，綠草如茵的牧場。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "平昌市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%A4%A7%E9%97%9C%E5%B6%BA%E7%BE%8A%E7%BE%A4%E7%89%A7%E5%A0%B4%20%28%EB%8C%80%EA%B4%80%EB%A0%B9%EC%96%91%EB%96%BC%EB%AA%A9%EC%9E%A5%29%20in%20%E5%B9%B3%E6%98%8C%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "平昌特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "woljeongsa",
+      "name": "月精寺",
+      "local_name": "월정사",
+      "category": "歷史文化",
+      "lat": 37.7314,
+      "lng": 128.5938,
+      "description": "五台山內的名剎，擁有名為「千年杉林」的參天步道。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "平昌市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9C%88%E7%B2%BE%E5%AF%BA%20%28%EC%9B%94%EC%A0%95%EC%82%AC%29%20in%20%E5%B9%B3%E6%98%8C%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "平昌特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "chuncheon-myeongdong",
+      "name": "春川明洞辣炒雞排街",
+      "local_name": "춘천명동 닭갈비골목",
+      "category": "購物美食",
+      "lat": 37.8803,
+      "lng": 127.7288,
+      "description": "品嚐正宗春川辣炒雞排的最佳地點。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "春川市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%98%A5%E5%B7%9D%E6%98%8E%E6%B4%9E%E8%BE%A3%E7%82%92%E9%9B%9E%E6%8E%92%E8%A1%97%20%28%EC%B6%98%EC%B2%9C%EB%AA%85%EB%8F%99%20%EB%8B%AD%EA%B0%88%EB%B9%84%EA%B3%A8%EB%AA%A9%29%20in%20%E6%98%A5%E5%B7%9D%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "春川特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "gongjicheon",
+      "name": "孔之川",
+      "local_name": "공지천",
+      "category": "自然景觀",
+      "lat": 37.8726,
+      "lng": 127.7118,
+      "description": "春川市民的休憩場所，秋季湖畔景色迷人。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "春川市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%AD%94%E4%B9%8B%E5%B7%9D%20%28%EA%B3%B5%EC%A7%80%EC%B2%9C%29%20in%20%E6%98%A5%E5%B7%9D%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "春川特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "dongdaegu-market",
+      "name": "西門市場",
+      "local_name": "서문시장",
+      "category": "購物美食",
+      "lat": 35.869,
+      "lng": 128.5807,
+      "description": "大邱最大傳統市場，夜市小吃非常豐富。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "大邱市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E8%A5%BF%E9%96%80%E5%B8%82%E5%A0%B4%20%28%EC%84%9C%EB%AC%B8%EC%8B%9C%EC%9E%A5%29%20in%20%E5%A4%A7%E9%82%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "大邱特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "kim-kwang-seok-street",
+      "name": "金光石路",
+      "local_name": "김광석다시그리기길",
+      "category": "文化藝術",
+      "lat": 35.8601,
+      "lng": 128.6068,
+      "description": "紀念已故歌手金光石的壁畫街，充滿文藝氣息。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "大邱市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E9%87%91%E5%85%89%E7%9F%B3%E8%B7%AF%20%28%EA%B9%80%EA%B4%91%EC%84%9D%EB%8B%A4%EC%8B%9C%EA%B7%B8%EB%A6%AC%EA%B8%B0%EA%B8%B8%29%20in%20%E5%A4%A7%E9%82%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "大邱特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "e-world",
+      "name": "E-World",
+      "local_name": "이월드",
+      "category": "娛樂",
+      "lat": 35.8533,
+      "lng": 128.563,
+      "description": "大邱代表性主題樂園，星光櫻花節特別受歡迎。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "大邱市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20E-World%20%28%EC%9D%B4%EC%9B%94%EB%93%9C%29%20in%20%E5%A4%A7%E9%82%B1%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "大邱特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "songdo-central-park",
+      "name": "松島中央公園",
+      "local_name": "송도센트럴파크",
+      "category": "自然景觀",
+      "lat": 37.3925,
+      "lng": 126.6372,
+      "description": "韓國首個海水公園，可在都市中體驗水上活動。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "仁川市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9D%BE%E5%B3%B6%E4%B8%AD%E5%A4%AE%E5%85%AC%E5%9C%92%20%28%EC%86%A1%EB%8F%84%EC%84%BC%ED%8A%B8%EB%9F%B4%ED%8C%8C%ED%81%AC%29%20in%20%E4%BB%81%E5%B7%9D%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "仁川特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "incheon-chinatown",
+      "name": "仁川中華街",
+      "local_name": "인천차이나타운",
+      "category": "歷史文化",
+      "lat": 37.4746,
+      "lng": 126.6198,
+      "description": "韓國最大的唐人街，炸醬麵發源地。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "仁川市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E4%BB%81%E5%B7%9D%E4%B8%AD%E8%8F%AF%E8%A1%97%20%28%EC%9D%B8%EC%B2%9C%EC%B0%A8%EC%9D%B4%EB%82%98%ED%83%80%EC%9A%B4%29%20in%20%E4%BB%81%E5%B7%9D%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "仁川特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "wolmido",
+      "name": "月尾島",
+      "local_name": "월미도",
+      "category": "休閒",
+      "lat": 37.4727,
+      "lng": 126.5982,
+      "description": "仁川著名的海濱遊樂區，遊樂園的「Disco Pang Pang」很受歡迎。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "仁川市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%9C%88%E5%B0%BE%E5%B3%B6%20%28%EC%9B%94%EB%AF%B8%EB%8F%84%29%20in%20%E4%BB%81%E5%B7%9D%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "仁川特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "gwangmyeong-cave",
+      "name": "光明洞窟",
+      "local_name": "광명동굴",
+      "category": "休閒",
+      "lat": 37.4264,
+      "lng": 126.8654,
+      "description": "廢棄礦坑改建的主題公園，設有葡萄酒洞窟和燈光展。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "光明市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E5%85%89%E6%98%8E%E6%B4%9E%E7%AA%9F%20%28%EA%B4%91%EB%AA%85%EB%8F%99%EA%B5%B4%29%20in%20%E5%85%89%E6%98%8E%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "光明特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "suwon-starfield",
+      "name": "星空圖書館 (水原店)",
+      "local_name": "별마당도서관 수원",
+      "category": "地標觀景",
+      "lat": 37.2847,
+      "lng": 126.9995,
+      "description": "位於水原Starfield的超大型壯觀圖書館。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "水原市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%98%9F%E7%A9%BA%E5%9C%96%E6%9B%B8%E9%A4%A8%20%28%E6%B0%B4%E5%8E%9F%E5%BA%97%29%20%28%EB%B3%84%EB%A7%88%EB%8B%B9%EB%8F%84%EC%84%9C%EA%B4%80%20%EC%88%98%EC%9B%90%29%20in%20%E6%B0%B4%E5%8E%9F%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "水原特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
+    },
+    {
+      "id": "everland-gyeonggi",
+      "name": "愛寶樂園",
+      "local_name": "에버랜드",
+      "category": "娛樂",
+      "lat": 37.2939,
+      "lng": 127.2025,
+      "description": "韓國最大主題樂園，木製過山車與野生動物園是亮點。",
+      "highlights": [
+        "打卡熱點",
+        "當地特色",
+        "美麗風景"
+      ],
+      "transport": {
+        "subway": "龍仁市區交通",
+        "time_from_station": "約10-15分鐘"
+      },
+      "ticket": "請參考官方網站",
+      "hours": "09:00-18:00 (依季節變動)",
+      "image": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20%E6%84%9B%E5%AF%B6%E6%A8%82%E5%9C%92%20%28%EC%97%90%EB%B2%84%EB%9E%9C%EB%93%9C%29%20in%20%E9%BE%8D%E4%BB%81%2C%20South%20Korea%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9",
+      "tips": "建議提早前往以避開人潮。",
+      "local_cuisine": [
+        "龍仁特色美食",
+        "傳統韓食",
+        "當地小吃"
+      ],
+      "best_seasons": [
+        "春季",
+        "秋季"
+      ],
+      "stay_duration": "2-4 小時",
+      "visitor_insights": "評價極高，是來韓國旅遊不容錯過的景點。",
+      "source_urls": [
+        "https://korean.visitkorea.or.kr/",
+        "https://www.tripadvisor.com/",
+        "https://www.klook.com/"
+      ]
     }
   ]
 }
