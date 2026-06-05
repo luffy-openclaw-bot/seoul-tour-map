@@ -1289,9 +1289,21 @@ function showRouteByNames(fromName, toName) {
     }
 }
 
+let isDraggingChat = false;
+let systemStatusChecked = false;
+
 function toggleChat() {
+    if (isDraggingChat) return;
     const chat = document.getElementById('ai-chat');
     chat.classList.toggle('collapsed');
+    
+    // 首次展開時才檢查系統狀態並顯示指示器
+    if (!chat.classList.contains('collapsed') && !systemStatusChecked) {
+        const statusDot = document.getElementById('system-status');
+        if (statusDot) statusDot.classList.remove('hidden');
+        checkSystemStatus();
+        systemStatusChecked = true;
+    }
 }
 
 function toggleChatHeight(event) {
@@ -1743,6 +1755,77 @@ function generateAIReply(userText) {
 function initChat() {
     // 預設已經喺 HTML 有歡迎訊息
     loadChatHistory();
+    initChatDrag();
+}
+
+function initChatDrag() {
+    const chatHeader = document.querySelector('.chat-header');
+    const aiChat = document.getElementById('ai-chat');
+    if (!chatHeader || !aiChat) return;
+
+    let startX = 0;
+    let currentX = 0;
+    let initialTranslateX = 0;
+
+    function getTranslateX() {
+        const transform = window.getComputedStyle(aiChat).getPropertyValue('transform');
+        if (transform !== 'none') {
+            // 解析 matrix(a, b, c, d, tx, ty)
+            const matrix = transform.match(/^matrix\((.+)\)$/);
+            if (matrix) {
+                return parseFloat(matrix[1].split(',')[4].trim());
+            }
+            // 解析 matrix3d
+            const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
+            if (matrix3d) {
+                return parseFloat(matrix3d[1].split(',')[12].trim());
+            }
+        }
+        return 0;
+    }
+
+    function onDragStart(e) {
+        if (e.target.closest('.resize-icon') || e.target.closest('.toggle-icon')) return;
+        
+        isDraggingChat = false;
+        startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        initialTranslateX = getTranslateX();
+
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
+        document.addEventListener('touchmove', onDragMove, { passive: false });
+        document.addEventListener('touchend', onDragEnd);
+    }
+
+    function onDragMove(e) {
+        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const dx = clientX - startX;
+        
+        if (Math.abs(dx) > 3) {
+            isDraggingChat = true;
+            aiChat.style.transition = 'none';
+            currentX = initialTranslateX + dx;
+            aiChat.style.transform = `translateX(${currentX}px)`;
+            if (e.type === 'touchmove') e.preventDefault(); // 防止手機滾動
+        }
+    }
+
+    function onDragEnd(e) {
+        document.removeEventListener('mousemove', onDragMove);
+        document.removeEventListener('mouseup', onDragEnd);
+        document.removeEventListener('touchmove', onDragMove);
+        document.removeEventListener('touchend', onDragEnd);
+        
+        if (isDraggingChat) {
+            aiChat.style.transition = '';
+            setTimeout(() => {
+                isDraggingChat = false;
+            }, 100);
+        }
+    }
+
+    chatHeader.addEventListener('mousedown', onDragStart);
+    chatHeader.addEventListener('touchstart', onDragStart, { passive: true });
 }
 
 // ==================== 手機版底部景點列表面板 ====================
@@ -2256,8 +2339,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderPinnedMarkers();
     // 恢復聊天添加的地點
     loadChatPlaces();
-    // 頁面啟動時檢查系統狀態
-    checkSystemStatus();
+    // 取消頁面啟動時自動檢查系統狀態，改為在首次打開聊天時檢查
+    // checkSystemStatus();
 });
 
 // ==================== Chatbot 搜索標記與範圍顯示 ====================
