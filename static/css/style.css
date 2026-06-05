@@ -883,11 +883,12 @@ body {
 
 .ai-chat.collapsed .chat-header .status-indicator {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 2px;
+    right: 2px;
     left: auto;
-    font-size: 10px;
+    font-size: 4px;
     margin-left: 0;
+    pointer-events: none;
 }
 
 .ai-chat.collapsed .chat-body {
