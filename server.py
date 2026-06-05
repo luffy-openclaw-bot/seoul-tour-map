@@ -138,6 +138,48 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             user_message = data.get('message', '')
             system_prompt = data.get('system', '')
             chat_history = data.get('history', [])  # 獲取對話歷史
+            fingerprint = data.get('fingerprint', '') # 獲取指紋授權
+
+            # 處理系統定位報告
+            if user_message == "[SYSTEM_LOCATION_REPORT]":
+                if not fingerprint:
+                    self.send_json({'reply': '❌ 未授權存取位置資料。請確認您的設備指紋有效。', 'error': True}, status=403)
+                    return
+                
+                lat = data.get('lat')
+                lng = data.get('lng')
+                
+                # Reverse geocode
+                address_name = "未知地點"
+                if search_location and hasattr(search_module, 'get_searcher'):
+                    searcher = search_module.get_searcher()
+                    address_data = searcher._reverse_geocode(lat, lng)
+                    if address_data and 'display_name' in address_data:
+                        address_name = address_data['display_name']
+                
+                location_system = f"""你係一個韓國首爾旅遊專家 AI 助手。
+用戶啱啱分享咗佢嘅實時 GPS 位置：緯度 {lat}, 經度 {lng}。
+系統逆向地理編碼解析出嘅地址大約係：{address_name}。
+
+請用粵語（廣東話）友善地話俾用戶知佢而家大概喺邊，並且根據呢個位置，推薦 1-2 個附近值得去嘅景點或活動。
+注意：呢個係實時位置資料，基於私隱安全，系統只會喺記憶體中短暫處理，唔會記錄低。"""
+                
+                try:
+                    ollama_reply = self._call_ollama_api(location_system, "我而家喺邊度？附近有咩好去處？", [])
+                    self.send_json({'reply': ollama_reply, 'source': 'ollama'})
+                except Exception as e:
+                    self.send_json({'reply': f'已經收到你嘅位置 ({lat}, {lng})，但 AI 分析出錯：{str(e)}', 'error': True})
+                return
+
+            # NLP 位置查詢檢測
+            location_keywords = ['我在哪', '我在哪裡', '我喺邊', 'where am i', 'my location', 'current location', '定位']
+            if any(kw in user_message.lower() for kw in location_keywords):
+                # 立即返回定位指令
+                self.send_json({
+                    'reply': '幫緊你定位，請稍等...【{"action":"locate_user_and_report"}】',
+                    'source': 'system'
+                })
+                return
 
             # 構建系統提示
             full_system = """你係一個韓國首爾旅遊專家 AI 助手，用粵語（廣東話書面）回答。
@@ -308,6 +350,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'focus_attraction': {'id': str},
                 'highlight_category': {'category': str},
                 'locate_user': {},
+                'locate_user_and_report': {},
                 'show_route': {'from': str, 'to': str},
                 'add_marker': {'lat': float, 'lng': float, 'title': str, 'color': str, 'popup': str, 'pulse': bool},
                 'add_polygon': {'name': str, 'color': str, 'coords': list},

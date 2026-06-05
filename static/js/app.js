@@ -1464,7 +1464,8 @@ async function fetchAIReply(userText) {
         body: JSON.stringify({
             message: userText,
             system: getSystemContext(),
-            history: chatHistory.slice(0, -1)  // 唔包剛加入嘅 user message
+            history: chatHistory.slice(0, -1),  // 唔包剛加入嘅 user message
+            fingerprint: fingerprintManager.getFingerprint()
         })
     });
 
@@ -2123,6 +2124,9 @@ async function executeMapAction(action, params) {
             case 'locate_user':
                 locateUser();
                 break;
+            case 'locate_user_and_report':
+                locateUserAndReport();
+                break;
             case 'show_route':
                 // from 和 to 可以係 attraction id 或者名稱
                 const fromAttr = attractionsData.find(a => a.id === params.from) ||
@@ -2329,6 +2333,95 @@ function locateUser() {
         }
     );
 }
+
+// ==================== 定位並向聊天匯報 ====================
+function locateUserAndReport() {
+    if (!navigator.geolocation) {
+        addMessage('❌ 您的瀏覽器不支持地理位置定位', 'bot');
+        return;
+    }
+
+    showTyping();
+    
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const { latitude, longitude } = position.coords;
+            const accuracy = position.coords.accuracy;
+
+            // 添加用戶位置標記 (與 locateUser 相同)
+            const userIcon = L.divIcon({
+                html: '<div class="user-marker"><i class="fas fa-user"></i></div>',
+                className: '',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            if (map && window.userMarker) {
+                map.removeLayer(window.userMarker);
+            }
+            if (map && window.userAccuracyCircle) {
+                map.removeLayer(window.userAccuracyCircle);
+            }
+
+            if (map) {
+                window.userAccuracyCircle = L.circle([latitude, longitude], {
+                    radius: Math.max(accuracy, 10),
+                    color: '#3388ff',
+                    fillColor: '#3388ff',
+                    fillOpacity: 0.15,
+                    weight: 1,
+                    opacity: 0.5
+                }).addTo(map);
+
+                window.userMarker = L.marker([latitude, longitude], { icon: userIcon })
+                    .addTo(map)
+                    .bindPopup("📍 您的位置")
+                    .openPopup();
+
+                map.setView([latitude, longitude], 15);
+            }
+
+            // 報告位置給後端
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "[SYSTEM_LOCATION_REPORT]",
+                        lat: latitude,
+                        lng: longitude,
+                        history: chatHistory,
+                        fingerprint: fingerprintManager.getFingerprint()
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                hideTyping();
+                if (data.reply) {
+                    addMessage(data.reply, 'bot');
+                } else if (data.error) {
+                    addMessage(`❌ ${data.error}`, 'bot');
+                }
+            } catch (e) {
+                hideTyping();
+                console.error('Location report error:', e);
+                addMessage('❌ 無法向伺服器報告位置。', 'bot');
+            }
+        },
+        (error) => {
+            hideTyping();
+            let msg = '無法獲取位置';
+            if (error.code === 1) msg = '用戶拒絕提供位置權限';
+            addMessage(`❌ ${msg}`, 'bot');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     await loadData();
@@ -3601,6 +3694,7 @@ if (typeof module !== 'undefined' && module.exports) {
         addMessage,
         saveChatHistory,
         loadChatHistory,
+        executeMapAction,
         getChatHistory: () => chatHistory,
         CHAT_HISTORY_KEY
     };
