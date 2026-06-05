@@ -6,8 +6,8 @@
     <title>首爾旅遊地圖 | Seoul Tour Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="static/css/style.css?v=40" />
-    <link rel="stylesheet" href="static/css/search_module.css?v=40" />
+    <link rel="stylesheet" href="static/css/style.css?v=42" />
+    <link rel="stylesheet" href="static/css/search_module.css?v=42" />
 </head>
 <body>
     <div id="app">
@@ -125,10 +125,12 @@
                 <div class="panel">
                     <h3><i class="fas fa-list"></i> 景點列表</h3>
                     <div class="panel-search-container">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="desktop-search-input" placeholder="搜尋景點..." autocomplete="off">
-                        <span id="desktop-search-loading" class="search-loading hidden"><i class="fas fa-spinner fa-spin"></i></span>
-                        <button id="desktop-search-clear" class="search-clear hidden" title="清除搜尋"><i class="fas fa-times-circle"></i></button>
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="desktop-search-input" placeholder="搜尋景點..." autocomplete="off">
+                            <span id="desktop-search-loading" class="search-loading hidden"><i class="fas fa-spinner fa-spin"></i></span>
+                            <button id="desktop-search-clear" class="search-clear hidden" title="清除搜尋"><i class="fas fa-times-circle"></i></button>
+                        </div>
                     </div>
                     <div id="attraction-list" class="attraction-list">
                         <!-- 動態生成 -->
@@ -249,10 +251,12 @@
             <button class="mobile-tab" data-category="visited" data-category-id="cat-visited">✅ <span data-i18n-category="cat-visited">去過</span></button>
         </div>
         <div class="mobile-panel-search-container">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="mobile-search-input" placeholder="搜尋景點..." autocomplete="off">
-            <span id="mobile-search-loading" class="search-loading hidden"><i class="fas fa-spinner fa-spin"></i></span>
-            <button id="mobile-search-clear" class="search-clear hidden" title="清除搜尋"><i class="fas fa-times-circle"></i></button>
+            <div class="search-input-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="mobile-search-input" placeholder="搜尋景點..." autocomplete="off">
+                <span id="mobile-search-loading" class="search-loading hidden"><i class="fas fa-spinner fa-spin"></i></span>
+                <button id="mobile-search-clear" class="search-clear hidden" title="清除搜尋"><i class="fas fa-times-circle"></i></button>
+            </div>
         </div>
         <div class="mobile-panel-list" id="mobile-panel-list">
             <!-- 動態生成 -->
@@ -288,7 +292,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="static/js/app.js?v=41"></script>
-    <script src="static/js/search_module.js?v=41"></script>
+    <script src="static/js/app.js?v=42"></script>
+    <script src="static/js/search_module.js?v=42"></script>
 </body>
 </html>
