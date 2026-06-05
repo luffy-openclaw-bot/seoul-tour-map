@@ -112,14 +112,14 @@ const CATEGORY_COLORS = {
 };
 
 const CATEGORY_FALLBACK_IMAGES = {
-    '歷史文化': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20traditional%20Korean%20palace%20or%20temple%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
-    '地標觀景': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20modern%20Seoul%20city%20landmark%20or%20skyline%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
-    '購物美食': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20bustling%20Seoul%20shopping%20street%20and%20street%20food%20stalls%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
-    '夜生活文化': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20Seoul%20nightlife%2C%20neon%20lights%2C%20busy%20streets%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
-    '娛樂': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20an%20amusement%20park%20or%20entertainment%20venue%20in%20Seoul%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
-    '休閒': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20relaxing%20cafe%20or%20cultural%20space%20in%20Seoul%2C%20realistic%2C%204k%20resolution&image_size=landscape_16_9',
-    '自然景觀': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20a%20beautiful%20park%20or%20nature%20trail%20in%20Seoul%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
-    'default': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High%20quality%20travel%20photography%20of%20Seoul%20cityscape%2C%20realistic%2C%20sunny%20day%2C%204k%20resolution&image_size=landscape_16_9',
+    '歷史文化': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High+quality+travel+photography+of+a+traditional+Korean+palace+or+temple+in+Seoul%2C+realistic%2C+sunny+day%2C+cinematic+lighting%2C+8k+resolution&image_size=landscape_16_9',
+    '地標觀景': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High+quality+travel+photography+of+a+modern+Seoul+city+landmark+or+skyline%2C+realistic%2C+sunny+day%2C+cinematic+lighting%2C+8k+resolution&image_size=landscape_16_9',
+    '購物美食': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High+quality+travel+photography+of+a+bustling+Seoul+shopping+street+and+street+food+stalls%2C+realistic%2C+cinematic+lighting%2C+8k+resolution&image_size=landscape_16_9',
+    '夜生活文化': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High+quality+travel+photography+of+Seoul+nightlife%2C+neon+lights%2C+busy+streets%2C+realistic%2C+cinematic+lighting%2C+8k+resolution&image_size=landscape_16_9',
+    '娛樂': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High+quality+travel+photography+of+an+amusement+park+or+entertainment+venue+in+Seoul%2C+realistic%2C+cinematic+lighting%2C+8k+resolution&image_size=landscape_16_9',
+    '休閒': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High+quality+travel+photography+of+a+relaxing+cafe+or+cultural+space+in+Seoul%2C+realistic%2C+cinematic+lighting%2C+8k+resolution&image_size=landscape_16_9',
+    '自然景觀': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High+quality+travel+photography+of+a+beautiful+park+or+nature+trail+in+Seoul%2C+realistic%2C+sunny+day%2C+cinematic+lighting%2C+8k+resolution&image_size=landscape_16_9',
+    'default': 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=High+quality+travel+photography+of+Seoul+cityscape%2C+realistic%2C+sunny+day%2C+cinematic+lighting%2C+8k+resolution&image_size=landscape_16_9',
 };
 
 function getFallbackImage(category) {
@@ -1770,22 +1770,22 @@ function initChatDrag() {
     const aiChat = document.getElementById('ai-chat');
     if (!chatHeader || !aiChat) return;
 
-    let startX = 0;
-    let currentX = 0;
-    let initialTranslateX = 0;
+    let startY = 0;
+    let currentY = 0;
+    let initialTranslateY = 0;
 
-    function getTranslateX() {
+    function getTranslateY() {
         const transform = window.getComputedStyle(aiChat).getPropertyValue('transform');
         if (transform !== 'none') {
             // 解析 matrix(a, b, c, d, tx, ty)
             const matrix = transform.match(/^matrix\((.+)\)$/);
             if (matrix) {
-                return parseFloat(matrix[1].split(',')[4].trim());
+                return parseFloat(matrix[1].split(',')[5].trim());
             }
             // 解析 matrix3d
             const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
             if (matrix3d) {
-                return parseFloat(matrix3d[1].split(',')[12].trim());
+                return parseFloat(matrix3d[1].split(',')[13].trim());
             }
         }
         return 0;
@@ -1795,8 +1795,8 @@ function initChatDrag() {
         if (e.target.closest('.resize-icon') || e.target.closest('.toggle-icon')) return;
         
         isDraggingChat = false;
-        startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-        initialTranslateX = getTranslateX();
+        startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+        initialTranslateY = getTranslateY();
 
         document.addEventListener('mousemove', onDragMove);
         document.addEventListener('mouseup', onDragEnd);
@@ -1805,14 +1805,14 @@ function initChatDrag() {
     }
 
     function onDragMove(e) {
-        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-        const dx = clientX - startX;
+        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        const dy = clientY - startY;
         
-        if (Math.abs(dx) > 3) {
+        if (Math.abs(dy) > 3) {
             isDraggingChat = true;
             aiChat.style.transition = 'none';
-            currentX = initialTranslateX + dx;
-            aiChat.style.transform = `translateX(${currentX}px)`;
+            currentY = initialTranslateY + dy;
+            aiChat.style.transform = `translateY(${currentY}px)`;
             if (e.type === 'touchmove') e.preventDefault(); // 防止手機滾動
         }
     }
