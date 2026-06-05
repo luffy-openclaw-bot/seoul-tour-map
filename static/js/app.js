@@ -432,34 +432,53 @@ async function loadData() {
 }
 
 function getFilteredAttractions(category) {
-    if (category === 'all') {
-        return attractionsData;
-    } else if (category === '願望s' || category === 'pinned' || category === 'visited') {
-        let items = WishlistManager.getAll();
-        if (category === '願望s') {
-            items = items.filter(item => item.wish);
-        } else if (category === 'pinned') {
-            items = items.filter(item => item.pinned);
-        } else if (category === 'visited') {
-            items = items.filter(item => item.visited);
+    // 獲取所有自訂/同步的景點
+    const customItems = WishlistManager.getAll().map(item => {
+        return {
+            id: item.id,
+            name: item.name,
+            name_ko: '',
+            lat: item.lat,
+            lng: item.lng,
+            category: item.category || '自訂景點',
+            image: '',
+            ticket: item.price || '',
+            description: item.description || ''
+        };
+    });
+
+    // 合併內建景點與自訂景點（避免重複）
+    let combined = [...attractionsData];
+    customItems.forEach(customItem => {
+        const exists = combined.some(a => a.name === customItem.name && Math.abs(a.lat - customItem.lat) < 0.0001);
+        if (!exists) {
+            combined.push(customItem);
         }
-        return items.map(item => {
-            const predefined = attractionsData.find(a => a.name === item.name && Math.abs(a.lat - item.lat) < 0.0001);
-            if (predefined) return predefined;
-            return {
-                id: item.id,
-                name: item.name,
-                name_ko: '',
-                lat: item.lat,
-                lng: item.lng,
-                category: item.category || '自訂景點',
-                image: '',
-                ticket: item.price || '',
-                description: item.description || ''
-            };
-        });
+    });
+
+    if (category === 'all') {
+        return combined;
+    } else if (category === '願望s' || category === 'pinned' || category === 'visited') {
+        let items = combined;
+        if (category === '願望s') {
+            items = items.filter(item => {
+                const w = WishlistManager.get(item.name, item.lat, item.lng);
+                return w && w.wish;
+            });
+        } else if (category === 'pinned') {
+            items = items.filter(item => {
+                const w = WishlistManager.get(item.name, item.lat, item.lng);
+                return w && w.pinned;
+            });
+        } else if (category === 'visited') {
+            items = items.filter(item => {
+                const w = WishlistManager.get(item.name, item.lat, item.lng);
+                return w && w.visited;
+            });
+        }
+        return items;
     } else {
-        return attractionsData.filter(a => a.category === category);
+        return combined.filter(a => a.category === category);
     }
 }
 
@@ -3040,12 +3059,10 @@ const WishlistManager = {
         // 更新地圖上的釘選標記
         renderPinnedMarkers();
 
-        // 如果當前分類是願望清單、釘選或去過，更新景點列表
-        if (activeCategory === '願望s' || activeCategory === 'pinned' || activeCategory === 'visited') {
-            renderAttractionList();
-            renderMobilePanelList();
-            addMarkers();
-        }
+        // 重新渲染景點列表和標記 (不再限制分類，因為同步的景點可能屬於任何分類)
+        renderAttractionList();
+        if (typeof renderMobilePanelList === 'function') renderMobilePanelList();
+        addMarkers();
     }
 };
 

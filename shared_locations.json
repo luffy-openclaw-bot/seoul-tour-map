@@ -8,7 +8,11 @@
     "description": "",
     "price": "",
     "addedAt": 1780488938589,
-    "ownerFingerprint": "unknown"
+    "ownerFingerprint": "unknown",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_通仁市場_37.5780_126.9720",
@@ -19,7 +23,11 @@
     "description": "特色銅錢市場，多種傳統小食",
     "price": "",
     "addedAt": 1780488000938,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_景福宮_37.5796_126.9770",
@@ -30,7 +38,11 @@
     "description": "韓國最大嘅宮殿，朝鮮王朝嘅正宮。每日有守門將交接儀式，著韓服入場免費。",
     "price": "3000韓元（韓服免費）",
     "addedAt": 1780488050387,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_明洞_37.5636_126.9824",
@@ -41,7 +53,11 @@
     "description": "首爾最熱鬧嘅購物區，集合各大品牌、藥妝店同街頭小食。自由行必去。",
     "price": "免費",
     "addedAt": 1780488171201,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_弘大（弘益大學區）_37.5563_126.9230",
@@ -52,7 +68,11 @@
     "description": "年輕人嘅天堂，充滿街頭表演、特色咖啡店、酒吧同潮店。夜晚特別熱鬧。",
     "price": "免費",
     "addedAt": 1780488249857,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_📍 釘選位置 (37.543488, 126.961956)_37.5435_126.9620",
@@ -63,7 +83,11 @@
     "description": "用戶於地圖手動釘選的位置 (37.54348845864999, 126.96195602416994)",
     "price": "",
     "addedAt": 1780509172766,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_明洞餃子 (Myeongdong Kyoja)_37.5630_126.9840",
@@ -74,7 +98,11 @@
     "description": "米芝蓮必比登推薦嘅名店，以濃郁嘅手工刀切麵同多汁嘅餃子聞名。",
     "price": "",
     "addedAt": 1780509444282,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_📍 釘選位置 (37.568163, 126.967916)_37.5682_126.9679",
@@ -85,7 +113,11 @@
     "description": "用戶於地圖手動釘選的位置 (37.568162595153495, 126.96791589260103)",
     "price": "",
     "addedAt": 1780510480862,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "chat_星巴克明洞店_37.5635_126.9895",
@@ -96,7 +128,11 @@
     "description": "位於明洞的星巴克",
     "price": "",
     "addedAt": 1780533181096,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "chat_弘大_37.5568_126.9245",
@@ -107,7 +143,11 @@
     "description": "弘益大學周邊",
     "price": "",
     "addedAt": 1780533181142,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_仁寺洞_37.5744_126.9858",
@@ -118,7 +158,11 @@
     "description": "用戶手動儲存的位置 (37.57440, 126.98580)",
     "price": "",
     "addedAt": 1780629509500,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   },
   {
     "id": "wl_南山塔（N首爾塔）_37.5511_126.9882",
@@ -129,6 +173,40 @@
     "description": "首爾地標性建築，位於南山頂，可俯瞰全首爾夜景。著名嘅情人鎖牆喺呢度。",
     "price": "觀景台11000韓元",
     "addedAt": 1780630791881,
-    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV"
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
+  },
+  {
+    "id": "wl_Test b_37.5658_126.9667",
+    "name": "Test b",
+    "lat": 37.56580695492947,
+    "lng": 126.9667410850525,
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.56581, 126.96674)",
+    "price": "",
+    "addedAt": 1780632547864,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
+    "wish": true,
+    "pinned": true,
+    "visited": false,
+    "myRemark": "bbb"
+  },
+  {
+    "id": "wl_清溪川_37.5693_127.0056",
+    "name": "清溪川",
+    "lat": 37.5693,
+    "lng": 127.0056,
+    "category": "自然景觀",
+    "description": "穿過市中心嘅人工溪流，兩旁有步行徑，適合散步放鬆，夜晚有燈光裝飾。",
+    "price": "免費",
+    "addedAt": 1780632633143,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
+    "wish": true,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   }
 ]
