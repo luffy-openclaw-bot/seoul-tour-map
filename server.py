@@ -1122,6 +1122,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         'description': str(loc.get('description', '')),
                         'price': str(loc.get('price', '')),
                         'addedAt': loc.get('addedAt', int(time.time() * 1000)),
+                        'updatedAt': loc.get('updatedAt', int(time.time() * 1000)),
                         'ownerFingerprint': str(loc.get('ownerFingerprint', 'unknown')),
                         'wish': bool(loc.get('wish', False)),
                         'pinned': bool(loc.get('pinned', False)),
