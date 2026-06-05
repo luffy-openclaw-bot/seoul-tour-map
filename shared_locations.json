@@ -79,14 +79,14 @@
     "name": "📍 釘選位置 (37.543488, 126.961956)",
     "lat": 37.54348845864999,
     "lng": 126.96195602416994,
-    "category": "用戶釘選",
-    "description": "用戶於地圖手動釘選的位置 (37.54348845864999, 126.96195602416994)",
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.54349, 126.96196)",
     "price": "",
     "addedAt": 1780509172766,
     "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
     "wish": false,
     "pinned": false,
-    "visited": false,
+    "visited": true,
     "myRemark": ""
   },
   {
@@ -238,5 +238,35 @@
     "pinned": false,
     "visited": false,
     "myRemark": "買被"
+  },
+  {
+    "id": "wl_星巴克明洞店_37.5635_126.9895",
+    "name": "星巴克明洞店",
+    "lat": 37.5635,
+    "lng": 126.9895,
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.56350, 126.98950)",
+    "price": "",
+    "addedAt": 1780650252596,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
+    "wish": false,
+    "pinned": true,
+    "visited": true,
+    "myRemark": ""
+  },
+  {
+    "id": "wl_Myeongdong_37.5635_126.9895",
+    "name": "Myeongdong",
+    "lat": 37.5635,
+    "lng": 126.9895,
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.56350, 126.98950)",
+    "price": "",
+    "addedAt": 1780650268891,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
+    "wish": false,
+    "pinned": true,
+    "visited": true,
+    "myRemark": ""
   }
 ]
