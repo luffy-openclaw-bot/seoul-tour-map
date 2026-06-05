@@ -5,7 +5,7 @@ with open('static/data/attractions.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 for attr in data['attractions']:
-    prompt = f"High quality travel photography of {attr['name']} ({attr['local_name']}) in Seoul, realistic, sunny day, 4k resolution"
+    prompt = f"High quality travel photography of {attr['name']} ({attr['local_name']}) in Seoul, realistic, sunny day, cinematic lighting, 8k resolution"
     encoded_prompt = urllib.parse.quote(prompt)
     url = f"https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt={encoded_prompt}&image_size=landscape_16_9"
     attr['image'] = url
