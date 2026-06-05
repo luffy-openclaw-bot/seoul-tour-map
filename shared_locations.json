@@ -169,14 +169,14 @@
     "name": "南山塔（N首爾塔）",
     "lat": 37.5511,
     "lng": 126.9882,
-    "category": "地標觀景",
-    "description": "首爾地標性建築，位於南山頂，可俯瞰全首爾夜景。著名嘅情人鎖牆喺呢度。",
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.55110, 126.98820)",
     "price": "觀景台11000韓元",
     "addedAt": 1780630791881,
     "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
     "wish": false,
     "pinned": false,
-    "visited": false,
+    "visited": true,
     "myRemark": ""
   },
   {
