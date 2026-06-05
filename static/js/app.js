@@ -85,7 +85,12 @@ const MapManager = {
         if (pref === 'google') {
             url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
         } else if (pref === 'naver') {
-            url = `https://map.naver.com/p/search/${lat},${lng}`;
+            // Convert WGS84 to EPSG:3857 (Web Mercator)
+            const R = 6378137;
+            const x = R * lng * Math.PI / 180;
+            const y = R * Math.log(Math.tan((90 + lat) * Math.PI / 360));
+            const encodedName = encodeURIComponent(name || 'Location');
+            url = `https://map.naver.com/p/entry/address/${x},${y},${encodedName}?c=15,0,0,0,dh`;
         }
 
         if (url) {
