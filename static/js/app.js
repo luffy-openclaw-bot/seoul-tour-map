@@ -1193,6 +1193,41 @@ function closeModal() {
     document.getElementById('modal').classList.add('hidden');
 }
 
+// ==================== 設置彈窗 ====================
+window.openSettingsModal = function() {
+    document.getElementById('setting-lang').value = localStorage.getItem('seoul_tour_lang') || 'zh-Hant';
+    document.getElementById('setting-map-provider').value = localStorage.getItem('tour_map_preference') || 'google';
+    document.getElementById('setting-radius-val').value = localStorage.getItem('seoul_tour_radius_val') || '';
+    document.getElementById('setting-radius-unit').value = localStorage.getItem('seoul_tour_radius_unit') || 'km';
+
+    document.getElementById('settings-modal').classList.remove('hidden');
+};
+
+window.closeSettingsModal = function() {
+    document.getElementById('settings-modal').classList.add('hidden');
+};
+
+window.saveSettings = function() {
+    const lang = document.getElementById('setting-lang').value;
+    const mapProvider = document.getElementById('setting-map-provider').value;
+    const radiusVal = document.getElementById('setting-radius-val').value;
+    const radiusUnit = document.getElementById('setting-radius-unit').value;
+
+    localStorage.setItem('seoul_tour_lang', lang);
+    localStorage.setItem('tour_map_preference', mapProvider);
+    if (radiusVal) {
+        localStorage.setItem('seoul_tour_radius_val', radiusVal);
+    } else {
+        localStorage.removeItem('seoul_tour_radius_val');
+    }
+    localStorage.setItem('seoul_tour_radius_unit', radiusUnit);
+
+    closeSettingsModal();
+    
+    // 重新載入頁面以套用語言與地圖等設定
+    location.reload();
+};
+
 // ==================== 路線規劃 ====================
 function initRoutePanel() {
     const startSelect = document.getElementById('route-start');
@@ -1640,6 +1675,12 @@ function toggleChat() {
     if (isDraggingChat) return;
     const chat = document.getElementById('ai-chat');
     chat.classList.toggle('collapsed');
+    
+    // 如果收合，一併關閉 system-status-bar
+    if (chat.classList.contains('collapsed')) {
+        const statusBar = document.getElementById('system-status-bar');
+        if (statusBar) statusBar.classList.add('hidden');
+    }
     
     // 首次展開時才檢查系統狀態並顯示指示器
     if (!chat.classList.contains('collapsed') && !systemStatusChecked) {
