@@ -667,7 +667,28 @@ function focusAttraction(attr) {
 
 // ==================== 景點詳情彈窗 ====================
 function showAttractionDetailById(id) {
-    const attr = attractionsData.find(a => a.id === id);
+    let attr = attractionsData.find(a => a.id === id);
+    if (!attr) {
+        const customItems = WishlistManager.getAll();
+        const customItem = customItems.find(item => item.id === id);
+        if (customItem) {
+            attr = {
+                id: customItem.id,
+                name: customItem.name,
+                name_ko: '',
+                lat: customItem.lat,
+                lng: customItem.lng,
+                category: customItem.category || '自訂景點',
+                image: '',
+                ticket: customItem.price || '無',
+                description: customItem.description || '無詳細描述',
+                highlights: ['用戶自訂景點'],
+                transport: { subway: '無', time_from_station: '無' },
+                hours: '無',
+                tips: customItem.myRemark || '無小貼士'
+            };
+        }
+    }
     if (attr) showAttractionDetail(attr);
 }
 
