@@ -518,12 +518,17 @@ function renderPinnedMarkers() {
                 iconAnchor: [18, 18]
             });
             
+            let iconsHtml = '';
+            if (item.wish) iconsHtml += '<i class="fas fa-heart" style="color: #e74c3c; margin-left: 6px; font-size: 14px;" title="Wish"></i>';
+            if (item.pinned) iconsHtml += '<i class="fas fa-thumbtack" style="color: #3498db; margin-left: 6px; font-size: 14px;" title="Pinned"></i>';
+            if (item.visited) iconsHtml += '<i class="fas fa-check-circle" style="color: #2ecc71; margin-left: 6px; font-size: 14px;" title="Visited"></i>';
+
             const marker = L.marker([item.lat, item.lng], { icon: customIcon })
                 .addTo(pinnedLayerGroup)
                 .bindPopup(`
                     <div class="popup-card">
                         <div class="popup-info">
-                            <div class="popup-name">${item.name}</div>
+                            <div class="popup-name">${item.name}${iconsHtml}</div>
                             <span class="popup-cat" style="background:${color}">${item.category || '釘選位置'}</span>
                             <div class="popup-desc">坐標：${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
                             <button class="popup-btn" style="background:#f39c12; margin-bottom: 5px;" onclick="openSaveLocationModal(${item.lat}, ${item.lng}, '${item.name.replace(/'/g, "\\'")}')">
@@ -1035,11 +1040,19 @@ function createMultiPopupContent(group) {
 
 function createPopupContent(attr) {
     const color = CATEGORY_COLORS[attr.category] || '#666';
+    const customData = WishlistManager.get(attr.name, attr.lat, attr.lng);
+    let iconsHtml = '';
+    if (customData) {
+        if (customData.wish) iconsHtml += '<i class="fas fa-heart" style="color: #e74c3c; margin-left: 6px; font-size: 14px;" title="Wish"></i>';
+        if (customData.pinned) iconsHtml += '<i class="fas fa-thumbtack" style="color: #3498db; margin-left: 6px; font-size: 14px;" title="Pinned"></i>';
+        if (customData.visited) iconsHtml += '<i class="fas fa-check-circle" style="color: #2ecc71; margin-left: 6px; font-size: 14px;" title="Visited"></i>';
+    }
+
     return `
         <div class="popup-card">
             <img src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="popup-info">
-                <div class="popup-name">${attr.name}</div>
+                <div class="popup-name">${attr.name}${iconsHtml}</div>
                 <div class="popup-ko">${attr.local_name}</div>
                 <span class="popup-cat" style="background:${color}">${attr.category}</span>
                 <div class="popup-desc">${attr.description.substring(0, 80)}...</div>

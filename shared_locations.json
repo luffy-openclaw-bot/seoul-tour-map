@@ -301,5 +301,21 @@
     "pinned": false,
     "visited": false,
     "myRemark": ""
+  },
+  {
+    "id": "wl_want to go_37.5819_126.9741",
+    "name": "want to go",
+    "lat": 37.58186124999265,
+    "lng": 126.97414398193361,
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.58186, 126.97414)",
+    "price": "",
+    "addedAt": 1780675506854,
+    "updatedAt": 1780675506854,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
+    "wish": true,
+    "pinned": true,
+    "visited": false,
+    "myRemark": "here!!"
   }
 ]
