@@ -653,7 +653,9 @@ function addMarkers() {
     Object.values(grouped).forEach(group => {
         if (group.length === 1) {
             const attr = group[0];
-            const color = CATEGORY_COLORS[attr.category] || '#666';
+            const customData = WishlistManager.get(attr.name, attr.lat, attr.lng);
+            const isVisited = customData && customData.visited;
+            const color = isVisited ? '#b0b0b0' : (CATEGORY_COLORS[attr.category] || '#666');
 
             // 自訂圖標
             const iconHtml = `<div class="custom-marker" style="border-color:${color};background:${color}">
@@ -675,8 +677,13 @@ function addMarkers() {
             markers[attr.id] = marker;
         } else {
             const firstAttr = group[0];
-            // Use the first item's color for the marker
-            const color = CATEGORY_COLORS[firstAttr.category] || '#666';
+            // Check if all items in this group are marked as visited
+            const allVisited = group.every(attr => {
+                const data = WishlistManager.get(attr.name, attr.lat, attr.lng);
+                return data && data.visited;
+            });
+            // Use the first item's color for the marker, unless all are visited
+            const color = allVisited ? '#b0b0b0' : (CATEGORY_COLORS[firstAttr.category] || '#666');
 
             // 自訂圖標 (with badge)
             const iconHtml = `<div class="custom-marker" style="border-color:${color};background:${color}">
