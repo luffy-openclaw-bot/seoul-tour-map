@@ -652,6 +652,17 @@ function toggleRadiusPanel() {
                 const defaultUnit = localStorage.getItem('seoul_tour_radius_unit');
                 if (defaultUnit) radiusUnitInput.value = defaultUnit;
             }
+
+            const radiusLatInput = document.getElementById('radius-lat');
+            const radiusLngInput = document.getElementById('radius-lng');
+            if (radiusLatInput && !radiusLatInput.value && radiusLngInput && !radiusLngInput.value) {
+                const defaultLat = localStorage.getItem('seoul_tour_radius_center_lat');
+                const defaultLng = localStorage.getItem('seoul_tour_radius_center_lng');
+                if (defaultLat && defaultLng) {
+                    radiusLatInput.value = defaultLat;
+                    radiusLngInput.value = defaultLng;
+                }
+            }
         } else {
             if (toggleBtn) toggleBtn.classList.remove('active');
         }
@@ -1213,6 +1224,16 @@ window.openSettingsModal = function() {
     document.getElementById('setting-radius-val').value = localStorage.getItem('seoul_tour_radius_val') || '';
     document.getElementById('setting-radius-unit').value = localStorage.getItem('seoul_tour_radius_unit') || 'km';
 
+    const centerName = localStorage.getItem('seoul_tour_radius_center_name') || '';
+    const centerLat = localStorage.getItem('seoul_tour_radius_center_lat') || '';
+    const centerLng = localStorage.getItem('seoul_tour_radius_center_lng') || '';
+    
+    document.getElementById('setting-radius-center').value = centerName || (centerLat && centerLng ? `${centerLat}, ${centerLng}` : '');
+    document.getElementById('setting-radius-lat').value = centerLat;
+    document.getElementById('setting-radius-lng').value = centerLng;
+    document.getElementById('setting-radius-center-result').textContent = centerLat && centerLng ? `已設定: ${centerLat}, ${centerLng}` : '';
+    document.getElementById('setting-radius-center-result').style.color = '#2ecc71';
+
     document.getElementById('settings-modal').classList.remove('hidden');
 };
 
@@ -1235,11 +1256,69 @@ window.saveSettings = function() {
     }
     localStorage.setItem('seoul_tour_radius_unit', radiusUnit);
 
+    const centerName = document.getElementById('setting-radius-center').value.trim();
+    const centerLat = document.getElementById('setting-radius-lat').value;
+    const centerLng = document.getElementById('setting-radius-lng').value;
+
+    if (centerName && centerLat && centerLng) {
+        localStorage.setItem('seoul_tour_radius_center_name', centerName);
+        localStorage.setItem('seoul_tour_radius_center_lat', centerLat);
+        localStorage.setItem('seoul_tour_radius_center_lng', centerLng);
+    } else {
+        localStorage.removeItem('seoul_tour_radius_center_name');
+        localStorage.removeItem('seoul_tour_radius_center_lat');
+        localStorage.removeItem('seoul_tour_radius_center_lng');
+    }
+
     closeSettingsModal();
     
     // 重新載入頁面以套用語言與地圖等設定
     location.reload();
 };
+
+document.getElementById('btn-geocode-center')?.addEventListener('click', async function() {
+    const input = document.getElementById('setting-radius-center').value.trim();
+    const resultEl = document.getElementById('setting-radius-center-result');
+    if (!input) return;
+
+    // Check if input is lat, lng
+    const coordsMatch = input.match(/^(-?\d+(\.\d+)?)[,\s]+(-?\d+(\.\d+)?)$/);
+    if (coordsMatch) {
+        const lat = parseFloat(coordsMatch[1]);
+        const lng = parseFloat(coordsMatch[3]);
+        document.getElementById('setting-radius-lat').value = lat;
+        document.getElementById('setting-radius-lng').value = lng;
+        resultEl.textContent = `已解析座標: ${lat}, ${lng}`;
+        resultEl.style.color = '#2ecc71';
+        return;
+    }
+
+    // Geocode using backend endpoint
+    resultEl.textContent = '搜尋中...';
+    resultEl.style.color = '#666';
+    try {
+        const response = await fetch('/api/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: input })
+        });
+        const data = await response.json();
+        if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            document.getElementById('setting-radius-lat').value = lat;
+            document.getElementById('setting-radius-lng').value = lng;
+            resultEl.textContent = `找到地點: ${data[0].display_name.split(',')[0]} (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            resultEl.style.color = '#2ecc71';
+        } else {
+            resultEl.textContent = '找不到該地點，請嘗試其他名稱。';
+            resultEl.style.color = '#e74c3c';
+        }
+    } catch (e) {
+        resultEl.textContent = '搜尋發生錯誤。';
+        resultEl.style.color = '#e74c3c';
+    }
+});
 
 // ==================== 路線規劃 ====================
 function initRoutePanel() {
