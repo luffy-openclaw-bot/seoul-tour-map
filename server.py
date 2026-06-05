@@ -87,14 +87,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        # 解析路徑以忽略查詢參數或完整 URI
+        parsed_path = urllib.parse.urlparse(self.path).path
+
         # API 端點
-        if self.path == '/api/health':
+        if parsed_path == '/api/health':
             self.handle_health_check()
             return
-        if self.path == '/api/get-locations':
+        if parsed_path == '/api/get-locations':
             self.handle_get_locations()
             return
-        if self.path == '/api/stream-locations':
+        if parsed_path == '/api/stream-locations':
             self.handle_stream_locations()
             return
 
@@ -102,26 +105,27 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        print(f"DEBUG: do_POST path='{self.path}'")
-        if self.path == '/api/chat':
+        parsed_path = urllib.parse.urlparse(self.path).path
+        print(f"DEBUG: do_POST path='{self.path}' parsed_path='{parsed_path}'")
+        if parsed_path == '/api/chat':
             self.handle_chat()
             return
-        if self.path == '/api/nearby':
+        if parsed_path == '/api/nearby':
             self.handle_nearby()
             return
-        if self.path == '/api/execute':
+        if parsed_path == '/api/execute':
             self.handle_execute()
             return
-        if self.path == '/api/analyze-image':
+        if parsed_path == '/api/analyze-image':
             self.handle_analyze_image()
             return
-        if self.path == '/api/search':
+        if parsed_path == '/api/search':
             self.handle_location_search()
             return
-        if self.path == '/api/transit':
+        if parsed_path == '/api/transit':
             self.handle_transit()
             return
-        if self.path == '/api/sync-locations':
+        if parsed_path == '/api/sync-locations':
             self.handle_sync_locations()
             return
         self.send_error(404)
