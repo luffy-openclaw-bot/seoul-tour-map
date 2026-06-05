@@ -127,12 +127,6 @@ function updateCategoryLanguage(lang) {
     currentLanguage = lang;
     localStorage.setItem('seoul_tour_lang', lang);
     
-    // 更新下拉選單狀態
-    const desktopSelector = document.getElementById('lang-selector');
-    const mobileSelector = document.getElementById('mobile-lang-selector');
-    if (desktopSelector && desktopSelector.value !== lang) desktopSelector.value = lang;
-    if (mobileSelector && mobileSelector.value !== lang) mobileSelector.value = lang;
-
     // 替換所有帶有 data-i18n-category 屬性的文字
     document.querySelectorAll('[data-i18n-category]').forEach(el => {
         const catId = el.getAttribute('data-i18n-category');
@@ -1479,19 +1473,11 @@ function bindEvents() {
             // 切換到英文地圖
             map.removeLayer(window.osmLayer);
             map.addLayer(window.englishLayer);
-            document.getElementById('toggle-map-lang').title = '切換至韓文地圖';
-            document.getElementById('toggle-map-lang').innerHTML = '<i class="fas fa-globe"></i> 韓文';
         } else {
             // 切換到韓文地圖
             map.removeLayer(window.englishLayer);
             map.addLayer(window.osmLayer);
-            document.getElementById('toggle-map-lang').title = '切換至英文地圖';
-            document.getElementById('toggle-map-lang').innerHTML = '<i class="fas fa-globe"></i> English';
         }
-    }
-    const toggleMapLangBtn = document.getElementById('toggle-map-lang');
-    if (toggleMapLangBtn) {
-        toggleMapLangBtn.addEventListener('click', toggleMapLanguage);
     }
     // 定位我的位置
     const locateUserBtn = document.getElementById('locate-user');
@@ -1499,18 +1485,16 @@ function bindEvents() {
         locateUserBtn.addEventListener('click', locateUser);
     }
 
-    // 多國語言下拉選單
-    const desktopLangSelector = document.getElementById('lang-selector');
-    if (desktopLangSelector) {
-        desktopLangSelector.addEventListener('change', (e) => {
-            updateCategoryLanguage(e.target.value);
-        });
-    }
-
-    const mobileLangSelector = document.getElementById('mobile-lang-selector'); 
-    if (mobileLangSelector) {
-        mobileLangSelector.addEventListener('change', (e) => {
-            updateCategoryLanguage(e.target.value);
+    // 設置彈窗事件
+    const openSettingsBtn = document.getElementById('open-settings');
+    const burgerSettings = document.getElementById('burger-settings');
+    
+    if (openSettingsBtn) openSettingsBtn.addEventListener('click', openSettingsModal);
+    if (burgerSettings) {
+        burgerSettings.addEventListener('click', () => {
+            const dropdown = document.getElementById('burger-dropdown');
+            if (dropdown) dropdown.classList.remove('show');
+            openSettingsModal();
         });
     }
 

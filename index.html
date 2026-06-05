@@ -37,15 +37,8 @@
                     <span><i class="fas fa-bullseye"></i> 範圍篩選</span>
                     <div class="toggle-switch"><i class="fas fa-toggle-off"></i></div>
                 </div>
-                <div class="burger-menu-item" id="burger-toggle-lang">
-                    <span><i class="fas fa-globe"></i> English 地圖</span>
-                </div>
-                <div class="burger-menu-item">
-                    <span><i class="fas fa-language"></i> 介面語言</span>
-                    <select id="mobile-lang-selector" style="margin-left: auto; padding: 2px 5px; border-radius: 5px; border: 1px solid #ccc; outline: none;">
-                        <option value="zh-Hant">繁體中文</option>
-                        <option value="en">English</option>
-                    </select>
+                <div class="burger-menu-item" id="burger-settings">
+                    <span><i class="fas fa-cog"></i> 設置</span>
                 </div>
                 <div class="burger-menu-item" id="burger-locate-user">
                     <span><i class="fas fa-location-arrow"></i> 我的定位</span>
@@ -55,14 +48,6 @@
                 </div>
             </div>
             <div class="header-actions" id="desktop-actions">
-                <select id="lang-selector" class="btn-toggle" style="padding: 5px 10px; border-radius: 20px; background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3); outline: none; cursor: pointer;">
-                    <option value="zh-Hant" style="color: black;">繁體中文</option>
-                    <option value="en" style="color: black;">English</option>
-                </select>
-                <select id="map-selector" class="btn-toggle" style="padding: 5px 10px; border-radius: 20px; background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3); outline: none; cursor: pointer;" onchange="MapManager.setPreference(this.value)">
-                    <option value="google" style="color: black;">Google Maps</option>
-                    <option value="naver" style="color: black;">Naver Map</option>
-                </select>
                 <button id="toggle-subway" class="btn-toggle" title="顯示/隱藏地鐵線">
                     <i class="fas fa-subway"></i> 地鐵線
                 </button>
@@ -75,11 +60,11 @@
                 <button id="reset-map" class="btn-toggle" title="重置地圖">
                     <i class="fas fa-compress-arrows-alt"></i> 重置
                 </button>
-                <button id="toggle-map-lang" class="btn-toggle" title="切換至英文地圖">
-                    <i class="fas fa-globe"></i> English
-                </button>
                 <button id="locate-user" class="btn-toggle" title="定位我的位置">
                     <i class="fas fa-location-arrow"></i> 定位
+                </button>
+                <button id="open-settings" class="btn-toggle" title="設置">
+                    <i class="fas fa-cog"></i> 設置
                 </button>
             </div>
         </header>
@@ -323,6 +308,54 @@
             <button class="btn-primary" style="width: 100%; background-color: #03C75A; border: none; padding: 12px; border-radius: 8px; color: white; cursor: pointer; font-size: 16px;" onclick="MapManager.executeMapOpen('naver')">
                 <i class="fas fa-map-pin"></i> Naver Map
             </button>
+        </div>
+    </div>
+
+    <!-- 設置彈窗 (Settings Modal) -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content settings-content">
+            <button class="modal-close" onclick="closeSettingsModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="settings-title"><i class="fas fa-cog"></i> 應用程式設置</h3>
+            
+            <div class="settings-group">
+                <h4>介面與地圖</h4>
+                <div class="settings-field">
+                    <label for="setting-lang">介面語言</label>
+                    <select id="setting-lang" class="settings-select">
+                        <option value="zh-Hant">繁體中文</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <div class="settings-field">
+                    <label for="setting-map-provider">預設地圖供應商</label>
+                    <select id="setting-map-provider" class="settings-select">
+                        <option value="google">Google Maps</option>
+                        <option value="naver">Naver Map</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h4>範圍篩選預設值</h4>
+                <div class="settings-field">
+                    <label for="setting-radius-val">預設距離</label>
+                    <input type="number" id="setting-radius-val" class="settings-input" placeholder="例如: 5" min="0" step="any">
+                </div>
+                <div class="settings-field">
+                    <label for="setting-radius-unit">預設單位</label>
+                    <select id="setting-radius-unit" class="settings-select">
+                        <option value="km">公里 (km)</option>
+                        <option value="mi">英里 (mi)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-secondary" onclick="closeSettingsModal()">取消</button>
+                <button class="btn-primary" onclick="saveSettings()">儲存設置</button>
+            </div>
         </div>
     </div>
 
