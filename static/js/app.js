@@ -635,6 +635,18 @@ function toggleRadiusPanel() {
             const routePanel = document.getElementById('route-panel');
             if (routePanel) routePanel.classList.add('hidden');
             if (toggleBtn) toggleBtn.classList.add('active');
+            
+            // 載入預設範圍設定 (若欄位為空)
+            const radiusValInput = document.getElementById('radius-val');
+            const radiusUnitInput = document.getElementById('radius-unit');
+            if (radiusValInput && !radiusValInput.value) {
+                const defaultVal = localStorage.getItem('seoul_tour_radius_val');
+                if (defaultVal) radiusValInput.value = defaultVal;
+            }
+            if (radiusUnitInput) {
+                const defaultUnit = localStorage.getItem('seoul_tour_radius_unit');
+                if (defaultUnit) radiusUnitInput.value = defaultUnit;
+            }
         } else {
             if (toggleBtn) toggleBtn.classList.remove('active');
         }
@@ -3147,16 +3159,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // English 地圖（手機版）
-    const burgerLang = document.getElementById('burger-toggle-lang');
-    if (burgerLang) {
-        burgerLang.addEventListener('click', function() {
-            const desktopBtn = document.getElementById('toggle-map-lang');
-            if (desktopBtn) desktopBtn.click();
-            burgerDropdown.classList.remove('show');
-        });
-    }
-    
     // 我的定位（手機版）
     const burgerLocate = document.getElementById('burger-locate-user');
     if (burgerLocate) {
@@ -3615,13 +3617,17 @@ const WishlistManager = {
                 changed = true;
             } else {
                 const localItem = localMap.get(remoteItem.id);
-                // 檢查是否有更新
-                if (localItem.wish !== remoteItem.wish ||
-                    localItem.pinned !== remoteItem.pinned ||
-                    localItem.visited !== remoteItem.visited ||
-                    localItem.myRemark !== remoteItem.myRemark) {
+                const remoteTime = remoteItem.updatedAt || remoteItem.addedAt || 0;
+                const localTime = localItem.updatedAt || localItem.addedAt || 0;
+
+                if (remoteTime > localTime) {
                     merged.push(remoteItem);
-                    changed = true;
+                    if (localItem.wish !== remoteItem.wish ||
+                        localItem.pinned !== remoteItem.pinned ||
+                        localItem.visited !== remoteItem.visited ||
+                        localItem.myRemark !== remoteItem.myRemark) {
+                        changed = true;
+                    }
                 } else {
                     merged.push(localItem);
                 }
@@ -3665,7 +3671,8 @@ const WishlistManager = {
                 myRemark: item.myRemark !== undefined ? item.myRemark : (items[existingIdx].myRemark || ''),
                 category: item.category || items[existingIdx].category,
                 price: item.price || items[existingIdx].price,
-                description: item.description || items[existingIdx].description
+                description: item.description || items[existingIdx].description,
+                updatedAt: Date.now()
             };
             console.log('[Wishlist] Updated:', item.name);
         } else {
@@ -3679,6 +3686,7 @@ const WishlistManager = {
                 price: item.price || '',
                 description: item.description || '',
                 addedAt: Date.now(),
+                updatedAt: Date.now(),
                 ownerFingerprint: FingerprintManager.getFingerprint(),
                 wish: item.wish || false,
                 pinned: item.pinned || false,
