@@ -128,6 +128,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if parsed_path == '/api/sync-locations':
             self.handle_sync_locations()
             return
+        if parsed_path == '/api/geocode':
+            self.handle_geocode()
+            return
         self.send_error(404)
 
     def handle_chat(self):
@@ -276,6 +279,39 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         except Exception as e:
             self.send_json({'reply': f'系統錯誤：{str(e)}', 'error': True})
+
+    def handle_geocode(self):
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+            query = data.get('query', '')
+            
+            if not query:
+                self.send_json({'error': 'No query provided'}, status=400)
+                return
+                
+            params = urllib.parse.urlencode({
+                'format': 'json',
+                'q': query,
+                'limit': 1,
+                'accept-language': 'zh-TW,zh-CN,en'
+            })
+            
+            url = f"https://nominatim.openstreetmap.org/search?{params}"
+            req = urllib.request.Request(
+                url,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (compatible; SeoulMap/2.0; +https://seoul-tour-map.local)'
+                }
+            )
+            
+            opener = create_urllib_opener()
+            with opener.open(req, timeout=10) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                self.send_json(result)
+        except Exception as e:
+            self.send_json({'error': str(e)}, status=500)
 
     def handle_nearby(self):
         """處理附近景點查詢"""

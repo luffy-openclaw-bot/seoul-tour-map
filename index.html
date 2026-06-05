@@ -350,6 +350,16 @@
                         <option value="mi">英里 (mi)</option>
                     </select>
                 </div>
+                <div class="settings-field">
+                    <label for="setting-radius-center">預設中心點 (地名 或 緯度,經度)</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="setting-radius-center" class="settings-input" placeholder="例如: 明洞 或 37.56, 126.98">
+                        <button type="button" id="btn-geocode-center" class="btn-secondary" style="white-space: nowrap;"><i class="fas fa-search"></i> 解析</button>
+                    </div>
+                    <small id="setting-radius-center-result" style="color: #666; display: block; margin-top: 5px;"></small>
+                    <input type="hidden" id="setting-radius-lat">
+                    <input type="hidden" id="setting-radius-lng">
+                </div>
             </div>
 
             <div class="settings-actions">
