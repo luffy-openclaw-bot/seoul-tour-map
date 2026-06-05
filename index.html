@@ -55,6 +55,10 @@
                     <option value="zh-Hant" style="color: black;">繁體中文</option>
                     <option value="en" style="color: black;">English</option>
                 </select>
+                <select id="map-selector" class="btn-toggle" style="padding: 5px 10px; border-radius: 20px; background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3); outline: none; cursor: pointer;" onchange="MapManager.setPreference(this.value)">
+                    <option value="google" style="color: black;">Google Maps</option>
+                    <option value="naver" style="color: black;">Naver Map</option>
+                </select>
                 <button id="toggle-subway" class="btn-toggle" title="顯示/隱藏地鐵線">
                     <i class="fas fa-subway"></i> 地鐵線
                 </button>
@@ -262,6 +266,23 @@
                 <i class="fas fa-times"></i>
             </button>
             <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- 地圖選擇彈窗 -->
+    <div id="map-selection-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 300px; text-align: center;">
+            <button class="modal-close" onclick="document.getElementById('map-selection-modal').classList.add('hidden')">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 style="margin-bottom: 15px;">選擇預設地圖</h3>
+            <p style="margin-bottom: 20px; color: #666; font-size: 0.9em;">請選擇您偏好的地圖應用程式，我們將記住您的選擇。</p>
+            <button class="btn-primary" style="width: 100%; margin-bottom: 10px; background-color: #4285F4; border: none; padding: 12px; border-radius: 8px; color: white; cursor: pointer; font-size: 16px;" onclick="MapManager.executeMapOpen('google')">
+                <i class="fas fa-map-marker-alt"></i> Google Maps
+            </button>
+            <button class="btn-primary" style="width: 100%; background-color: #03C75A; border: none; padding: 12px; border-radius: 8px; color: white; cursor: pointer; font-size: 16px;" onclick="MapManager.executeMapOpen('naver')">
+                <i class="fas fa-map-pin"></i> Naver Map
+            </button>
         </div>
     </div>
 

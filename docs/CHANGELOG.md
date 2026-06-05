@@ -1,5 +1,18 @@
 # 首爾旅遊地圖平台 - 改動紀錄
 
+## 📅 2026-06-05 v42 (地圖偏好選擇功能)
+
+### ✨ 新功能：Google Maps 與 Naver Map 選擇
+
+**功能描述：**
+新增功能允許用戶在點擊地圖連結時選擇他們偏好的地圖應用程式（Google Maps 或 Naver Map），並將選擇記憶下來，以便日後使用。
+
+**實現內容：**
+- `index.html`：新增地圖選擇彈窗 `#map-selection-modal`，以及在頂部導航欄和手機版選單新增地圖選擇下拉選單。
+- `app.js`：實作 `MapManager`，管理 `localStorage` 中的 `tour_map_preference` 設定，並動態生成對應的地圖連結。
+- `app.js` & `search_module.js`：將原有的 Google Maps 連結 `<a>` 標籤改為按鈕 `<button>`，點擊後觸發 `MapManager.openMap()`。
+- `style.css` & `search_module.css`：新增並更新地圖按鈕的樣式，將 `btn-gmaps` 重新命名為 `btn-open-map`，並增加 Naver Map 和 Google Maps 按鈕的特定顏色設定。
+
 ## 📅 2025-06-04 v38 (價格資訊 + 願望清單功能)
 
 ### ✨ 新功能 1：搜索結果價格資訊顯示

@@ -35,15 +35,14 @@ const SearchPopup = {
         this.currentLat = lat;
         this.currentLng = lng;
 
-        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
         const content = `
             <div class="search-popup-container">
                 <div class="search-popup-header">
                     <div class="search-coord">📍 ${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}</div>
                     <div class="search-location-name" id="search-location-name">正在識別位置...</div>
-                    <a href="${googleMapsUrl}" target="_blank" class="google-maps-btn" onclick="event.stopPropagation()">
-                        <i class="fas fa-map"></i> Google Maps
-                    </a>
+                    <button class="open-map-btn" onclick="MapManager.openMap(${lat}, ${lng}); event.stopPropagation();">
+                        <i class="fas fa-map"></i> 開啟地圖
+                    </button>
                     <button class="pin-location-btn-mini" onclick="openSaveLocationModal(${lat}, ${lng}); SearchPopup.close();" title="儲存此位置">
                         <i class="fas fa-save"></i> 儲存
                     </button>
