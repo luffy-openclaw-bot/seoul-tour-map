@@ -658,48 +658,6 @@ body {
     line-height: 1.5;
 }
 
-/* ==================== 地圖圖例 - 固定位置，避免被遮擋 ==================== */
-.map-legend {
-    position: absolute;
-    bottom: 70px;
-    left: 15px;
-    background: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    z-index: 400;
-    min-width: 120px;
-    max-width: 200px;
-    font-size: 11px;
-}
-
-.map-legend h4 {
-    font-size: 11px;
-    margin-bottom: 4px;
-    color: #555;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10px;
-    margin-bottom: 3px;
-    color: #666;
-}
-
-.dot {
-    width: 8px;
-    height: 8px;
-}
-
-.dot.history { background: #e74c3c; }
-.dot.landmark { background: #3498db; }
-.dot.shopping { background: #f39c12; }
-.dot.nightlife { background: #9b59b6; }
-.dot.entertainment { background: #e91e63; }
-.dot.leisure { background: #1abc9c; }
-.dot.nature { background: #27ae60; }
 
 /* 地圖控制按鈕優化 */
 .leaflet-control-zoom {
@@ -1479,15 +1437,6 @@ body {
             padding: 8px;
         }
 
-        .legend-item {
-            font-size: 10px;
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-        }
-
         .cat-btn {
             font-size: 11px;
             padding: 6px 8px;
@@ -1598,11 +1547,6 @@ body {
         z-index: 1000 !important;
     }
 
-    /* 地圖圖例按鈕 */
-    .map-legend {
-        z-index: 900 !important;
-    }
-
     /* ===== Chat widget mobile enhancements ===== */
 
     /* chat-header 作為定位上下文（badge-dot 需要） */
@@ -1644,10 +1588,6 @@ body {
 
 .modal {
     z-index: 10001 !important;
-}
-
-.map-legend {
-    z-index: 900 !important;
 }
 
 /* 按鈕 hover 啟用狀態 */
