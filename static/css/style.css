@@ -886,9 +886,13 @@ body {
     top: 2px;
     right: 2px;
     left: auto;
-    font-size: 4px;
     margin-left: 0;
     pointer-events: none;
+}
+
+.ai-chat.collapsed .chat-header .status-indicator i {
+    font-size: 6px;
+    text-shadow: 0 0 2px currentColor !important;
 }
 
 .ai-chat.collapsed .chat-body {
