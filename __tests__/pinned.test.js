@@ -10,7 +10,9 @@ global.EventSource = class {
 
 global.map = {
     closePopup: jest.fn(),
-    flyTo: jest.fn()
+    flyTo: jest.fn(),
+    removeLayer: jest.fn(),
+    addLayer: jest.fn()
 };
 
 global.L = {
@@ -20,7 +22,13 @@ global.L = {
                 openOn: jest.fn()
             })
         })
-    })
+    }),
+    divIcon: jest.fn(() => ({})),
+    marker: jest.fn(() => ({
+        addTo: jest.fn(() => ({
+            bindPopup: jest.fn()
+        }))
+    }))
 };
 
 global.fetch = jest.fn(() => Promise.resolve({ ok: true }));
