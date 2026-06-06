@@ -750,6 +750,44 @@ function clearRadiusFilter() {
     addMarkers();
 }
 
+function initRadiusFilter() {
+    const defaultVal = localStorage.getItem('seoul_tour_radius_val');
+    const defaultLat = localStorage.getItem('seoul_tour_radius_center_lat');
+    const defaultLng = localStorage.getItem('seoul_tour_radius_center_lng');
+    const defaultUnit = localStorage.getItem('seoul_tour_radius_unit') || 'km';
+
+    if (defaultVal && defaultLat && defaultLng) {
+        const radiusLatInput = document.getElementById('radius-lat');
+        const radiusLngInput = document.getElementById('radius-lng');
+        const radiusValInput = document.getElementById('radius-val');
+        const radiusUnitInput = document.getElementById('radius-unit');
+        
+        if (radiusLatInput) radiusLatInput.value = defaultLat;
+        if (radiusLngInput) radiusLngInput.value = defaultLng;
+        if (radiusValInput) radiusValInput.value = defaultVal;
+        if (radiusUnitInput) radiusUnitInput.value = defaultUnit;
+        
+        const lat = parseFloat(defaultLat);
+        const lng = parseFloat(defaultLng);
+        const val = parseFloat(defaultVal);
+        
+        if (!isNaN(lat) && !isNaN(lng) && !isNaN(val) && val > 0) {
+            radiusState.active = true;
+            radiusState.lat = lat;
+            radiusState.lng = lng;
+            radiusState.radiusMeters = defaultUnit === 'mi' ? val * 1609.344 : val * 1000;
+            
+            updateRadiusVisuals();
+            
+            const toggleBtn = document.getElementById('toggle-radius-filter');
+            if (toggleBtn) toggleBtn.classList.add('active');
+            
+            return true;
+        }
+    }
+    return false;
+}
+
 function updateRadiusVisuals() {
     if (!map || !radiusState.active) return;
     
@@ -1896,12 +1934,30 @@ function toggleChat() {
         if (statusBar) statusBar.classList.add('hidden');
     }
     
-    // 首次展開時才檢查系統狀態並顯示指示器
-    if (!chat.classList.contains('collapsed') && !systemStatusChecked) {
-        const statusDot = document.getElementById('system-status');
-        if (statusDot) statusDot.classList.remove('hidden');
-        checkSystemStatus();
-        systemStatusChecked = true;
+    // 展開時的處理邏輯
+    if (!chat.classList.contains('collapsed')) {
+        // 首次展開時才檢查系統狀態並顯示指示器
+        if (!systemStatusChecked) {
+            const statusDot = document.getElementById('system-status');
+            if (statusDot) statusDot.classList.remove('hidden');
+            checkSystemStatus();
+            systemStatusChecked = true;
+        }
+
+        // 自動平滑捲動到最後一則訊息的頂部
+        setTimeout(() => {
+            const container = document.getElementById('chat-messages');
+            if (container) {
+                const messages = container.querySelectorAll('.message');
+                if (messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    container.scrollTo({
+                        top: lastMessage.offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }, 50);
     }
 }
 
@@ -3028,6 +3084,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('mobile-search-input')?.addEventListener('input', handlePanelSearchInput);
     document.getElementById('desktop-search-clear')?.addEventListener('click', clearPanelSearch);
     document.getElementById('mobile-search-clear')?.addEventListener('click', clearPanelSearch);
+    
+    initRadiusFilter();
     
     renderAttractionList();
     addMarkers();
@@ -4325,6 +4383,7 @@ if (typeof module !== 'undefined' && module.exports) {
         addMarkers,
         calculateHaversineDistance,
         radiusState,
+        initRadiusFilter,
         applyRadiusFilter,
         clearRadiusFilter,
         parseRadiusSlashCommand
