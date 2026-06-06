@@ -1944,7 +1944,7 @@ async function fetchAIReply(userText) {
             message: userText,
             system: getSystemContext(),
             history: chatHistory.slice(0, -1),  // 唔包剛加入嘅 user message
-            fingerprint: fingerprintManager.getFingerprint()
+            fingerprint: FingerprintManager.getFingerprint()
         })
     });
 
@@ -2870,7 +2870,7 @@ function locateUserAndReport() {
                         lat: latitude,
                         lng: longitude,
                         history: chatHistory,
-                        fingerprint: fingerprintManager.getFingerprint()
+                        fingerprint: FingerprintManager.getFingerprint()
                     })
                 });
 
