@@ -224,8 +224,11 @@ function initMap() {
     map = L.map('map', {
         center: [37.5665, 126.9780],
         zoom: 13,
-        zoomControl: true
+        zoomControl: false
     });
+
+    // 建立右下角 (或者左下角) 的小縮放按鈕
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     // 建立兩種地圖圖層
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
