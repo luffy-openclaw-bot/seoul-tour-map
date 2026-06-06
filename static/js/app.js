@@ -1821,8 +1821,14 @@ function bindEvents() {
     const toggleRadiusBtn = document.getElementById('toggle-radius-filter');
     
     if (toggleRadiusBtn) toggleRadiusBtn.addEventListener('click', toggleRadiusPanel);
-    if (btnRadiusApply) btnRadiusApply.addEventListener('click', applyRadiusFilter);
-    if (btnRadiusClear) btnRadiusClear.addEventListener('click', clearRadiusFilter);
+    if (btnRadiusApply) btnRadiusApply.addEventListener('click', () => {
+        applyRadiusFilter();
+        toggleRadiusPanel();
+    });
+    if (btnRadiusClear) btnRadiusClear.addEventListener('click', () => {
+        clearRadiusFilter();
+        toggleRadiusPanel();
+    });
     if (btnRadiusPickMap) {
         btnRadiusPickMap.addEventListener('click', () => {
             radiusState.pickingMap = !radiusState.pickingMap;
@@ -1836,6 +1842,29 @@ function bindEvents() {
                 btnRadiusPickMap.style.color = '';
             }
         });
+    }
+
+    // Add both click & contextmenu listeners for map picking
+    if (map) {
+        const handleMapPick = (e) => {
+            if (radiusState.pickingMap) {
+                e.originalEvent?.preventDefault();
+                document.getElementById('radius-lat').value = e.latlng.lat.toFixed(6);
+                document.getElementById('radius-lng').value = e.latlng.lng.toFixed(6);
+                radiusState.pickingMap = false;
+                document.getElementById('map').style.cursor = '';
+                const pickBtn = document.getElementById('btn-radius-pick-map');
+                if (pickBtn) {
+                    pickBtn.style.backgroundColor = '';
+                    pickBtn.style.color = '';
+                }
+                if (document.getElementById('radius-val').value) {
+                    applyRadiusFilter();
+                }
+            }
+        };
+        map.on('click', handleMapPick);
+        map.on('contextmenu', handleMapPick);
     }
 
     let radiusDebounceTimer;
