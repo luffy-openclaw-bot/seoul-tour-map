@@ -864,6 +864,97 @@ body {
     flex-shrink: 0;
 }
 
+/* 範圍篩選面板 */
+.radius-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 500;
+    width: 280px;
+}
+
+.radius-panel.hidden {
+    display: none;
+}
+
+.radius-panel h3 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.radius-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.radius-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.radius-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.radius-coord-inputs,
+.radius-dist-inputs {
+    display: flex;
+    gap: 8px;
+}
+
+.radius-field input[type="number"],
+.radius-field select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.radius-field input[type="number"]:focus,
+.radius-field select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+
+.btn-secondary {
+    padding: 10px;
+    background: #f1f5f9;
+    color: #475569;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
 /* ==================== AI 對話框 ==================== */
 .ai-chat {
     position: fixed;
@@ -1545,7 +1636,8 @@ body {
         max-width: 350px;
     }
 
-    .route-panel {
+    .route-panel,
+    .radius-panel {
         width: calc(100% - 40px);
         right: 20px;
         left: 20px;
@@ -1580,22 +1672,27 @@ body {
             left: auto;
         }
 
-        .route-panel {
+        .route-panel,
+        .radius-panel {
             width: 90%;
             right: 5%;
             left: 5%;
             bottom: 15px;
         }
 
-        .route-panel h3 {
+        .route-panel h3,
+        .radius-panel h3 {
             font-size: 13px;
         }
 
-        .route-field label {
+        .route-field label,
+        .radius-field label {
             font-size: 11px;
         }
 
         .route-field select,
+        .radius-field select,
+        .radius-field input,
         .btn-primary {
             font-size: 12px;
             padding: 8px;
@@ -1654,7 +1751,8 @@ body {
     }
 
     /* 調高 Route Panel z-index */
-    .route-panel {
+    .route-panel,
+    .radius-panel {
         z-index: 9999 !important;
     }
 
@@ -1695,7 +1793,8 @@ body {
     z-index: 10000 !important;
 }
 
-.route-panel {
+.route-panel,
+.radius-panel {
     z-index: 9999 !important;
 }
 
