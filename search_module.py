@@ -21,6 +21,7 @@ import time
 import glob
 import uuid
 import subprocess
+import math
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 
@@ -179,6 +180,20 @@ class LocationSearcher:
             print(f"[LocationSearcher] Seoul Data Plaza error: {e}")
             return {}
     
+    def _calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """Calculate distance between two points in meters using Haversine formula"""
+        R = 6371000  # Earth radius in meters
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+
+        a = math.sin(delta_phi / 2) * math.sin(delta_phi / 2) + \
+            math.cos(phi1) * math.cos(phi2) * \
+            math.sin(delta_lambda / 2) * math.sin(delta_lambda / 2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+
     def search(self, lat: float, lng: float, query_type: str = "all", radius: int = 2000) -> Dict:
         """
         主搜索方法
@@ -216,9 +231,25 @@ class LocationSearcher:
             # Pass API data as context for AI to summarize and enrich
             print("[LocationSearcher] Analyzing with AI...")
             places = self._analyze_with_ai(
-                api_data, query_type, location_name, lat, lng
+                api_data, query_type, location_name, lat, lng, radius
             )
-            print(f"[LocationSearcher] AI analysis complete. Found {len(places)} places.")
+            
+            # Step 3.5: Strict radius filtering
+            if lat is not None and lng is not None:
+                filtered_places = []
+                for place in places:
+                    if place.lat is not None and place.lng is not None:
+                        dist = self._calculate_distance(lat, lng, place.lat, place.lng)
+                        if dist <= radius:
+                            place.distance = f"{int(dist)}m"
+                            filtered_places.append(place)
+                        else:
+                            print(f"[LocationSearcher] Filtered out {place.name} (distance: {dist:.0f}m > radius: {radius}m)")
+                    else:
+                        filtered_places.append(place)
+                places = filtered_places
+
+            print(f"[LocationSearcher] AI analysis complete. Kept {len(places)} places within radius.")
             
             # Step 4: Determine data source label
             source_label = "ai_knowledge"
@@ -410,7 +441,7 @@ class LocationSearcher:
         return None
     
     def _analyze_with_ai(self, api_data: Dict, query_type: str, location_name: str,
-                          lat: float = None, lng: float = None) -> List[PlaceInfo]:
+                          lat: float = None, lng: float = None, radius: int = 2000) -> List[PlaceInfo]:
         """
         使用 Ollama AI 分析 API 數據或基於知識庫推薦
         """
@@ -419,7 +450,7 @@ class LocationSearcher:
         
         try:
             # 構建 AI 分析請求
-            system_prompt = self._get_analysis_prompt(query_type, location_name, bool(visit_korea_items))
+            system_prompt = self._get_analysis_prompt(query_type, location_name, bool(visit_korea_items), radius)
             
             user_content = f"位置：{location_name}\n搜索中心坐標：({lat:.5f}, {lng:.5f})" if lat and lng else f"位置：{location_name}"
             user_content += "\n\n"
@@ -465,7 +496,7 @@ class LocationSearcher:
             print(f"[LocationSearcher] AI analysis error: {e}")
             return []
     
-    def _get_analysis_prompt(self, query_type: str, location_name: str, has_search_results: bool) -> str:
+    def _get_analysis_prompt(self, query_type: str, location_name: str, has_search_results: bool, radius: int) -> str:
         """獲取 AI 分析的 system prompt"""
         
         category_focus = {
@@ -479,9 +510,9 @@ class LocationSearcher:
         
         data_source_note = ""
         if not has_search_results:
-            data_source_note = "\n\n注意：由於實時 API 數據暫時不可用，請基於你對首爾的旅遊知識庫推薦附近地點。"
+            data_source_note = f"\n\n注意：由於實時 API 數據暫時不可用，請基於你對首爾的旅遊知識庫推薦附近地點。請確保推薦的地點必須位於搜索中心點的 {radius} 米範圍內。"
         else:
-            data_source_note = "\n\n注意：請優先使用提供的【VisitKorea】或【首爾城市數據】進行分析，並將其轉化為用戶友好的廣東話描述。"
+            data_source_note = f"\n\n注意：請優先使用提供的【VisitKorea】或【首爾城市數據】進行分析，並將其轉化為用戶友好的廣東話描述。請確保推薦的地點必須位於搜索中心點的 {radius} 米範圍內。"
         
         return f"""你係韓國旅遊資訊分析專家。{data_source_note}
 
