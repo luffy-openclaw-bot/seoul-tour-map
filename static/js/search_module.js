@@ -4,8 +4,11 @@
  */
 
 // ==================== 搜索配置 ====================
+// 若部署到靜態伺服器，可通過全局 API_BASE_URL（在 app.js 中定義）補全
+const API_PREFIX = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+
 const SearchConfig = {
-    ENDPOINT: '/api/search',
+    ENDPOINT: `${API_PREFIX}/api/search`,
     TIMEOUT: 60000,  // 60秒（含網頁搜索）
     DEFAULT_RADIUS: 2000,
     MAX_RESULTS: 5

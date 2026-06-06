@@ -2,6 +2,11 @@
  * 首爾旅遊地圖平台 - 主程式
  */
 
+// ==================== 全局配置 ====================
+// 如果前端部署到靜態伺服器 (例如 GitHub Pages, Vercel)，
+// 請將此處改為後端 Python API 的完整 URL（例如：'https://your-backend.onrender.com'）
+const API_BASE_URL = ''; 
+
 // ==================== 全局變量 ====================
 let map;
 let markers = {};
@@ -305,7 +310,7 @@ async function searchNearby(lat, lng) {
     }).map(attr => `${attr.name} (${attr.local_name}) - ${attr.category}`).join('\n');
     
     try {
-        const response = await fetch('/api/nearby', {
+        const response = await fetch(`${API_BASE_URL}/api/nearby`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lat, lng, radius: 2000 })
@@ -1297,7 +1302,7 @@ document.getElementById('btn-geocode-center')?.addEventListener('click', async f
     resultEl.textContent = '搜尋中...';
     resultEl.style.color = '#666';
     try {
-        const response = await fetch('/api/geocode', {
+        const response = await fetch(`${API_BASE_URL}/api/geocode`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: input })
@@ -1859,12 +1864,12 @@ async function handleTransitCommand() {
     try {
         // 同時獲取巴士同地鐵資訊
         const [busRes, subwayRes] = await Promise.all([
-            fetch('/api/transit', {
+            fetch(`${API_BASE_URL}/api/transit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ lat, lng, type: 'bus' })
             }),
-            fetch('/api/transit', {
+            fetch(`${API_BASE_URL}/api/transit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ lat, lng, type: 'subway' })
@@ -1932,7 +1937,7 @@ async function handleTransitCommand() {
 }
 
 async function fetchAIReply(userText) {
-    const response = await fetch('/api/chat', {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2559,7 +2564,7 @@ async function executeMapAction(action, params) {
     }
     
     try {
-        const response = await fetch('/api/execute', {
+        const response = await fetch(`${API_BASE_URL}/api/execute`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, params })
@@ -2857,7 +2862,7 @@ function locateUserAndReport() {
 
             // 報告位置給後端
             try {
-                const response = await fetch('/api/chat', {
+                const response = await fetch(`${API_BASE_URL}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -3158,7 +3163,7 @@ async function analyzeUploadedImage() {
         // 只發送 base64 內容（唔要 data:image/... 前綴）
         const base64Image = currentUploadedImage.split(',')[1];
         
-        const response = await fetch('/api/analyze-image', {
+        const response = await fetch(`${API_BASE_URL}/api/analyze-image`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image: base64Image }),
@@ -3690,7 +3695,7 @@ const WishlistManager = {
     async syncToServer(items) {
         try {
             toggleLoadingState(true);
-            const response = await fetch('/api/sync-locations', {
+            const response = await fetch(`${API_BASE_URL}/api/sync-locations`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(items)
@@ -4057,7 +4062,7 @@ async function checkSystemStatus() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超時
 
-        const response = await fetch('/api/health', {
+        const response = await fetch(`${API_BASE_URL}/api/health`, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);
