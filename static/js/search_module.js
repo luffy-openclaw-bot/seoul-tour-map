@@ -527,6 +527,14 @@ function initLocationSearch() {
             L.DomEvent.preventDefault(e.originalEvent);
         }
 
+        // 如果正在使用範圍篩選的「在地圖上選取」功能，交由原始處理函數處理
+        if (typeof window.radiusState !== 'undefined' && window.radiusState.pickingMap) {
+            if (typeof window.originalOnMapClick === 'function') {
+                window.originalOnMapClick(e);
+            }
+            return;
+        }
+
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
 

@@ -29,6 +29,7 @@ let radiusState = {
     circleLayer: null,
     pickingMap: false
 };
+window.radiusState = radiusState; // 暴露到全局作用域
 
 // ==================== 距離計算 (Haversine) ====================
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
