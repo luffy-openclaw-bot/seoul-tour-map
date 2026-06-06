@@ -841,7 +841,9 @@ function getFilteredAttractions(category) {
             category: item.category || '自訂景點',
             image: '',
             ticket: item.price || '',
-            description: item.description || ''
+            description: item.description || '',
+            addedAt: item.addedAt,
+            updatedAt: item.updatedAt
         };
     });
 
@@ -852,6 +854,17 @@ function getFilteredAttractions(category) {
         if (!exists) {
             combined.push(customItem);
         }
+    });
+
+    // Sort items by timestamp (newest first)
+    combined.sort((a, b) => {
+        // Get timestamps for a and b (use updatedAt if available, else addedAt, else 0)
+        const getTimestamp = (item) => {
+            return item.updatedAt || item.addedAt || 0;
+        };
+        const timeA = getTimestamp(a);
+        const timeB = getTimestamp(b);
+        return timeB - timeA; // descending order
     });
 
     let items = combined;
