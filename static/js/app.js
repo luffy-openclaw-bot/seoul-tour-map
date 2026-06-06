@@ -19,6 +19,7 @@ let attractionsData = [];
 let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面板同步
 let subwayData = {};
 let activeCategory = 'all';
+let lastBotMessageElement = null; // Track last bot message DOM element
 
 // ==================== Radius Filter 狀態 ====================
 let radiusState = {
@@ -2340,6 +2341,11 @@ function addMessage(text, sender, isRestore = false) {
 
     // Bind click handlers for fly_to links after DOM insertion
     if (sender === 'bot') {
+        // Update lastBotMessageElement (only if not restoring)
+        if (!isRestore) {
+            lastBotMessageElement = div;
+        }
+        
         div.querySelectorAll('.fly-to-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -2801,6 +2807,50 @@ function toggleMobilePanel(expanded) {
 
 
 // ==================== AI 地圖控制指令執行 ====================
+// Helper function to add "Go there again" button to last bot message
+function addLocationButtonToLastBotMessage(locationData) {
+    if (!lastBotMessageElement) return;
+    
+    // Find the bubble div in lastBotMessageElement
+    const bubble = lastBotMessageElement.querySelector('.bubble');
+    if (!bubble) return;
+    
+    // Create button element
+    const button = document.createElement('button');
+    button.className = 'go-there-again-btn';
+    button.style.cssText = `
+        margin-top: 10px;
+        padding: 8px 16px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    `;
+    button.innerHTML = '<i class="fas fa-map-marker-alt"></i> 再次前往';
+    
+    // Store location data in button
+    button.dataset.locationData = JSON.stringify(locationData);
+    
+    // Add click handler
+    button.addEventListener('click', () => {
+        const data = JSON.parse(button.dataset.locationData);
+        if (data.type === 'attraction' && data.attraction) {
+            focusAttraction(data.attraction);
+        } else if (data.lat && data.lng) {
+            flyToSearchResult(data.lat, data.lng, data.title || '位置');
+            addSearchMarker(data.lat, data.lng, data.title || '位置', data.color || '#e74c3c', data.title || '位置', true);
+        }
+    });
+    
+    // Append button to bubble
+    bubble.appendChild(button);
+}
+
 async function executeMapAction(action, params) {
     console.log('[Map Action] Executing:', action, params);
     
@@ -2841,18 +2891,33 @@ async function executeMapAction(action, params) {
                 if (params.lat !== undefined && params.lng !== undefined) {
                     map.setView([params.lat, params.lng], params.zoom || 15);
                     console.log(`[Map Action] Map centered at ${params.lat}, ${params.lng}, zoom ${params.zoom || 15}`);
+                    addLocationButtonToLastBotMessage({
+                        lat: params.lat,
+                        lng: params.lng,
+                        title: params.title || '位置'
+                    });
                 }
                 break;
             case 'focus_attraction':
                 const attr = attractionsData.find(a => a.id === params.id);
                 if (attr) {
                     focusAttraction(attr);
+                    addLocationButtonToLastBotMessage({
+                        type: 'attraction',
+                        attraction: attr
+                    });
                 } else {
                     // 嘗試用名稱查找
                     const attrByName = attractionsData.find(a =>
                         a.name.includes(params.id) || params.id.includes(a.name)
                     );
-                    if (attrByName) focusAttraction(attrByName);
+                    if (attrByName) {
+                        focusAttraction(attrByName);
+                        addLocationButtonToLastBotMessage({
+                            type: 'attraction',
+                            attraction: attrByName
+                        });
+                    }
                 }
                 break;
             case 'highlight_category':
@@ -2889,6 +2954,12 @@ async function executeMapAction(action, params) {
                     
                     addSearchMarker(params.lat, params.lng, title, color, popup, pulse);
                     console.log(`[Map Action] Added marker for "${title}" at ${params.lat}, ${params.lng}`);
+                    addLocationButtonToLastBotMessage({
+                        lat: params.lat,
+                        lng: params.lng,
+                        title: title,
+                        color: color
+                    });
                 }
                 break;
             case 'add_polygon':
@@ -2940,6 +3011,11 @@ async function executeMapAction(action, params) {
                     // 使用統一的 flyToSearchResult 以獲得豐富的氣泡詳情
                     flyToSearchResult(params.lat, params.lng, title);
                     console.log(`[Map Action] Flying to ${params.lat}, ${params.lng} (${title})`);
+                    addLocationButtonToLastBotMessage({
+                        lat: params.lat,
+                        lng: params.lng,
+                        title: title
+                    });
                 }
                 break;
             case 'add_to_list':
@@ -2964,6 +3040,12 @@ async function executeMapAction(action, params) {
                     addSearchMarker(lat, lng, params.name, color, params.name, true);
                     
                     console.log(`[Map Action] Added to list & map: ${params.name}`);
+                    addLocationButtonToLastBotMessage({
+                        lat: lat,
+                        lng: lng,
+                        title: params.name,
+                        color: color
+                    });
                 }
                 break;
             case 'transit_info':
