@@ -1266,6 +1266,50 @@ function closeModal() {
 }
 
 // ==================== 設置彈窗 ====================
+function showSettingsNotification(message, type = 'success') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-20px);
+        background: ${type === 'success' ? '#27ae60' : '#e74c3c'};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        z-index: 10000;
+        opacity: 0;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    `;
+    
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(-50%) translateY(0)';
+    }, 10);
+    
+    // Animate out after 3 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(-50%) translateY(-20px)';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
 window.openSettingsModal = function() {
     document.getElementById('setting-lang').value = localStorage.getItem('seoul_tour_lang') || 'zh-Hant';
     document.getElementById('setting-map-provider').value = localStorage.getItem('tour_map_preference') || 'google';
@@ -1279,8 +1323,15 @@ window.openSettingsModal = function() {
     document.getElementById('setting-radius-center').value = centerName || (centerLat && centerLng ? `${centerLat}, ${centerLng}` : '');
     document.getElementById('setting-radius-lat').value = centerLat;
     document.getElementById('setting-radius-lng').value = centerLng;
-    document.getElementById('setting-radius-center-result').textContent = centerLat && centerLng ? `已設定: ${centerLat}, ${centerLng}` : '';
-    document.getElementById('setting-radius-center-result').style.color = '#2ecc71';
+    
+    const resultEl = document.getElementById('setting-radius-center-result');
+    if (centerLat && centerLng) {
+        resultEl.textContent = `已設定: ${centerLat}, ${centerLng}`;
+        resultEl.style.color = '#2ecc71';
+        resultEl.style.borderLeftColor = '#2ecc71';
+    } else {
+        resultEl.textContent = '';
+    }
 
     document.getElementById('settings-modal').classList.remove('hidden');
 };
@@ -1320,8 +1371,13 @@ window.saveSettings = function() {
 
     closeSettingsModal();
     
+    // Show success notification before reloading
+    showSettingsNotification('設定已儲存！頁面將重新載入...', 'success');
+    
     // 重新載入頁面以套用語言與地圖等設定
-    location.reload();
+    setTimeout(() => {
+        location.reload();
+    }, 800);
 };
 
 document.getElementById('btn-geocode-center')?.addEventListener('click', async function() {

@@ -2634,3 +2634,177 @@ body {
     margin-bottom: 0;
 }
 
+/* ==================== Settings Modal ==================== */
+.settings-content {
+    max-width: 480px;
+    padding: 0;
+}
+
+.settings-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+    padding: 24px 24px 0;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-title i {
+    color: #667eea;
+    font-size: 22px;
+}
+
+.settings-group {
+    padding: 0 24px;
+    margin-bottom: 24px;
+}
+
+.settings-group h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f0f4ff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-group h4 i {
+    font-size: 13px;
+}
+
+.settings-field {
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.settings-field label i {
+    color: #667eea;
+    font-size: 12px;
+}
+
+.settings-select,
+.settings-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+    background: #fff;
+    font-family: inherit;
+}
+
+.settings-select:hover,
+.settings-input:hover {
+    border-color: #ccc;
+}
+
+.settings-select:focus,
+.settings-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.settings-select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.settings-input::placeholder {
+    color: #aaa;
+}
+
+.settings-field .btn-secondary {
+    margin-top: 0;
+    padding: 8px 14px;
+    font-size: 13px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.settings-field small {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+    display: block;
+    padding: 6px 10px;
+    background: #f8f9fc;
+    border-radius: 6px;
+    border-left: 3px solid #667eea;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px 24px;
+    background: #fafafa;
+    border-top: 1px solid #eee;
+    border-radius: 0 0 16px 16px;
+}
+
+.settings-actions .btn-secondary {
+    flex: 1;
+    padding: 11px 16px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.settings-actions .btn-primary {
+    flex: 1;
+    padding: 11px 16px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Responsive settings modal */
+@media (max-width: 768px) {
+    .settings-title {
+        font-size: 18px;
+        padding: 20px 18px 0;
+    }
+    
+    .settings-group {
+        padding: 0 18px;
+    }
+    
+    .settings-actions {
+        padding: 16px 18px 18px;
+        flex-direction: column-reverse;
+        gap: 10px;
+    }
+    
+    .settings-actions .btn-secondary,
+    .settings-actions .btn-primary {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-content {
+        max-width: 100%;
+    }
+}
+
