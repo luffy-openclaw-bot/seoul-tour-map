@@ -784,23 +784,8 @@ function initRadiusFilter() {
         if (radiusValInput) radiusValInput.value = defaultVal;
         if (radiusUnitInput) radiusUnitInput.value = defaultUnit;
         
-        const lat = parseFloat(defaultLat);
-        const lng = parseFloat(defaultLng);
-        const val = parseFloat(defaultVal);
-        
-        if (!isNaN(lat) && !isNaN(lng) && !isNaN(val) && val > 0) {
-            radiusState.active = true;
-            radiusState.lat = lat;
-            radiusState.lng = lng;
-            radiusState.radiusMeters = defaultUnit === 'mi' ? val * 1609.344 : val * 1000;
-            
-            updateRadiusVisuals();
-            
-            const toggleBtn = document.getElementById('toggle-radius-filter');
-            if (toggleBtn) toggleBtn.classList.add('active');
-            
-            return true;
-        }
+        // Don't activate by default, just load values into inputs
+        return true;
     }
     return false;
 }
