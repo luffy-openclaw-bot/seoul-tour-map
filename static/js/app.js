@@ -2981,7 +2981,7 @@ async function executeMapAction(action, params) {
 }
 
 // ==================== 定位我的位置 ====================
-function locateUser() {
+async function locateUser() {
     if (!navigator.geolocation) {
         alert('您的瀏覽器不支持地理位置定位');
         return;
@@ -2994,7 +2994,7 @@ function locateUser() {
     locateBtn.disabled = true;
 
     navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
             const { latitude, longitude } = position.coords;
             const accuracy = position.coords.accuracy;
 
@@ -3024,12 +3024,28 @@ function locateUser() {
                 opacity: 0.5
             }).addTo(map);
 
+            let addressText = '';
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/reverse-geocode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lat: latitude, lng: longitude })
+                });
+                const data = await response.json();
+                if (data.display_name) {
+                    addressText = data.display_name;
+                }
+            } catch (error) {
+                console.error('Reverse geocoding failed:', error);
+            }
+
             window.userMarker = L.marker([latitude, longitude], { icon: userIcon })
                 .addTo(map)
                 .bindPopup(`
                     <div class="user-location-popup">
                         <div class="user-location-title">📍 您的位置</div>
                         <div class="user-location-info">
+                            ${addressText ? `<div class="user-location-address">${addressText}</div>` : ''}
                             <div>緯度: ${latitude.toFixed(6)}</div>
                             <div>經度: ${longitude.toFixed(6)}</div>
                             <div class="user-location-accuracy">精確度: ±${accuracy}米</div>

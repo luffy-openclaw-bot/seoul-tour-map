@@ -317,5 +317,21 @@
     "pinned": true,
     "visited": false,
     "myRemark": "here!!"
+  },
+  {
+    "id": "chat_Gongneung Dak-han-mari_37.5828_126.9845",
+    "name": "Gongneung Dak-han-mari",
+    "lat": 37.5828,
+    "lng": 126.9845,
+    "category": "購物美食",
+    "description": "首爾名店，專門提供傳統的一家一隻雞料理",
+    "price": "",
+    "addedAt": 1780765266887,
+    "updatedAt": 1780765266891,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   }
 ]
