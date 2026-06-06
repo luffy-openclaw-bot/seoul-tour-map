@@ -766,6 +766,23 @@ body {
     gap: 8px;
 }
 
+.panel-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.panel-close-btn:hover {
+    color: #333;
+}
+
 .route-field {
     margin-bottom: 10px;
 }

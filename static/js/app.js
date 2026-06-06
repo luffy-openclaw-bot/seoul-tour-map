@@ -1326,27 +1326,124 @@ document.getElementById('btn-geocode-center')?.addEventListener('click', async f
 });
 
 // ==================== 路線規劃 ====================
-function initRoutePanel() {
+function refreshRouteOptions() {
     const startSelect = document.getElementById('route-start');
     const endSelect = document.getElementById('route-end');
+    
+    const currentStart = startSelect.value;
+    const currentEnd = endSelect.value;
+
+    startSelect.innerHTML = '<option value="">選擇起點...</option>';
+    endSelect.innerHTML = '<option value="">選擇終點...</option>';
+
+    // 1. Current Location
+    startSelect.add(new Option('📍 我的位置 (Current Location)', 'current_location'));
+    endSelect.add(new Option('📍 我的位置 (Current Location)', 'current_location'));
+
+    // 2. Pinned Locations
+    const pinnedItems = WishlistManager.getAll().filter(item => item.pinned);
+    if (pinnedItems.length > 0) {
+        const groupStart = document.createElement('optgroup');
+        groupStart.label = '📌 釘選位置';
+        const groupEnd = document.createElement('optgroup');
+        groupEnd.label = '📌 釘選位置';
+        
+        pinnedItems.forEach(item => {
+            groupStart.appendChild(new Option(item.name, item.id));
+            groupEnd.appendChild(new Option(item.name, item.id));
+        });
+        
+        startSelect.add(groupStart);
+        endSelect.add(groupEnd);
+    }
+
+    // 3. Attractions
+    const attrGroupStart = document.createElement('optgroup');
+    attrGroupStart.label = '🗺️ 景點';
+    const attrGroupEnd = document.createElement('optgroup');
+    attrGroupEnd.label = '🗺️ 景點';
 
     attractionsData.forEach(attr => {
-        const opt1 = new Option(attr.name, attr.id);
-        const opt2 = new Option(attr.name, attr.id);
-        startSelect.add(opt1);
-        endSelect.add(opt2);
+        attrGroupStart.appendChild(new Option(attr.name, attr.id));
+        attrGroupEnd.appendChild(new Option(attr.name, attr.id));
     });
+
+    startSelect.add(attrGroupStart);
+    endSelect.add(attrGroupEnd);
+
+    // Restore values if still valid
+    if (currentStart && Array.from(startSelect.options).some(o => o.value === currentStart)) {
+        startSelect.value = currentStart;
+    }
+    if (currentEnd && Array.from(endSelect.options).some(o => o.value === currentEnd)) {
+        endSelect.value = currentEnd;
+    }
+}
+
+function initRoutePanel() {
+    refreshRouteOptions();
+
+    // Event listener for close button
+    const closeBtn = document.getElementById('route-panel-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            const desktopBtn = document.getElementById('toggle-traffic');
+            if (desktopBtn && desktopBtn.classList.contains('active')) {
+                desktopBtn.click();
+            } else {
+                document.getElementById('route-panel').classList.add('hidden');
+                routeLayerGroup.clearLayers();
+                if (typeof trafficVisible !== 'undefined') trafficVisible = false;
+            }
+        });
+    }
 }
 
 function planRouteTo(attrId) {
     closeModal();
-    const panel = document.getElementById('route-panel');
-    panel.classList.remove('hidden');
+    const desktopBtn = document.getElementById('toggle-traffic');
+    if (desktopBtn && !desktopBtn.classList.contains('active')) {
+        desktopBtn.click();
+    } else {
+        refreshRouteOptions();
+        document.getElementById('route-panel').classList.remove('hidden');
+    }
+    
     document.getElementById('route-end').value = attrId;
     document.getElementById('route-start').focus();
 }
 
 document.getElementById('calculate-route').addEventListener('click', calculateRoute);
+
+function getLocationById(id) {
+    if (id === 'current_location') {
+        if (window.userMarker) {
+            const latlng = window.userMarker.getLatLng();
+            return {
+                id: 'current_location',
+                name: '我的位置',
+                lat: latlng.lat,
+                lng: latlng.lng,
+                transport: { subway: '依據您的當前位置' }
+            };
+        } else {
+            return null; // Not located yet
+        }
+    }
+    
+    const wishItem = WishlistManager.getAll().find(i => String(i.id) === String(id));
+    if (wishItem) {
+        return {
+            id: wishItem.id,
+            name: wishItem.name,
+            lat: wishItem.lat,
+            lng: wishItem.lng,
+            transport: { subway: '自訂位置' }
+        };
+    }
+    
+    return attractionsData.find(a => String(a.id) === String(id));
+}
 
 function calculateRoute() {
     const startId = document.getElementById('route-start').value;
@@ -1363,8 +1460,24 @@ function calculateRoute() {
         return;
     }
 
-    const start = attractionsData.find(a => a.id === startId);
-    const end = attractionsData.find(a => a.id === endId);
+    const start = getLocationById(startId);
+    const end = getLocationById(endId);
+
+    if (!start && startId === 'current_location') {
+        locateUser();
+        resultDiv.innerHTML = '<p style="color:#e74c3c"><i class="fas fa-spinner fa-spin"></i> 正在獲取您的位置，請稍候再試...</p>';
+        return;
+    }
+    if (!end && endId === 'current_location') {
+        locateUser();
+        resultDiv.innerHTML = '<p style="color:#e74c3c"><i class="fas fa-spinner fa-spin"></i> 正在獲取您的位置，請稍候再試...</p>';
+        return;
+    }
+    
+    if (!start || !end) {
+        resultDiv.innerHTML = '<p style="color:#e74c3c">找不到所選地點資訊</p>';
+        return;
+    }
 
     // 檢查預設交通時間
     const key1 = `${start.name}-${end.name}`;
@@ -1498,6 +1611,7 @@ document.getElementById('toggle-traffic').addEventListener('click', function() {
     this.classList.toggle('active');
 
     if (trafficVisible) {
+        refreshRouteOptions();
         const panel = document.getElementById('route-panel');
         panel.classList.remove('hidden');
     } else {
