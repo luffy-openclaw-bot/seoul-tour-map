@@ -4,3 +4,7 @@ Whenever you update JS and CSS related codes, you MUST bump the cache version pa
 This ensures that users can view the latest changes without being served old, cached versions.
 
 Use the `cache-version-bumper` skill or do it manually whenever you modify `*.js` or `*.css` files.
+
+# Local Service Testing
+
+When performing local service tests, note that the correct working URL is `http://127.0.0.1:8082` instead of `localhost:8082`.
