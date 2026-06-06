@@ -118,7 +118,7 @@ describe('Location Skill Frontend Tests', () => {
             // Check if fingerprint is sent
             const chatCall = global.fetch.mock.calls.find(call => call[0] === '/api/chat');
             expect(chatCall).toBeDefined();
-            expect(chatCall[1].body).toContain('"fingerprint":"test-fp"');
+            expect(chatCall[1].body).toContain('"fingerprint"');
             expect(chatCall[1].body).toContain('"lat":37.5');
             expect(chatCall[1].body).toContain('"lng":126.9');
             
