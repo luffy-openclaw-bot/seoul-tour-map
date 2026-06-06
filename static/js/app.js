@@ -551,6 +551,12 @@ function renderPinnedMarkers() {
                         </div>
                     </div>
                 `);
+                
+            marker.on('click', (e) => {
+                if (!handleMarkerClickForRadiusFilter(e, marker.getLatLng())) {
+                    L.DomEvent.stop(e);
+                }
+            });
         }
     });
 }
@@ -645,12 +651,19 @@ function clearPanelSearch() {
 function toggleRadiusPanel() {
     const panel = document.getElementById('radius-panel');
     const toggleBtn = document.getElementById('toggle-radius-filter');
+    const chatWidget = document.getElementById('ai-chat');
     if (panel) {
         panel.classList.toggle('hidden');
         if (!panel.classList.contains('hidden')) {
             const routePanel = document.getElementById('route-panel');
             if (routePanel) routePanel.classList.add('hidden');
             if (toggleBtn) toggleBtn.classList.add('active');
+            // Collapse chatbot widget
+            if (chatWidget && !chatWidget.classList.contains('collapsed')) {
+                chatWidget.classList.add('collapsed');
+                const statusBar = document.getElementById('system-status-bar');
+                if (statusBar) statusBar.classList.add('hidden');
+            }
             
             const radiusLatInput = document.getElementById('radius-lat');
             const radiusLngInput = document.getElementById('radius-lng');
@@ -668,6 +681,8 @@ function toggleRadiusPanel() {
                         radiusState.radiusMeters / 1000;
                     radiusValInput.value = radiusVal;
                 }
+                // Show the circle overlay if active
+                updateRadiusVisuals();
             } else {
                 // 如果沒有套用的濾鏡，載入預設設定 (若欄位為空)
                 if (radiusValInput && !radiusValInput.value) {
@@ -690,6 +705,12 @@ function toggleRadiusPanel() {
             }
         } else {
             if (toggleBtn) toggleBtn.classList.remove('active');
+            // Hide the circle overlay when panel is closed
+            if (radiusState.circleLayer && map) {
+                map.removeLayer(radiusState.circleLayer);
+            }
+            // Close the info popover when panel is closed
+            closeRadiusInfoPopover();
         }
     }
 }
@@ -1004,6 +1025,28 @@ function renderAttractionList() {
     });
 }
 
+// ==================== Helper for marker clicks in radius picking mode ====================
+function handleMarkerClickForRadiusFilter(e, latlng) {
+    if (radiusState.pickingMap) {
+        e.originalEvent?.stopPropagation();
+        e.stopPropagation();
+        document.getElementById('radius-lat').value = latlng.lat.toFixed(6);
+        document.getElementById('radius-lng').value = latlng.lng.toFixed(6);
+        radiusState.pickingMap = false;
+        document.getElementById('map').style.cursor = '';
+        const pickBtn = document.getElementById('btn-radius-pick-map');
+        if (pickBtn) {
+            pickBtn.style.backgroundColor = '';
+            pickBtn.style.color = '';
+        }
+        if (document.getElementById('radius-val').value) {
+            applyRadiusFilter();
+        }
+        return false; // indicate we handled it
+    }
+    return true; // let popup open normally
+}
+
 // ==================== 地圖標記 ====================
 function addMarkers() {
     if (!map) return;
@@ -1044,6 +1087,12 @@ function addMarkers() {
             const marker = L.marker([attr.lat, attr.lng], { icon: customIcon })
                 .addTo(map)
                 .bindPopup(createPopupContent(attr));
+                
+            marker.on('click', (e) => {
+                if (!handleMarkerClickForRadiusFilter(e, marker.getLatLng())) {
+                    L.DomEvent.stop(e);
+                }
+            });
 
             // 點擊 marker 只顯示 popup 氣泡，唔彈出 modal 對話框
             markers[attr.id] = marker;
@@ -1073,6 +1122,12 @@ function addMarkers() {
             const marker = L.marker([firstAttr.lat, firstAttr.lng], { icon: customIcon })
                 .addTo(map)
                 .bindPopup(createMultiPopupContent(group));
+                
+            marker.on('click', (e) => {
+                if (!handleMarkerClickForRadiusFilter(e, marker.getLatLng())) {
+                    L.DomEvent.stop(e);
+                }
+            });
 
             // Map all IDs in this group to the same marker
             group.forEach(attr => {
@@ -3259,6 +3314,21 @@ function locateUserAndReport() {
     );
 }
 
+// ==================== Radius filter info popover handling ====================
+function toggleRadiusInfoPopover() {
+    const popover = document.getElementById('radius-info-popover');
+    if (popover) {
+        popover.classList.toggle('hidden');
+    }
+}
+
+function closeRadiusInfoPopover() {
+    const popover = document.getElementById('radius-info-popover');
+    if (popover && !popover.classList.contains('hidden')) {
+        popover.classList.add('hidden');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     MapManager.init();
     initMap();
@@ -3269,6 +3339,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('mobile-search-input')?.addEventListener('input', handlePanelSearchInput);
     document.getElementById('desktop-search-clear')?.addEventListener('click', clearPanelSearch);
     document.getElementById('mobile-search-clear')?.addEventListener('click', clearPanelSearch);
+    
+    // Setup radius info popover listener
+    const radiusInfoIcon = document.getElementById('radius-info-icon');
+    if (radiusInfoIcon) {
+        radiusInfoIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleRadiusInfoPopover();
+        });
+    }
+    
+    // Close popover when clicking outside
+    document.addEventListener('click', (e) => {
+        const popover = document.getElementById('radius-info-popover');
+        const icon = document.getElementById('radius-info-icon');
+        if (popover && icon && !popover.contains(e.target) && !icon.contains(e.target)) {
+            closeRadiusInfoPopover();
+        }
+    });
     
     initRadiusFilter();
     
@@ -3330,9 +3418,17 @@ function addSearchMarker(lat, lng, title, color, popupContent, pulse = true) {
                 <p>${popupContent}</p>
             </div>
         `);
+        
+    marker.on('click', (e) => {
+        if (!handleMarkerClickForRadiusFilter(e, marker.getLatLng())) {
+            L.DomEvent.stop(e);
+        }
+    });
     
-    // 自動打開彈出窗口
-    marker.openPopup();
+    // 自動打開彈出窗口 only if not picking radius center
+    if (!radiusState.pickingMap) {
+        marker.openPopup();
+    }
     
     return marker;
 }

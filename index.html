@@ -6,7 +6,7 @@
     <title>首爾旅遊地圖 | Seoul Tour Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="static/css/style.css?v=44" />
+    <link rel="stylesheet" href="static/css/style.css?v=45" />
     <link rel="stylesheet" href="static/css/search_module.css?v=43" />
 </head>
 <body>
@@ -176,7 +176,20 @@
 
                 <!-- 範圍篩選面板 (Radius Filter) -->
                 <div id="radius-panel" class="radius-panel hidden">
-                    <h3><i class="fas fa-bullseye"></i> 範圍篩選</h3>
+                    <h3>
+                        <i class="fas fa-bullseye"></i> 範圍篩選
+                        <i class="fas fa-info-circle radius-info-icon" id="radius-info-icon" title="使用說明"></i>
+                    </h3>
+                    <!-- 範圍篩選說明 Popover -->
+                    <div id="radius-info-popover" class="radius-info-popover hidden">
+                        <h4>使用說明</h4>
+                        <ul>
+                            <li><strong>座標輸入</strong>：直接輸入緯度和經度，或點擊「在地圖上選取」在地圖上點擊選擇中心點</li>
+                            <li><strong>範圍設定</strong>：輸入距離並選擇單位（公里或英里）</li>
+                            <li><strong>應用篩選</strong>：點擊「應用」按鈕以顯示該範圍內的景點</li>
+                            <li><strong>取消篩選</strong>：點擊「取消」按鈕以清除篩選</li>
+                        </ul>
+                    </div>
                     <div class="radius-inputs">
                         <div class="radius-field">
                             <label><i class="fas fa-map-marker-alt"></i> 座標 (緯度, 經度)</label>
@@ -372,7 +385,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="static/js/app.js?v=49"></script>
+    <script src="static/js/app.js?v=51"></script>
     <script src="static/js/search_module.js?v=45"></script>
 </body>
 </html>
