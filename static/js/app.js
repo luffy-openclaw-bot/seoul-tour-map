@@ -26,6 +26,7 @@ let radiusState = {
     lat: null,
     lng: null,
     radiusMeters: 0,
+    unit: 'km',
     circleLayer: null,
     pickingMap: false
 };
@@ -650,26 +651,40 @@ function toggleRadiusPanel() {
             if (routePanel) routePanel.classList.add('hidden');
             if (toggleBtn) toggleBtn.classList.add('active');
             
-            // 載入預設範圍設定 (若欄位為空)
-            const radiusValInput = document.getElementById('radius-val');
-            const radiusUnitInput = document.getElementById('radius-unit');
-            if (radiusValInput && !radiusValInput.value) {
-                const defaultVal = localStorage.getItem('seoul_tour_radius_val');
-                if (defaultVal) radiusValInput.value = defaultVal;
-            }
-            if (radiusUnitInput) {
-                const defaultUnit = localStorage.getItem('seoul_tour_radius_unit');
-                if (defaultUnit) radiusUnitInput.value = defaultUnit;
-            }
-
             const radiusLatInput = document.getElementById('radius-lat');
             const radiusLngInput = document.getElementById('radius-lng');
-            if (radiusLatInput && !radiusLatInput.value && radiusLngInput && !radiusLngInput.value) {
-                const defaultLat = localStorage.getItem('seoul_tour_radius_center_lat');
-                const defaultLng = localStorage.getItem('seoul_tour_radius_center_lng');
-                if (defaultLat && defaultLng) {
-                    radiusLatInput.value = defaultLat;
-                    radiusLngInput.value = defaultLng;
+            const radiusValInput = document.getElementById('radius-val');
+            const radiusUnitInput = document.getElementById('radius-unit');
+            
+            // 優先使用當前已套用的 radiusState 值（如果有）
+            if (radiusState.active) {
+                if (radiusLatInput) radiusLatInput.value = radiusState.lat;
+                if (radiusLngInput) radiusLngInput.value = radiusState.lng;
+                if (radiusUnitInput) radiusUnitInput.value = radiusState.unit;
+                if (radiusValInput) {
+                    const radiusVal = radiusState.unit === 'mi' ? 
+                        radiusState.radiusMeters / 1609.344 : 
+                        radiusState.radiusMeters / 1000;
+                    radiusValInput.value = radiusVal;
+                }
+            } else {
+                // 如果沒有套用的濾鏡，載入預設設定 (若欄位為空)
+                if (radiusValInput && !radiusValInput.value) {
+                    const defaultVal = localStorage.getItem('seoul_tour_radius_val');
+                    if (defaultVal) radiusValInput.value = defaultVal;
+                }
+                if (radiusUnitInput) {
+                    const defaultUnit = localStorage.getItem('seoul_tour_radius_unit');
+                    if (defaultUnit) radiusUnitInput.value = defaultUnit;
+                }
+
+                if (radiusLatInput && !radiusLatInput.value && radiusLngInput && !radiusLngInput.value) {
+                    const defaultLat = localStorage.getItem('seoul_tour_radius_center_lat');
+                    const defaultLng = localStorage.getItem('seoul_tour_radius_center_lng');
+                    if (defaultLat && defaultLng) {
+                        radiusLatInput.value = defaultLat;
+                        radiusLngInput.value = defaultLng;
+                    }
                 }
             }
         } else {
@@ -727,6 +742,7 @@ function applyRadiusFilter() {
     radiusState.lat = lat;
     radiusState.lng = lng;
     radiusState.radiusMeters = unit === 'mi' ? val * 1609.344 : val * 1000;
+    radiusState.unit = unit;
 
     updateRadiusVisuals();
     
