@@ -1165,7 +1165,6 @@ function createPopupContent(attr) {
 
     return `
         <div class="popup-card">
-            <img src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
             <div class="popup-info">
                 <div class="popup-name">${attr.name}${iconsHtml}</div>
                 <div class="popup-ko">${attr.local_name}</div>
