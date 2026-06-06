@@ -131,6 +131,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if parsed_path == '/api/geocode':
             self.handle_geocode()
             return
+        if parsed_path == '/api/reverse-geocode':
+            self.handle_reverse_geocode()
+            return
         self.send_error(404)
 
     def handle_chat(self):
@@ -299,6 +302,41 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             })
             
             url = f"https://nominatim.openstreetmap.org/search?{params}"
+            req = urllib.request.Request(
+                url,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (compatible; SeoulMap/2.0; +https://seoul-tour-map.local)'
+                }
+            )
+            
+            opener = create_urllib_opener()
+            with opener.open(req, timeout=10) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                self.send_json(result)
+        except Exception as e:
+            self.send_json({'error': str(e)}, status=500)
+
+    def handle_reverse_geocode(self):
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+            lat = data.get('lat')
+            lng = data.get('lng')
+            
+            if lat is None or lng is None:
+                self.send_json({'error': 'Missing lat or lng parameters'}, status=400)
+                return
+                
+            params = urllib.parse.urlencode({
+                'format': 'json',
+                'lat': lat,
+                'lon': lng,
+                'accept-language': 'zh-TW,zh-CN,en',
+                'zoom': 18
+            })
+            
+            url = f"https://nominatim.openstreetmap.org/reverse?{params}"
             req = urllib.request.Request(
                 url,
                 headers={
