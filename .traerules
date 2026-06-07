@@ -8,3 +8,7 @@ Use the `cache-version-bumper` skill or do it manually whenever you modify `*.js
 # Local Service Testing
 
 When performing local service tests, note that the correct working URL is `http://127.0.0.1:8082` instead of `localhost:8082`.
+
+# Plan Recording Rule
+
+After finishing the implementation of any planned change (feature, bug fix, refactor), you MUST invoke the `plan-recorder` skill to record the finalized plan and verification steps into `docs/plans/` (preferred) or `.trae/documents/`.

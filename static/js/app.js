@@ -1304,8 +1304,8 @@ function showAttractionDetail(attr) {
 
     const highlights = attr.highlights.map(h => `<li>${h}</li>`).join('');
 
+    body.classList.add('no-hero');
     body.innerHTML = `
-        <img class="modal-hero" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
         <div class="modal-info">
             <div class="modal-title">${attr.name}</div>
             <div class="modal-ko">${attr.local_name}</div>
