@@ -830,8 +830,10 @@ function updateRadiusVisuals() {
 }
 
 function getFilteredAttractions(category) {
-    // 獲取所有自訂/同步的景點
-    const customItems = WishlistManager.getAll().map(item => {
+    // 獲取所有自訂/同步的景點（排除已標記為刪除的）
+    const customItems = WishlistManager.getAll()
+        .filter(item => !item.deleted)
+        .map(item => {
         return {
             id: item.id,
             name: item.name,
@@ -1011,6 +1013,17 @@ function renderAttractionList() {
         const safeDesc = attr.description ? attr.description : '';
         const safeDescShort = safeDesc.length > 60 ? safeDesc.substring(0, 60) + '...' : safeDesc;
 
+        let removeBtnHtml = '';
+        if (customData && !customData.deleted) {
+            removeBtnHtml = `
+                <button class="remove-loc-btn" 
+                        data-name="${safeName}" data-lat="${attr.lat || 0}" data-lng="${attr.lng || 0}" 
+                        onclick="event.stopPropagation(); removeFromWishlist(this)" title="從清單移除">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+        }
+
         item.innerHTML = `
             <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${safeName}" loading="lazy"
                  onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
@@ -1028,6 +1041,7 @@ function renderAttractionList() {
                     onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
                 <i class="${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far'} fa-heart"></i>
             </button>
+            ${removeBtnHtml}
         `;
 
         item.addEventListener('click', () => {
@@ -2755,6 +2769,16 @@ function renderMobilePanelList() {
         const safeDesc = attr.description ? attr.description : '';
         const safeDescShort = safeDesc.length > 60 ? safeDesc.substring(0, 60) + '...' : safeDesc;
 
+        let removeBtnHtml = '';
+        if (customData && !customData.deleted) {
+            removeBtnHtml = 
+                '<button class="mobile-remove-loc-btn" ' +
+                    'data-name="' + safeName + '" data-lat="' + (attr.lat || 0) + '" data-lng="' + (attr.lng || 0) + '" ' +
+                    'onclick="event.stopPropagation(); removeFromWishlist(this)" title="從清單移除">' +
+                    '<i class="fas fa-trash-alt"></i>' +
+                '</button>';
+        }
+
         card.innerHTML =
             '<div class="card-emoji" style="background:' + color + '15">' + emoji + '</div>' +
             '<div class="card-info">' +
@@ -2765,6 +2789,7 @@ function renderMobilePanelList() {
                 '</div>' +
                 remarkHtml +
             '</div>' +
+            removeBtnHtml +
             '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : '') + '" ' +
                 'data-name="' + (attr.name || '') + '" data-lat="' + (attr.lat || 0) + '" data-lng="' + (attr.lng || 0) + '" ' +
                 'data-category="' + safeCategory + '" data-price="' + safeTicket + '" ' +
@@ -4315,10 +4340,12 @@ const WishlistManager = {
 
                 if (remoteTime > localTime) {
                     merged.push(remoteItem);
+                    // 檢查關鍵屬性是否有變更（包括 deleted 標籤）
                     if (localItem.wish !== remoteItem.wish ||
                         localItem.pinned !== remoteItem.pinned ||
                         localItem.visited !== remoteItem.visited ||
-                        localItem.myRemark !== remoteItem.myRemark) {
+                        localItem.myRemark !== remoteItem.myRemark ||
+                        localItem.deleted !== remoteItem.deleted) {
                         changed = true;
                     }
                 } else {
@@ -4328,7 +4355,7 @@ const WishlistManager = {
             }
         });
 
-        // 將本地有但遠端沒有的項目也加回去（雖然伺服器應該會返回全部）
+        // 將本地有但遠端沒有的項目也加回去（這通常發生在本地有尚未同步的新項目時）
         localMap.forEach(item => merged.push(item));
         
         if (changed) {
@@ -4365,6 +4392,7 @@ const WishlistManager = {
                 category: item.category || items[existingIdx].category,
                 price: item.price || items[existingIdx].price,
                 description: item.description || items[existingIdx].description,
+                deleted: false, // 重新添加或更新時，確保標記為未刪除
                 updatedAt: Date.now()
             };
             console.log('[Wishlist] Updated:', item.name);
@@ -4384,7 +4412,8 @@ const WishlistManager = {
                 wish: item.wish || false,
                 pinned: item.pinned || false,
                 visited: item.visited || false,
-                myRemark: item.myRemark || ''
+                myRemark: item.myRemark || '',
+                deleted: false // 默認未刪除
             });
             console.log('[Wishlist] Added:', item.name);
         }
@@ -4394,13 +4423,17 @@ const WishlistManager = {
         return true;
     },
 
-    /** 從願望清單移除 */
+    /** 從願望清單移除（邏輯刪除） */
     remove(id) {
-        let items = this.getAll();
-        items = items.filter(i => i.id !== id);
-        this.save(items);
-        console.log('[Wishlist] Removed:', id);
-        this._notifyChange();
+        const items = this.getAll();
+        const idx = items.findIndex(i => i.id === id);
+        if (idx >= 0) {
+            items[idx].deleted = true;
+            items[idx].updatedAt = Date.now();
+            this.save(items);
+            console.log('[Wishlist] Soft deleted:', id);
+            this._notifyChange();
+        }
     },
 
     /** 獲取指定地點 */
@@ -4431,7 +4464,7 @@ const WishlistManager = {
     /** 檢查是否已在願望清單 */
     has(name, lat, lng) {
         const item = this.get(name, lat, lng);
-        return item ? !!item.wish : false;
+        return item && !item.deleted ? !!item.wish : false;
     },
 
     /** 獲取項目數量 */
@@ -4466,7 +4499,7 @@ function renderPinnedPanel() {
     if (!container) return;
 
     const allItems = WishlistManager.getAll();
-    const items = allItems.filter(item => item.pinned);
+    const items = allItems.filter(item => item.pinned && !item.deleted);
     
     if (countEl) countEl.textContent = items.length > 0 ? items.length.toString() : '0';
     if (countEl) countEl.dataset.count = items.length;
@@ -4535,7 +4568,7 @@ function renderPinnedPanel() {
 function updatePinnedCount() {
     const badge = document.getElementById('pinned-count');
     if (badge) {
-        const items = WishlistManager.getAll().filter(item => item.pinned);
+        const items = WishlistManager.getAll().filter(item => item.pinned && !item.deleted);
         const count = items.length;
         badge.textContent = count > 0 ? count.toString() : '0';
         badge.dataset.count = count;
@@ -4594,6 +4627,33 @@ function toggleWishlist(btn) {
     toast.innerHTML = added
         ? `<i class="fas fa-heart" style="color:#e74c3c"></i> 已加入願望清單`
         : `<i class="far fa-heart"></i> 已從願望清單移除`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
+
+/**
+ * 從清單中徹底移除地點（邏輯刪除）
+ */
+function removeFromWishlist(btn) {
+    const name = btn.dataset.name;
+    const lat = parseFloat(btn.dataset.lat);
+    const lng = parseFloat(btn.dataset.lng);
+    if (!name || isNaN(lat) || isNaN(lng)) return;
+
+    // 獲取項目以確認存在且獲取 ID
+    const item = WishlistManager.get(name, lat, lng);
+    if (!item) return;
+
+    // 彈出確認對話框
+    if (!confirm(`確定要移除「${name}」嗎？\n這將會清除所有收藏狀態及備註。`)) return;
+
+    // 執行邏輯刪除
+    WishlistManager.remove(item.id);
+
+    // 顯示提示
+    const toast = document.createElement('div');
+    toast.className = 'wishlist-toast';
+    toast.innerHTML = `<i class="fas fa-trash-alt"></i> 已從清單移除地點`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
 }

@@ -240,7 +240,7 @@ clearChatPlaces();
 
 **Steps:**
 1. Start the server: `cd /home/node/workspace/seoul-tour-map && python3 server.py`
-2. Open browser to `http://localhost:8082`
+2. Open browser to `http://localhost:8092`
 3. Open the chatbot widget
 4. Type: "airport cafe"
 5. **Verify:** The AI response should contain `add_to_list` action tags for mentioned places (Starbucks, Paris Baguette, etc.)
