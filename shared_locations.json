@@ -333,5 +333,21 @@
     "pinned": false,
     "visited": false,
     "myRemark": ""
+  },
+  {
+    "id": "chat_Menya Sandaya (日式拉麵)_37.5555_126.9245",
+    "name": "Menya Sandaya (日式拉麵)",
+    "lat": 37.5555,
+    "lng": 126.9245,
+    "category": "購物美食",
+    "description": "弘大區濃厚魚介豚骨拉麵名店",
+    "price": "",
+    "addedAt": 1780815241102,
+    "updatedAt": 1780815241104,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
   }
 ]
