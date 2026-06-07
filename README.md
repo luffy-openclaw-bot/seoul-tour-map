@@ -92,7 +92,7 @@ export OLLAMA_MODEL="kimi-k2.6"
 python3 server.py
 ```
 
-打開瀏覽器訪問：`http://localhost:8082`
+打開瀏覽器訪問：`http://localhost:8092` (或 `.env` 中設定的 PORT)
 
 ## 📁 項目結構
 

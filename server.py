@@ -44,7 +44,7 @@ if os.path.exists(module_path):
 else:
     search_location = None
 
-PORT = 8082
+PORT = int(os.getenv('PORT', 8082))
 # Ollama Cloud API 設定 - 可通過環境變數覆蓋
 API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
 API_KEY = os.getenv('OLLAMA_API_KEY', 'c309d7242319461783142d44f3949473.Cvsj6THEdCx3lfLBGAwYgtWx')
@@ -1195,13 +1195,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         'category': str(loc.get('category', '地標觀景')),
                         'description': str(loc.get('description', '')),
                         'price': str(loc.get('price', '')),
-                        'addedAt': loc.get('addedAt', int(time.time() * 1000)),
-                        'updatedAt': loc.get('updatedAt', int(time.time() * 1000)),
+                        'addedAt': int(loc.get('addedAt', time.time() * 1000)),
+                        'updatedAt': int(loc.get('updatedAt', time.time() * 1000)),
                         'ownerFingerprint': str(loc.get('ownerFingerprint', 'unknown')),
                         'wish': bool(loc.get('wish', False)),
                         'pinned': bool(loc.get('pinned', False)),
                         'visited': bool(loc.get('visited', False)),
-                        'myRemark': str(loc.get('myRemark', ''))
+                        'myRemark': str(loc.get('myRemark', '')),
+                        'deleted': bool(loc.get('deleted', False))
                     }
                     validated_locations.append(validated_loc)
                 except (ValueError, TypeError):
@@ -1227,14 +1228,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         changed = True
                     else:
                         idx = existing_map[loc['id']]
-                        # Check if fields changed
+                        # 基於 updatedAt 判斷是否需要更新（時間戳較新的獲勝）
                         old_loc = shared_data[idx]
-                        if (old_loc.get('wish') != loc['wish'] or
-                            old_loc.get('pinned') != loc['pinned'] or
-                            old_loc.get('visited') != loc['visited'] or
-                            old_loc.get('myRemark') != loc['myRemark']):
+                        
+                        # 強制轉換兩者為整數進行比較，處理可能的歷史字串數據
+                        try:
+                            new_ts = int(loc.get('updatedAt', loc.get('addedAt', 0)))
+                            old_ts = int(old_loc.get('updatedAt', old_loc.get('addedAt', 0)))
+                            
+                            if new_ts > old_ts:
+                                shared_data[idx] = loc
+                                changed = True
+                                print(f"DEBUG: Updating {loc['name']} ({loc['id']}): {old_ts} -> {new_ts}")
+                        except (ValueError, TypeError):
+                            # 如果舊數據損壞，直接覆蓋
                             shared_data[idx] = loc
                             changed = True
+                            print(f"DEBUG: Overwriting corrupted/old data for {loc['name']}")
                 
                 if changed:
                     # 原子寫入

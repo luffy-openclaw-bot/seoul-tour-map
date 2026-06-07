@@ -830,8 +830,10 @@ function updateRadiusVisuals() {
 }
 
 function getFilteredAttractions(category) {
-    // 獲取所有自訂/同步的景點
-    const customItems = WishlistManager.getAll().map(item => {
+    // 獲取所有自訂/同步的景點（排除已標記為刪除的）
+    const customItems = WishlistManager.getAll()
+        .filter(item => !item.deleted)
+        .map(item => {
         return {
             id: item.id,
             name: item.name,
@@ -1011,6 +1013,17 @@ function renderAttractionList() {
         const safeDesc = attr.description ? attr.description : '';
         const safeDescShort = safeDesc.length > 60 ? safeDesc.substring(0, 60) + '...' : safeDesc;
 
+        let removeBtnHtml = '';
+        if (customData && !customData.deleted) {
+            removeBtnHtml = `
+                <button class="remove-loc-btn" 
+                        data-name="${safeName}" data-lat="${attr.lat || 0}" data-lng="${attr.lng || 0}" 
+                        onclick="event.stopPropagation(); removeFromWishlist(this)" title="從清單移除">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+        }
+
         item.innerHTML = `
             <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${safeName}" loading="lazy"
                  onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
@@ -1028,6 +1041,7 @@ function renderAttractionList() {
                     onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
                 <i class="${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far'} fa-heart"></i>
             </button>
+            ${removeBtnHtml}
         `;
 
         item.addEventListener('click', () => {
@@ -2374,6 +2388,9 @@ function addMessage(text, sender, isRestore = false) {
                     const linkHtml = `<a href="javascript:void(0)" class="fly-to-link" data-lat="${lat}" data-lng="${lng}" data-title="${title.replace(/"/g, '&quot;')}" title="點擊飛到 ${title}">${title} 🗺️</a>`;
                     flyToLinks.push(linkHtml);
                     cleanText = cleanText.replace(match[0], placeholderId);
+                    
+                    // Also push to autoActions so we can recreate the button during restore
+                    autoActions.push(cmd);
                 } else if (cmd.action === 'add_marker' && cmd.params) {
                     // add_marker actions are auto-executed after render
                     autoActions.push(cmd);
@@ -2408,10 +2425,8 @@ function addMessage(text, sender, isRestore = false) {
 
     // Bind click handlers for fly_to links after DOM insertion
     if (sender === 'bot') {
-        // Update lastBotMessageElement (only if not restoring)
-        if (!isRestore) {
-            lastBotMessageElement = div;
-        }
+        // Update lastBotMessageElement
+        lastBotMessageElement = div;
         
         div.querySelectorAll('.fly-to-link').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -2427,13 +2442,17 @@ function addMessage(text, sender, isRestore = false) {
         });
 
         // Auto-execute add_marker and other actions
-        if (!isRestore) {
-            autoActions.forEach(cmd => {
-                const actName = cmd.action || cmd.type;
-                const actParams = cmd.params || {};
-                executeMapAction(actName, actParams);
-            });
-        }
+        autoActions.forEach(cmd => {
+            const actName = cmd.action || cmd.type;
+            const actParams = cmd.params || {};
+            if (!isRestore) {
+                // Pass current message element to executeMapAction to avoid race conditions
+                executeMapAction(actName, actParams, div);
+            } else {
+                // Recreate buttons during history restore, passing current message element
+                recreateMapActionButton(actName, actParams, div);
+            }
+        });
     }
 
     container.scrollTop = container.scrollHeight;
@@ -2750,6 +2769,16 @@ function renderMobilePanelList() {
         const safeDesc = attr.description ? attr.description : '';
         const safeDescShort = safeDesc.length > 60 ? safeDesc.substring(0, 60) + '...' : safeDesc;
 
+        let removeBtnHtml = '';
+        if (customData && !customData.deleted) {
+            removeBtnHtml = 
+                '<button class="mobile-remove-loc-btn" ' +
+                    'data-name="' + safeName + '" data-lat="' + (attr.lat || 0) + '" data-lng="' + (attr.lng || 0) + '" ' +
+                    'onclick="event.stopPropagation(); removeFromWishlist(this)" title="從清單移除">' +
+                    '<i class="fas fa-trash-alt"></i>' +
+                '</button>';
+        }
+
         card.innerHTML =
             '<div class="card-emoji" style="background:' + color + '15">' + emoji + '</div>' +
             '<div class="card-info">' +
@@ -2760,6 +2789,7 @@ function renderMobilePanelList() {
                 '</div>' +
                 remarkHtml +
             '</div>' +
+            removeBtnHtml +
             '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : '') + '" ' +
                 'data-name="' + (attr.name || '') + '" data-lat="' + (attr.lat || 0) + '" data-lng="' + (attr.lng || 0) + '" ' +
                 'data-category="' + safeCategory + '" data-price="' + safeTicket + '" ' +
@@ -2874,12 +2904,82 @@ function toggleMobilePanel(expanded) {
 
 
 // ==================== AI 地圖控制指令執行 ====================
-// Helper function to add "Go there again" button to last bot message
-function addLocationButtonToLastBotMessage(locationData) {
-    if (!lastBotMessageElement) return;
+/**
+ * 根據地圖動作重新創建按鈕（用於恢復對話歷史時）
+ * @param {string} action - 動作名稱
+ * @param {object} params - 動作參數
+ * @param {HTMLElement} targetElement - 目標訊息 DOM 元素
+ */
+function recreateMapActionButton(action, params, targetElement) {
+    let locationData = null;
     
-    // Find the bubble div in lastBotMessageElement
-    const bubble = lastBotMessageElement.querySelector('.bubble');
+    // Ensure numeric coordinates
+    const lat = params.lat !== undefined ? parseFloat(params.lat) : undefined;
+    const lng = params.lng !== undefined ? parseFloat(params.lng) : undefined;
+    
+    switch (action) {
+        case 'center':
+        case 'fly_to':
+            if (lat !== undefined && lng !== undefined) {
+                locationData = {
+                    lat: lat,
+                    lng: lng,
+                    title: params.title || '目標位置'
+                };
+            }
+            break;
+            
+        case 'focus_attraction':
+            // 嘗試從現有資料中尋找景點
+            const attr = attractionsData.find(a => a.id === params.id) ||
+                         attractionsData.find(a => a.name.includes(params.id) || params.id.includes(a.name));
+            if (attr) {
+                locationData = {
+                    type: 'attraction',
+                    attraction: attr
+                };
+            }
+            break;
+            
+        case 'add_marker':
+            if (lat !== undefined && lng !== undefined) {
+                locationData = {
+                    lat: lat,
+                    lng: lng,
+                    title: params.title || '目的地',
+                    color: params.color || '#e74c3c'
+                };
+            }
+            break;
+            
+        case 'add_to_list':
+            if (lat !== undefined && lng !== undefined) {
+                locationData = {
+                    lat: lat,
+                    lng: lng,
+                    title: params.name,
+                    color: (typeof CATEGORY_COLORS !== 'undefined') ? (CATEGORY_COLORS[params.category || '地標觀景'] || '#e74c3c') : '#e74c3c'
+                };
+            }
+            break;
+    }
+    
+    if (locationData) {
+        addLocationButtonToLastBotMessage(locationData, targetElement);
+    }
+}
+
+/**
+ * 為機器人訊息添加「再次前往」按鈕
+ * @param {object} locationData - 地點資料
+ * @param {HTMLElement} targetElement - 目標訊息 DOM 元素
+ */
+function addLocationButtonToLastBotMessage(locationData, targetElement) {
+    const target = targetElement || lastBotMessageElement;
+    if (!target) return;
+    
+    // Find the bubble div in target element
+    const bubble = target.querySelector('.bubble');
     if (!bubble) return;
     
     // Create button element
@@ -2898,7 +2998,16 @@ function addLocationButtonToLastBotMessage(locationData) {
         align-items: center;
         gap: 6px;
     `;
-    button.innerHTML = '<i class="fas fa-map-marker-alt"></i> 再次前往';
+    
+    // Determine button text based on location data
+    let locationName = '再次前往';
+    if (locationData.type === 'attraction' && locationData.attraction) {
+        locationName = locationData.attraction.name;
+    } else if (locationData.title) {
+        locationName = locationData.title;
+    }
+    
+    button.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${locationName}`;
     
     // Store location data in button
     button.dataset.locationData = JSON.stringify(locationData);
@@ -2918,7 +3027,7 @@ function addLocationButtonToLastBotMessage(locationData) {
     bubble.appendChild(button);
 }
 
-async function executeMapAction(action, params) {
+async function executeMapAction(action, params, targetElement) {
     console.log('[Map Action] Executing:', action, params);
     
     // 驗證坐標參數
@@ -2939,6 +3048,9 @@ async function executeMapAction(action, params) {
     if (params.zoom !== undefined) {
         params.zoom = parseInt(params.zoom);
     }
+    
+    // Use targetElement for button attachment to avoid race conditions
+    const msgElement = targetElement || lastBotMessageElement;
     
     try {
         const response = await fetch(`${API_BASE_URL}/api/execute`, {
@@ -2961,8 +3073,8 @@ async function executeMapAction(action, params) {
                     addLocationButtonToLastBotMessage({
                         lat: params.lat,
                         lng: params.lng,
-                        title: params.title || '位置'
-                    });
+                        title: params.title || '目標位置'
+                    }, msgElement);
                 }
                 break;
             case 'focus_attraction':
@@ -2972,7 +3084,7 @@ async function executeMapAction(action, params) {
                     addLocationButtonToLastBotMessage({
                         type: 'attraction',
                         attraction: attr
-                    });
+                    }, msgElement);
                 } else {
                     // 嘗試用名稱查找
                     const attrByName = attractionsData.find(a =>
@@ -2983,7 +3095,7 @@ async function executeMapAction(action, params) {
                         addLocationButtonToLastBotMessage({
                             type: 'attraction',
                             attraction: attrByName
-                        });
+                        }, msgElement);
                     }
                 }
                 break;
@@ -3026,7 +3138,7 @@ async function executeMapAction(action, params) {
                         lng: params.lng,
                         title: title,
                         color: color
-                    });
+                    }, msgElement);
                 }
                 break;
             case 'add_polygon':
@@ -3082,7 +3194,7 @@ async function executeMapAction(action, params) {
                         lat: params.lat,
                         lng: params.lng,
                         title: title
-                    });
+                    }, msgElement);
                 }
                 break;
             case 'add_to_list':
@@ -3112,7 +3224,7 @@ async function executeMapAction(action, params) {
                         lng: lng,
                         title: params.name,
                         color: color
-                    });
+                    }, msgElement);
                 }
                 break;
             case 'transit_info':
@@ -4228,10 +4340,12 @@ const WishlistManager = {
 
                 if (remoteTime > localTime) {
                     merged.push(remoteItem);
+                    // 檢查關鍵屬性是否有變更（包括 deleted 標籤）
                     if (localItem.wish !== remoteItem.wish ||
                         localItem.pinned !== remoteItem.pinned ||
                         localItem.visited !== remoteItem.visited ||
-                        localItem.myRemark !== remoteItem.myRemark) {
+                        localItem.myRemark !== remoteItem.myRemark ||
+                        localItem.deleted !== remoteItem.deleted) {
                         changed = true;
                     }
                 } else {
@@ -4241,7 +4355,7 @@ const WishlistManager = {
             }
         });
 
-        // 將本地有但遠端沒有的項目也加回去（雖然伺服器應該會返回全部）
+        // 將本地有但遠端沒有的項目也加回去（這通常發生在本地有尚未同步的新項目時）
         localMap.forEach(item => merged.push(item));
         
         if (changed) {
@@ -4278,6 +4392,7 @@ const WishlistManager = {
                 category: item.category || items[existingIdx].category,
                 price: item.price || items[existingIdx].price,
                 description: item.description || items[existingIdx].description,
+                deleted: false, // 重新添加或更新時，確保標記為未刪除
                 updatedAt: Date.now()
             };
             console.log('[Wishlist] Updated:', item.name);
@@ -4297,7 +4412,8 @@ const WishlistManager = {
                 wish: item.wish || false,
                 pinned: item.pinned || false,
                 visited: item.visited || false,
-                myRemark: item.myRemark || ''
+                myRemark: item.myRemark || '',
+                deleted: false // 默認未刪除
             });
             console.log('[Wishlist] Added:', item.name);
         }
@@ -4307,13 +4423,17 @@ const WishlistManager = {
         return true;
     },
 
-    /** 從願望清單移除 */
+    /** 從願望清單移除（邏輯刪除） */
     remove(id) {
-        let items = this.getAll();
-        items = items.filter(i => i.id !== id);
-        this.save(items);
-        console.log('[Wishlist] Removed:', id);
-        this._notifyChange();
+        const items = this.getAll();
+        const idx = items.findIndex(i => i.id === id);
+        if (idx >= 0) {
+            items[idx].deleted = true;
+            items[idx].updatedAt = Date.now();
+            this.save(items);
+            console.log('[Wishlist] Soft deleted:', id);
+            this._notifyChange();
+        }
     },
 
     /** 獲取指定地點 */
@@ -4344,7 +4464,7 @@ const WishlistManager = {
     /** 檢查是否已在願望清單 */
     has(name, lat, lng) {
         const item = this.get(name, lat, lng);
-        return item ? !!item.wish : false;
+        return item && !item.deleted ? !!item.wish : false;
     },
 
     /** 獲取項目數量 */
@@ -4379,7 +4499,7 @@ function renderPinnedPanel() {
     if (!container) return;
 
     const allItems = WishlistManager.getAll();
-    const items = allItems.filter(item => item.pinned);
+    const items = allItems.filter(item => item.pinned && !item.deleted);
     
     if (countEl) countEl.textContent = items.length > 0 ? items.length.toString() : '0';
     if (countEl) countEl.dataset.count = items.length;
@@ -4448,7 +4568,7 @@ function renderPinnedPanel() {
 function updatePinnedCount() {
     const badge = document.getElementById('pinned-count');
     if (badge) {
-        const items = WishlistManager.getAll().filter(item => item.pinned);
+        const items = WishlistManager.getAll().filter(item => item.pinned && !item.deleted);
         const count = items.length;
         badge.textContent = count > 0 ? count.toString() : '0';
         badge.dataset.count = count;
@@ -4507,6 +4627,33 @@ function toggleWishlist(btn) {
     toast.innerHTML = added
         ? `<i class="fas fa-heart" style="color:#e74c3c"></i> 已加入願望清單`
         : `<i class="far fa-heart"></i> 已從願望清單移除`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
+
+/**
+ * 從清單中徹底移除地點（邏輯刪除）
+ */
+function removeFromWishlist(btn) {
+    const name = btn.dataset.name;
+    const lat = parseFloat(btn.dataset.lat);
+    const lng = parseFloat(btn.dataset.lng);
+    if (!name || isNaN(lat) || isNaN(lng)) return;
+
+    // 獲取項目以確認存在且獲取 ID
+    const item = WishlistManager.get(name, lat, lng);
+    if (!item) return;
+
+    // 彈出確認對話框
+    if (!confirm(`確定要移除「${name}」嗎？\n這將會清除所有收藏狀態及備註。`)) return;
+
+    // 執行邏輯刪除
+    WishlistManager.remove(item.id);
+
+    // 顯示提示
+    const toast = document.createElement('div');
+    toast.className = 'wishlist-toast';
+    toast.innerHTML = `<i class="fas fa-trash-alt"></i> 已從清單移除地點`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
 }
