@@ -2374,6 +2374,9 @@ function addMessage(text, sender, isRestore = false) {
                     const linkHtml = `<a href="javascript:void(0)" class="fly-to-link" data-lat="${lat}" data-lng="${lng}" data-title="${title.replace(/"/g, '&quot;')}" title="點擊飛到 ${title}">${title} 🗺️</a>`;
                     flyToLinks.push(linkHtml);
                     cleanText = cleanText.replace(match[0], placeholderId);
+                    
+                    // Also push to autoActions so we can recreate the button during restore
+                    autoActions.push(cmd);
                 } else if (cmd.action === 'add_marker' && cmd.params) {
                     // add_marker actions are auto-executed after render
                     autoActions.push(cmd);
@@ -2408,10 +2411,8 @@ function addMessage(text, sender, isRestore = false) {
 
     // Bind click handlers for fly_to links after DOM insertion
     if (sender === 'bot') {
-        // Update lastBotMessageElement (only if not restoring)
-        if (!isRestore) {
-            lastBotMessageElement = div;
-        }
+        // Update lastBotMessageElement
+        lastBotMessageElement = div;
         
         div.querySelectorAll('.fly-to-link').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -2427,13 +2428,17 @@ function addMessage(text, sender, isRestore = false) {
         });
 
         // Auto-execute add_marker and other actions
-        if (!isRestore) {
-            autoActions.forEach(cmd => {
-                const actName = cmd.action || cmd.type;
-                const actParams = cmd.params || {};
-                executeMapAction(actName, actParams);
-            });
-        }
+        autoActions.forEach(cmd => {
+            const actName = cmd.action || cmd.type;
+            const actParams = cmd.params || {};
+            if (!isRestore) {
+                // Pass current message element to executeMapAction to avoid race conditions
+                executeMapAction(actName, actParams, div);
+            } else {
+                // Recreate buttons during history restore, passing current message element
+                recreateMapActionButton(actName, actParams, div);
+            }
+        });
     }
 
     container.scrollTop = container.scrollHeight;
@@ -2874,12 +2879,82 @@ function toggleMobilePanel(expanded) {
 
 
 // ==================== AI 地圖控制指令執行 ====================
-// Helper function to add "Go there again" button to last bot message
-function addLocationButtonToLastBotMessage(locationData) {
-    if (!lastBotMessageElement) return;
+/**
+ * 根據地圖動作重新創建按鈕（用於恢復對話歷史時）
+ * @param {string} action - 動作名稱
+ * @param {object} params - 動作參數
+ * @param {HTMLElement} targetElement - 目標訊息 DOM 元素
+ */
+function recreateMapActionButton(action, params, targetElement) {
+    let locationData = null;
     
-    // Find the bubble div in lastBotMessageElement
-    const bubble = lastBotMessageElement.querySelector('.bubble');
+    // Ensure numeric coordinates
+    const lat = params.lat !== undefined ? parseFloat(params.lat) : undefined;
+    const lng = params.lng !== undefined ? parseFloat(params.lng) : undefined;
+    
+    switch (action) {
+        case 'center':
+        case 'fly_to':
+            if (lat !== undefined && lng !== undefined) {
+                locationData = {
+                    lat: lat,
+                    lng: lng,
+                    title: params.title || '目標位置'
+                };
+            }
+            break;
+            
+        case 'focus_attraction':
+            // 嘗試從現有資料中尋找景點
+            const attr = attractionsData.find(a => a.id === params.id) ||
+                         attractionsData.find(a => a.name.includes(params.id) || params.id.includes(a.name));
+            if (attr) {
+                locationData = {
+                    type: 'attraction',
+                    attraction: attr
+                };
+            }
+            break;
+            
+        case 'add_marker':
+            if (lat !== undefined && lng !== undefined) {
+                locationData = {
+                    lat: lat,
+                    lng: lng,
+                    title: params.title || '目的地',
+                    color: params.color || '#e74c3c'
+                };
+            }
+            break;
+            
+        case 'add_to_list':
+            if (lat !== undefined && lng !== undefined) {
+                locationData = {
+                    lat: lat,
+                    lng: lng,
+                    title: params.name,
+                    color: (typeof CATEGORY_COLORS !== 'undefined') ? (CATEGORY_COLORS[params.category || '地標觀景'] || '#e74c3c') : '#e74c3c'
+                };
+            }
+            break;
+    }
+    
+    if (locationData) {
+        addLocationButtonToLastBotMessage(locationData, targetElement);
+    }
+}
+
+/**
+ * 為機器人訊息添加「再次前往」按鈕
+ * @param {object} locationData - 地點資料
+ * @param {HTMLElement} targetElement - 目標訊息 DOM 元素
+ */
+function addLocationButtonToLastBotMessage(locationData, targetElement) {
+    const target = targetElement || lastBotMessageElement;
+    if (!target) return;
+    
+    // Find the bubble div in target element
+    const bubble = target.querySelector('.bubble');
     if (!bubble) return;
     
     // Create button element
@@ -2898,7 +2973,16 @@ function addLocationButtonToLastBotMessage(locationData) {
         align-items: center;
         gap: 6px;
     `;
-    button.innerHTML = '<i class="fas fa-map-marker-alt"></i> 再次前往';
+    
+    // Determine button text based on location data
+    let locationName = '再次前往';
+    if (locationData.type === 'attraction' && locationData.attraction) {
+        locationName = locationData.attraction.name;
+    } else if (locationData.title) {
+        locationName = locationData.title;
+    }
+    
+    button.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${locationName}`;
     
     // Store location data in button
     button.dataset.locationData = JSON.stringify(locationData);
@@ -2918,7 +3002,7 @@ function addLocationButtonToLastBotMessage(locationData) {
     bubble.appendChild(button);
 }
 
-async function executeMapAction(action, params) {
+async function executeMapAction(action, params, targetElement) {
     console.log('[Map Action] Executing:', action, params);
     
     // 驗證坐標參數
@@ -2939,6 +3023,9 @@ async function executeMapAction(action, params) {
     if (params.zoom !== undefined) {
         params.zoom = parseInt(params.zoom);
     }
+    
+    // Use targetElement for button attachment to avoid race conditions
+    const msgElement = targetElement || lastBotMessageElement;
     
     try {
         const response = await fetch(`${API_BASE_URL}/api/execute`, {
@@ -2961,8 +3048,8 @@ async function executeMapAction(action, params) {
                     addLocationButtonToLastBotMessage({
                         lat: params.lat,
                         lng: params.lng,
-                        title: params.title || '位置'
-                    });
+                        title: params.title || '目標位置'
+                    }, msgElement);
                 }
                 break;
             case 'focus_attraction':
@@ -2972,7 +3059,7 @@ async function executeMapAction(action, params) {
                     addLocationButtonToLastBotMessage({
                         type: 'attraction',
                         attraction: attr
-                    });
+                    }, msgElement);
                 } else {
                     // 嘗試用名稱查找
                     const attrByName = attractionsData.find(a =>
@@ -2983,7 +3070,7 @@ async function executeMapAction(action, params) {
                         addLocationButtonToLastBotMessage({
                             type: 'attraction',
                             attraction: attrByName
-                        });
+                        }, msgElement);
                     }
                 }
                 break;
@@ -3026,7 +3113,7 @@ async function executeMapAction(action, params) {
                         lng: params.lng,
                         title: title,
                         color: color
-                    });
+                    }, msgElement);
                 }
                 break;
             case 'add_polygon':
@@ -3082,7 +3169,7 @@ async function executeMapAction(action, params) {
                         lat: params.lat,
                         lng: params.lng,
                         title: title
-                    });
+                    }, msgElement);
                 }
                 break;
             case 'add_to_list':
@@ -3112,7 +3199,7 @@ async function executeMapAction(action, params) {
                         lng: lng,
                         title: params.name,
                         color: color
-                    });
+                    }, msgElement);
                 }
                 break;
             case 'transit_info':
