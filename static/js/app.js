@@ -874,7 +874,17 @@ function getFilteredAttractions(category) {
     // 合併內建景點與自訂景點（避免重複）
     let combined = [...attractionsData];
     customItems.forEach(customItem => {
-        const exists = combined.some(a => a.name === customItem.name && Math.abs(a.lat - customItem.lat) < 0.0001);
+        const tol = 0.0001;
+        const clat = parseFloat(customItem.lat);
+        const clng = parseFloat(customItem.lng);
+        const exists = combined.some(a => {
+            const alat = parseFloat(a.lat);
+            const alng = parseFloat(a.lng);
+            if (isNaN(alat) || isNaN(alng) || isNaN(clat) || isNaN(clng)) return false;
+            return a.name === customItem.name &&
+                Math.abs(alat - clat) < tol &&
+                Math.abs(alng - clng) < tol;
+        });
         if (!exists) {
             combined.push(customItem);
         }
@@ -4431,7 +4441,10 @@ const WishlistManager = {
     /** 生成唯一 ID */
     _generateId(name, lat, lng) {
         // 用 name+坐標 作為唯一標識，避免重複
-        return `wl_${name}_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+        const nlat = Number(lat);
+        const nlng = Number(lng);
+        if (isNaN(nlat) || isNaN(nlng)) return `wl_${name}_${lat}_${lng}`;
+        return `wl_${name}_${nlat.toFixed(4)}_${nlng.toFixed(4)}`;
     },
 
     /** 添加或更新項目 */
@@ -4502,7 +4515,35 @@ const WishlistManager = {
     /** 獲取指定地點 */
     get(name, lat, lng) {
         const id = this._generateId(name, lat, lng);
-        return this.getAll().find(i => i.id === id);
+        const items = this.getAll();
+        const exact = items.find(i => i.id === id);
+        if (exact) return exact;
+
+        const targetName = String(name || '').trim();
+        const targetLat = Number(lat);
+        const targetLng = Number(lng);
+        if (!targetName || isNaN(targetLat) || isNaN(targetLng)) return null;
+
+        const tol = 0.0001;
+        let best = null;
+        let bestDist = Infinity;
+        for (const i of items) {
+            if (!i || !i.name) continue;
+            if (String(i.name).trim() !== targetName) continue;
+            const ilat = Number(i.lat);
+            const ilng = Number(i.lng);
+            if (isNaN(ilat) || isNaN(ilng)) continue;
+            const dlat = ilat - targetLat;
+            const dlng = ilng - targetLng;
+            if (Math.abs(dlat) <= tol && Math.abs(dlng) <= tol) {
+                const dist = dlat * dlat + dlng * dlng;
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = i;
+                }
+            }
+        }
+        return best;
     },
 
     /** 切換願望清單狀態（切換 wish 屬性） */
