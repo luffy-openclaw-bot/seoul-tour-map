@@ -21,6 +21,27 @@ let subwayData = {};
 let activeCategory = 'all';
 let lastBotMessageElement = null; // Track last bot message DOM element
 
+// ==================== 排序狀態 ====================
+let currentSortPreference = localStorage.getItem('attractionSortPreference') || 'recent';
+
+function setSortPreference(pref) {
+    currentSortPreference = pref;
+    localStorage.setItem('attractionSortPreference', pref);
+    
+    // 同步 UI
+    const desktopSelect = document.getElementById('desktop-sort-select');
+    if (desktopSelect && desktopSelect.value !== pref) desktopSelect.value = pref;
+    
+    const mobileSelect = document.getElementById('mobile-sort-select');
+    if (mobileSelect && mobileSelect.value !== pref) mobileSelect.value = pref;
+    
+    // 重新渲染列表
+    renderAttractionList();
+    if (typeof renderMobilePanelList === 'function') {
+        renderMobilePanelList();
+    }
+}
+
 // ==================== Radius Filter 狀態 ====================
 let radiusState = {
     active: false,
@@ -858,15 +879,37 @@ function getFilteredAttractions(category) {
         }
     });
 
-    // Sort items by timestamp (newest first)
+    // 根據排序偏好進行排序
     combined.sort((a, b) => {
-        // Get timestamps for a and b (use updatedAt if available, else addedAt, else 0)
-        const getTimestamp = (item) => {
-            return item.updatedAt || item.addedAt || 0;
-        };
-        const timeA = getTimestamp(a);
-        const timeB = getTimestamp(b);
-        return timeB - timeA; // descending order
+        if (currentSortPreference === 'name_asc') {
+            return (a.name || '').localeCompare(b.name || '', 'zh-Hant');
+        } else if (currentSortPreference === 'name_desc') {
+            return (b.name || '').localeCompare(a.name || '', 'zh-Hant');
+        } else if (currentSortPreference === 'distance') {
+            let userLat, userLng;
+            if (window.userMarker) {
+                const pos = window.userMarker.getLatLng();
+                userLat = pos.lat;
+                userLng = pos.lng;
+            } else if (radiusState && radiusState.active) {
+                userLat = radiusState.lat;
+                userLng = radiusState.lng;
+            }
+            if (userLat !== undefined && userLng !== undefined) {
+                const latA = parseFloat(a.lat) || 0;
+                const lngA = parseFloat(a.lng) || 0;
+                const latB = parseFloat(b.lat) || 0;
+                const lngB = parseFloat(b.lng) || 0;
+                const distA = calculateHaversineDistance(userLat, userLng, latA, lngA);
+                const distB = calculateHaversineDistance(userLat, userLng, latB, lngB);
+                return distA - distB;
+            }
+            // 若無位置資訊，則降級回 recent 排序
+        }
+        
+        // 預設: 最近新增 (recent)
+        const getTimestamp = (item) => item.updatedAt || item.addedAt || 0;
+        return getTimestamp(b) - getTimestamp(a); // descending order
     });
 
     let items = combined;
@@ -3463,6 +3506,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('mobile-search-input')?.addEventListener('input', handlePanelSearchInput);
     document.getElementById('desktop-search-clear')?.addEventListener('click', clearPanelSearch);
     document.getElementById('mobile-search-clear')?.addEventListener('click', clearPanelSearch);
+    
+    // Setup sort select listeners
+    const desktopSortSelect = document.getElementById('desktop-sort-select');
+    if (desktopSortSelect) {
+        desktopSortSelect.value = currentSortPreference;
+        desktopSortSelect.addEventListener('change', (e) => setSortPreference(e.target.value));
+    }
+    const mobileSortSelect = document.getElementById('mobile-sort-select');
+    if (mobileSortSelect) {
+        mobileSortSelect.value = currentSortPreference;
+        mobileSortSelect.addEventListener('change', (e) => setSortPreference(e.target.value));
+    }
     
     // Setup radius info popover listener
     const radiusInfoIcon = document.getElementById('radius-info-icon');
