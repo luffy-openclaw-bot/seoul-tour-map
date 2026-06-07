@@ -142,7 +142,9 @@ describe('Pinned Location Logic', () => {
         WishlistManager.remove(item.id);
         
         const items = WishlistManager.getAll();
-        expect(items.length).toBe(0);
+        expect(items.length).toBe(1);
+        const deleted = items.find(i => i.id === item.id);
+        expect(deleted.deleted).toBe(true);
         
         updatePinnedCount();
         const badge = document.getElementById('pinned-count');

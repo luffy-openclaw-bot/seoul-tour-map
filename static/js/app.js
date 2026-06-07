@@ -21,6 +21,27 @@ let subwayData = {};
 let activeCategory = 'all';
 let lastBotMessageElement = null; // Track last bot message DOM element
 
+// ==================== 排序狀態 ====================
+let currentSortPreference = localStorage.getItem('attractionSortPreference') || 'recent';
+
+function setSortPreference(pref) {
+    currentSortPreference = pref;
+    localStorage.setItem('attractionSortPreference', pref);
+    
+    // 同步 UI
+    const desktopSelect = document.getElementById('desktop-sort-select');
+    if (desktopSelect && desktopSelect.value !== pref) desktopSelect.value = pref;
+    
+    const mobileSelect = document.getElementById('mobile-sort-select');
+    if (mobileSelect && mobileSelect.value !== pref) mobileSelect.value = pref;
+    
+    // 重新渲染列表
+    renderAttractionList();
+    if (typeof renderMobilePanelList === 'function') {
+        renderMobilePanelList();
+    }
+}
+
 // ==================== Radius Filter 狀態 ====================
 let radiusState = {
     active: false,
@@ -542,6 +563,7 @@ function renderPinnedMarkers() {
                             <div class="popup-name">${item.name}${iconsHtml}</div>
                             <span class="popup-cat" style="background:${color}">${item.category || '釘選位置'}</span>
                             <div class="popup-desc">坐標：${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+                            ${item.myRemark ? `<div class="popup-desc" style="color: #d35400; font-weight: 500;">備註：${item.myRemark}</div>` : ''}
                             <button class="popup-btn" style="background:#f39c12; margin-bottom: 5px;" onclick="openSaveLocationModal(${item.lat}, ${item.lng}, '${item.name.replace(/'/g, "\\'")}')">
                                 編輯備註
                             </button>
@@ -852,21 +874,53 @@ function getFilteredAttractions(category) {
     // 合併內建景點與自訂景點（避免重複）
     let combined = [...attractionsData];
     customItems.forEach(customItem => {
-        const exists = combined.some(a => a.name === customItem.name && Math.abs(a.lat - customItem.lat) < 0.0001);
+        const tol = 0.0001;
+        const clat = parseFloat(customItem.lat);
+        const clng = parseFloat(customItem.lng);
+        const exists = combined.some(a => {
+            const alat = parseFloat(a.lat);
+            const alng = parseFloat(a.lng);
+            if (isNaN(alat) || isNaN(alng) || isNaN(clat) || isNaN(clng)) return false;
+            return a.name === customItem.name &&
+                Math.abs(alat - clat) < tol &&
+                Math.abs(alng - clng) < tol;
+        });
         if (!exists) {
             combined.push(customItem);
         }
     });
 
-    // Sort items by timestamp (newest first)
+    // 根據排序偏好進行排序
     combined.sort((a, b) => {
-        // Get timestamps for a and b (use updatedAt if available, else addedAt, else 0)
-        const getTimestamp = (item) => {
-            return item.updatedAt || item.addedAt || 0;
-        };
-        const timeA = getTimestamp(a);
-        const timeB = getTimestamp(b);
-        return timeB - timeA; // descending order
+        if (currentSortPreference === 'name_asc') {
+            return (a.name || '').localeCompare(b.name || '', 'zh-Hant');
+        } else if (currentSortPreference === 'name_desc') {
+            return (b.name || '').localeCompare(a.name || '', 'zh-Hant');
+        } else if (currentSortPreference === 'distance') {
+            let userLat, userLng;
+            if (window.userMarker) {
+                const pos = window.userMarker.getLatLng();
+                userLat = pos.lat;
+                userLng = pos.lng;
+            } else if (radiusState && radiusState.active) {
+                userLat = radiusState.lat;
+                userLng = radiusState.lng;
+            }
+            if (userLat !== undefined && userLng !== undefined) {
+                const latA = parseFloat(a.lat) || 0;
+                const lngA = parseFloat(a.lng) || 0;
+                const latB = parseFloat(b.lat) || 0;
+                const lngB = parseFloat(b.lng) || 0;
+                const distA = calculateHaversineDistance(userLat, userLng, latA, lngA);
+                const distB = calculateHaversineDistance(userLat, userLng, latB, lngB);
+                return distA - distB;
+            }
+            // 若無位置資訊，則降級回 recent 排序
+        }
+        
+        // 預設: 最近新增 (recent)
+        const getTimestamp = (item) => item.updatedAt || item.addedAt || 0;
+        return getTimestamp(b) - getTimestamp(a); // descending order
     });
 
     let items = combined;
@@ -1184,11 +1238,17 @@ function createPopupContent(attr) {
     const color = CATEGORY_COLORS[attr.category] || '#666';
     const customData = WishlistManager.get(attr.name, attr.lat, attr.lng);
     let iconsHtml = '';
+    let remarkHtml = '';
     if (customData) {
         if (customData.wish) iconsHtml += '<i class="fas fa-heart" style="color: #e74c3c; margin-left: 6px; font-size: 14px;" title="Wish"></i>';
         if (customData.pinned) iconsHtml += '<i class="fas fa-thumbtack" style="color: #3498db; margin-left: 6px; font-size: 14px;" title="Pinned"></i>';
         if (customData.visited) iconsHtml += '<i class="fas fa-check-circle" style="color: #2ecc71; margin-left: 6px; font-size: 14px;" title="Visited"></i>';
+        if (customData.myRemark) {
+            remarkHtml = `<div class="popup-desc" style="color: #d35400; font-weight: 500;">備註：${customData.myRemark}</div>`;
+        }
     }
+
+    const defaultDesc = attr.description ? (attr.description.length > 80 ? attr.description.substring(0, 80) + '...' : attr.description) : '無詳細描述';
 
     return `
         <div class="popup-card">
@@ -1196,7 +1256,8 @@ function createPopupContent(attr) {
                 <div class="popup-name">${attr.name}${iconsHtml}</div>
                 <div class="popup-ko">${attr.local_name}</div>
                 <span class="popup-cat" style="background:${color}">${attr.category}</span>
-                <div class="popup-desc">${attr.description.substring(0, 80)}...</div>
+                <div class="popup-desc">${defaultDesc}</div>
+                ${remarkHtml}
                 <button class="popup-btn" onclick="showAttractionDetailById('${attr.id}')">
                     查看詳情
                 </button>
@@ -1253,8 +1314,8 @@ function showAttractionDetail(attr) {
 
     const highlights = attr.highlights.map(h => `<li>${h}</li>`).join('');
 
+    body.classList.add('no-hero');
     body.innerHTML = `
-        <img class="modal-hero" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${attr.name}" onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
         <div class="modal-info">
             <div class="modal-title">${attr.name}</div>
             <div class="modal-ko">${attr.local_name}</div>
@@ -3464,6 +3525,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('desktop-search-clear')?.addEventListener('click', clearPanelSearch);
     document.getElementById('mobile-search-clear')?.addEventListener('click', clearPanelSearch);
     
+    // Setup sort select listeners
+    const desktopSortSelect = document.getElementById('desktop-sort-select');
+    if (desktopSortSelect) {
+        desktopSortSelect.value = currentSortPreference;
+        desktopSortSelect.addEventListener('change', (e) => setSortPreference(e.target.value));
+    }
+    const mobileSortSelect = document.getElementById('mobile-sort-select');
+    if (mobileSortSelect) {
+        mobileSortSelect.value = currentSortPreference;
+        mobileSortSelect.addEventListener('change', (e) => setSortPreference(e.target.value));
+    }
+    
     // Setup radius info popover listener
     const radiusInfoIcon = document.getElementById('radius-info-icon');
     if (radiusInfoIcon) {
@@ -4368,7 +4441,10 @@ const WishlistManager = {
     /** 生成唯一 ID */
     _generateId(name, lat, lng) {
         // 用 name+坐標 作為唯一標識，避免重複
-        return `wl_${name}_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+        const nlat = Number(lat);
+        const nlng = Number(lng);
+        if (isNaN(nlat) || isNaN(nlng)) return `wl_${name}_${lat}_${lng}`;
+        return `wl_${name}_${nlat.toFixed(4)}_${nlng.toFixed(4)}`;
     },
 
     /** 添加或更新項目 */
@@ -4439,7 +4515,35 @@ const WishlistManager = {
     /** 獲取指定地點 */
     get(name, lat, lng) {
         const id = this._generateId(name, lat, lng);
-        return this.getAll().find(i => i.id === id);
+        const items = this.getAll();
+        const exact = items.find(i => i.id === id);
+        if (exact) return exact;
+
+        const targetName = String(name || '').trim();
+        const targetLat = Number(lat);
+        const targetLng = Number(lng);
+        if (!targetName || isNaN(targetLat) || isNaN(targetLng)) return null;
+
+        const tol = 0.0001;
+        let best = null;
+        let bestDist = Infinity;
+        for (const i of items) {
+            if (!i || !i.name) continue;
+            if (String(i.name).trim() !== targetName) continue;
+            const ilat = Number(i.lat);
+            const ilng = Number(i.lng);
+            if (isNaN(ilat) || isNaN(ilng)) continue;
+            const dlat = ilat - targetLat;
+            const dlng = ilng - targetLng;
+            if (Math.abs(dlat) <= tol && Math.abs(dlng) <= tol) {
+                const dist = dlat * dlat + dlng * dlng;
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = i;
+                }
+            }
+        }
+        return best;
     },
 
     /** 切換願望清單狀態（切換 wish 屬性） */
