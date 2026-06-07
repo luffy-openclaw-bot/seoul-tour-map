@@ -4322,6 +4322,17 @@ function toggleLoadingState(isSyncing) {
 const WishlistManager = {
     STORAGE_KEY: 'seoul_tour_wishlist',
 
+    _normalizeName(name) {
+        return String(name || '').normalize('NFKC').replace(/\s+/g, ' ').trim();
+    },
+
+    _coordKey(lat, lng) {
+        const nlat = Number(lat);
+        const nlng = Number(lng);
+        if (isNaN(nlat) || isNaN(nlng)) return null;
+        return `${nlat.toFixed(4)}_${nlng.toFixed(4)}`;
+    },
+
     /** 獲取所有願望清單項目 */
     getAll() {
         try {
@@ -4519,7 +4530,7 @@ const WishlistManager = {
         const exact = items.find(i => i.id === id);
         if (exact) return exact;
 
-        const targetName = String(name || '').trim();
+        const targetName = this._normalizeName(name);
         const targetLat = Number(lat);
         const targetLng = Number(lng);
         if (!targetName || isNaN(targetLat) || isNaN(targetLng)) return null;
@@ -4529,7 +4540,7 @@ const WishlistManager = {
         let bestDist = Infinity;
         for (const i of items) {
             if (!i || !i.name) continue;
-            if (String(i.name).trim() !== targetName) continue;
+            if (this._normalizeName(i.name) !== targetName) continue;
             const ilat = Number(i.lat);
             const ilng = Number(i.lng);
             if (isNaN(ilat) || isNaN(ilng)) continue;
@@ -4543,7 +4554,27 @@ const WishlistManager = {
                 }
             }
         }
-        return best;
+        if (best) return best;
+
+        const targetKey = this._coordKey(targetLat, targetLng);
+        if (!targetKey) return null;
+
+        const candidates = [];
+        for (const i of items) {
+            if (!i) continue;
+            const k = this._coordKey(i.lat, i.lng);
+            if (k && k === targetKey) {
+                candidates.push(i);
+            }
+        }
+
+        if (candidates.length === 1) return candidates[0];
+        if (candidates.length > 1) {
+            const nameMatches = candidates.filter(c => c && c.name && this._normalizeName(c.name) === targetName);
+            if (nameMatches.length === 1) return nameMatches[0];
+        }
+
+        return null;
     },
 
     /** 切換願望清單狀態（切換 wish 屬性） */
