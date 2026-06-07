@@ -11,6 +11,7 @@ This skill helps record and manage development plans for features or enhancement
 
 Invoke this skill when:
 - You are starting a new feature or enhancement.
+- You have completed implementing a planned change and want to record what was done and how it was verified.
 - The user asks to "record a plan" or "create a plan doc".
 - You need to document implementation steps, current state analysis, and verification steps.
 
