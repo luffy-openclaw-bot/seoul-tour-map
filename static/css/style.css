@@ -2505,6 +2505,53 @@ body {
     font-weight: 900;
 }
 
+/* 列表中的移除按鈕 */
+.remove-loc-btn {
+    position: absolute;
+    top: 48px;
+    right: 8px;
+    background: rgba(255,255,255,0.9);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    z-index: 2;
+}
+
+.remove-loc-btn:hover {
+    color: #e74c3c;
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+/* 手機版移除按鈕 */
+.mobile-remove-loc-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    margin-right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    flex-shrink: 0;
+}
+
+.mobile-remove-loc-btn:hover {
+    color: #e74c3c;
+}
+
 /* Modal 中的願望清單按鈕 */
 .btn-wishlist-modal {
     display: inline-flex;

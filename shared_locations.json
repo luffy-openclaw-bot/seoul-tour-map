@@ -349,5 +349,21 @@
     "pinned": false,
     "visited": false,
     "myRemark": ""
+  },
+  {
+    "id": "wl_my test A_37.6006_126.9805",
+    "name": "my test A",
+    "lat": 37.60063222105408,
+    "lng": 126.98049545288087,
+    "category": "自訂景點",
+    "description": "用戶手動儲存的位置 (37.60063, 126.98050)",
+    "price": "",
+    "addedAt": 1780821563606,
+    "updatedAt": 1780821563606,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKGlQaG9uZTsgQ1BV",
+    "wish": true,
+    "pinned": true,
+    "visited": false,
+    "myRemark": "my-test-a"
   }
 ]
