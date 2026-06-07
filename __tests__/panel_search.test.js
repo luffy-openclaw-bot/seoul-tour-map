@@ -24,11 +24,17 @@ global.L = {
         })
     }),
     divIcon: jest.fn(() => ({})),
-    marker: jest.fn(() => ({
-        addTo: jest.fn(() => ({
-            bindPopup: jest.fn()
-        }))
-    }))
+    marker: jest.fn(() => {
+        const markerObj = {
+            addTo: jest.fn(() => markerObj),
+            bindPopup: jest.fn(() => markerObj),
+            on: jest.fn(() => markerObj),
+            getLatLng: jest.fn(() => ({ lat: 0, lng: 0 })),
+            openPopup: jest.fn()
+        };
+        return markerObj;
+    }),
+    DomEvent: { stop: jest.fn() }
 };
 
 global.fetch = jest.fn(() => Promise.resolve({ ok: true }));
