@@ -563,6 +563,7 @@ function renderPinnedMarkers() {
                             <div class="popup-name">${item.name}${iconsHtml}</div>
                             <span class="popup-cat" style="background:${color}">${item.category || '釘選位置'}</span>
                             <div class="popup-desc">坐標：${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+                            ${item.myRemark ? `<div class="popup-desc" style="color: #d35400; font-weight: 500;">備註：${item.myRemark}</div>` : ''}
                             <button class="popup-btn" style="background:#f39c12; margin-bottom: 5px;" onclick="openSaveLocationModal(${item.lat}, ${item.lng}, '${item.name.replace(/'/g, "\\'")}')">
                                 編輯備註
                             </button>
@@ -1227,11 +1228,17 @@ function createPopupContent(attr) {
     const color = CATEGORY_COLORS[attr.category] || '#666';
     const customData = WishlistManager.get(attr.name, attr.lat, attr.lng);
     let iconsHtml = '';
+    let remarkHtml = '';
     if (customData) {
         if (customData.wish) iconsHtml += '<i class="fas fa-heart" style="color: #e74c3c; margin-left: 6px; font-size: 14px;" title="Wish"></i>';
         if (customData.pinned) iconsHtml += '<i class="fas fa-thumbtack" style="color: #3498db; margin-left: 6px; font-size: 14px;" title="Pinned"></i>';
         if (customData.visited) iconsHtml += '<i class="fas fa-check-circle" style="color: #2ecc71; margin-left: 6px; font-size: 14px;" title="Visited"></i>';
+        if (customData.myRemark) {
+            remarkHtml = `<div class="popup-desc" style="color: #d35400; font-weight: 500;">備註：${customData.myRemark}</div>`;
+        }
     }
+
+    const defaultDesc = attr.description ? (attr.description.length > 80 ? attr.description.substring(0, 80) + '...' : attr.description) : '無詳細描述';
 
     return `
         <div class="popup-card">
@@ -1239,7 +1246,8 @@ function createPopupContent(attr) {
                 <div class="popup-name">${attr.name}${iconsHtml}</div>
                 <div class="popup-ko">${attr.local_name}</div>
                 <span class="popup-cat" style="background:${color}">${attr.category}</span>
-                <div class="popup-desc">${attr.description.substring(0, 80)}...</div>
+                <div class="popup-desc">${defaultDesc}</div>
+                ${remarkHtml}
                 <button class="popup-btn" onclick="showAttractionDetailById('${attr.id}')">
                     查看詳情
                 </button>
