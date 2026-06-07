@@ -89,5 +89,25 @@ describe('Wishlist fuzzy match', () => {
 
         expect(WishlistManager.has('WishPlace', 37.20005, 127.20005)).toBe(true);
     });
+
+    test('WishlistManager.get falls back to coordKey match when names differ but rounded coords match', () => {
+        localStorage.setItem(WishlistManager.STORAGE_KEY, JSON.stringify([
+            { id: 'imported_1', name: 'Imported Name', lat: 37.5664999, lng: 126.9780001, addedAt: 1, updatedAt: 1, deleted: false }
+        ]));
+
+        const found = WishlistManager.get('Preset Name', 37.5665, 126.9780);
+        expect(found).not.toBeNull();
+        expect(found.id).toBe('imported_1');
+    });
+
+    test('WishlistManager.get coordKey fallback returns null when ambiguous', () => {
+        localStorage.setItem(WishlistManager.STORAGE_KEY, JSON.stringify([
+            { id: 'imported_1', name: 'Imported A', lat: 37.5664999, lng: 126.9780001, addedAt: 1, updatedAt: 1, deleted: false },
+            { id: 'imported_2', name: 'Imported B', lat: 37.5665001, lng: 126.9780002, addedAt: 1, updatedAt: 1, deleted: false }
+        ]));
+
+        const found = WishlistManager.get('Preset Name', 37.5665, 126.9780);
+        expect(found).toBeNull();
+    });
 });
 
