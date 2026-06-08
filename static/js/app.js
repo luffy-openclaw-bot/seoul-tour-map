@@ -42,6 +42,125 @@ function setSortPreference(pref) {
     }
 }
 
+// ==================== User Preferences API ====================
+let userPreferences = {
+    accuracy: 50,
+    speed: 50,
+    personalization: 50,
+    use_web_search: true,
+    use_offline_fallback: true,
+    use_map_commands: true,
+    verbosity: 'normal'
+};
+
+let userTripData = {
+    planned_places: [],
+    visited_places: [],
+    interests: [],
+    start_date: "",
+    end_date: ""
+};
+
+async function loadUserPreferences() {
+    try {
+        const fingerprint = FingerprintManager.getFingerprint();
+        if (!fingerprint) return;
+        
+        const response = await fetch(`${API_BASE_URL}/api/user-profile?fingerprint=${encodeURIComponent(fingerprint)}`);
+        const data = await response.json();
+        
+        if (data.success && data.profile) {
+            if (data.profile.preferences) {
+                userPreferences = { ...userPreferences, ...data.profile.preferences };
+            }
+            if (data.profile.trip_data) {
+                userTripData = { ...userTripData, ...data.profile.trip_data };
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load user preferences:', e);
+    }
+}
+
+async function saveUserPreferences() {
+    try {
+        const fingerprint = FingerprintManager.getFingerprint();
+        if (!fingerprint) return;
+        
+        const profile = {
+            preferences: userPreferences,
+            trip_data: userTripData
+        };
+        
+        await fetch(`${API_BASE_URL}/api/user-profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fingerprint, profile })
+        });
+    } catch (e) {
+        console.error('Failed to save user preferences:', e);
+    }
+}
+
+function openPreferencesModal() {
+    // Populate modal with current preferences
+    document.getElementById('pref-accuracy').value = userPreferences.accuracy;
+    document.getElementById('pref-accuracy-val').textContent = userPreferences.accuracy;
+    
+    document.getElementById('pref-speed').value = userPreferences.speed;
+    document.getElementById('pref-speed-val').textContent = userPreferences.speed;
+    
+    document.getElementById('pref-personalization').value = userPreferences.personalization;
+    document.getElementById('pref-personalization-val').textContent = userPreferences.personalization;
+    
+    document.getElementById('pref-web-search').checked = userPreferences.use_web_search;
+    document.getElementById('pref-map-commands').checked = userPreferences.use_map_commands;
+    document.getElementById('pref-offline-fallback').checked = userPreferences.use_offline_fallback;
+    
+    document.getElementById('pref-verbosity').value = userPreferences.verbosity;
+    
+    document.getElementById('preferences-modal').classList.remove('hidden');
+    // Hide settings modal if open
+    document.getElementById('settings-modal').classList.add('hidden');
+}
+
+function closePreferencesModal() {
+    document.getElementById('preferences-modal').classList.add('hidden');
+}
+
+async function savePreferences() {
+    // Update preferences object from UI
+    userPreferences.accuracy = parseInt(document.getElementById('pref-accuracy').value, 10);
+    userPreferences.speed = parseInt(document.getElementById('pref-speed').value, 10);
+    userPreferences.personalization = parseInt(document.getElementById('pref-personalization').value, 10);
+    
+    userPreferences.use_web_search = document.getElementById('pref-web-search').checked;
+    userPreferences.use_map_commands = document.getElementById('pref-map-commands').checked;
+    userPreferences.use_offline_fallback = document.getElementById('pref-offline-fallback').checked;
+    
+    userPreferences.verbosity = document.getElementById('pref-verbosity').value;
+    
+    closePreferencesModal();
+    
+    // Save to backend
+    await saveUserPreferences();
+    
+    // Show success message
+    const msg = document.createElement('div');
+    msg.style.position = 'fixed';
+    msg.style.bottom = '20px';
+    msg.style.left = '50%';
+    msg.style.transform = 'translateX(-50%)';
+    msg.style.background = 'var(--primary-color)';
+    msg.style.color = 'white';
+    msg.style.padding = '10px 20px';
+    msg.style.borderRadius = '20px';
+    msg.style.zIndex = '9999';
+    msg.innerHTML = '<i class="fas fa-check"></i> 個人化設定已儲存';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3000);
+}
+
 // ==================== Radius Filter 狀態 ====================
 let radiusState = {
     active: false,
@@ -2698,7 +2817,9 @@ async function fetchAIReply(userText) {
                 message: userText,
                 system: getSystemContext(),
                 history: chatHistory.slice(0, -1),  // 唔包剛加入嘅 user message
-                fingerprint: FingerprintManager.getFingerprint()
+                fingerprint: FingerprintManager.getFingerprint(),
+                preferences: userPreferences,
+                trip_data: userTripData
             })
         });
         clearTimeout(timeoutId);
@@ -3882,6 +4003,9 @@ function closeRadiusInfoPopover() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 載入使用者偏好設定
+    await loadUserPreferences();
+    
     MapManager.init();
     initMap();
     await loadData();

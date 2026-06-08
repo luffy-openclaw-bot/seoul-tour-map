@@ -341,6 +341,101 @@
         </div>
     </div>
 
+    <!-- AI Preferences Modal -->
+    <div id="preferences-modal" class="modal hidden">
+        <div class="modal-content settings-content">
+            <button class="modal-close" onclick="closePreferencesModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="settings-title"><i class="fas fa-brain"></i> AI 助手個人化設定</h3>
+            
+            <div class="settings-group">
+                <h4><i class="fas fa-sliders-h"></i> 核心參數 (0-100)</h4>
+                
+                <div class="settings-field">
+                    <label for="pref-accuracy">
+                        <i class="fas fa-bullseye"></i> 準確度 (Accuracy)
+                        <span id="pref-accuracy-val" class="slider-value">50</span>
+                    </label>
+                    <input type="range" id="pref-accuracy" class="settings-slider" min="0" max="100" value="50" oninput="document.getElementById('pref-accuracy-val').textContent = this.value">
+                    <small style="color: #666; display: block; margin-top: 4px;">較高值會更嚴謹查證事實，但可能需要更多時間。</small>
+                </div>
+                
+                <div class="settings-field">
+                    <label for="pref-speed">
+                        <i class="fas fa-tachometer-alt"></i> 回應速度 (Speed)
+                        <span id="pref-speed-val" class="slider-value">50</span>
+                    </label>
+                    <input type="range" id="pref-speed" class="settings-slider" min="0" max="100" value="50" oninput="document.getElementById('pref-speed-val').textContent = this.value">
+                    <small style="color: #666; display: block; margin-top: 4px;">較高值會減少深度思考，加快回覆速度。</small>
+                </div>
+                
+                <div class="settings-field">
+                    <label for="pref-personalization">
+                        <i class="fas fa-user-edit"></i> 個人化程度 (Personalization)
+                        <span id="pref-personalization-val" class="slider-value">50</span>
+                    </label>
+                    <input type="range" id="pref-personalization" class="settings-slider" min="0" max="100" value="50" oninput="document.getElementById('pref-personalization-val').textContent = this.value">
+                    <small style="color: #666; display: block; margin-top: 4px;">較高值會更多地參考您的旅行偏好與歷史對話。</small>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h4><i class="fas fa-toggle-on"></i> 功能開關</h4>
+                
+                <div class="settings-field toggle-field" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <label><i class="fas fa-globe"></i> 啟用即時網頁搜尋</label>
+                        <small style="color: #666; display: block;">允許 AI 搜尋最新資訊（天氣、營業時間等）</small>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="pref-web-search" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <div class="settings-field toggle-field" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                    <div>
+                        <label><i class="fas fa-map-marked-alt"></i> 啟用自動地圖控制</label>
+                        <small style="color: #666; display: block;">允許 AI 自動移動地圖或標記景點</small>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="pref-map-commands" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <div class="settings-field toggle-field" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                    <div>
+                        <label><i class="fas fa-wifi-slash"></i> 啟用離線知識庫回退</label>
+                        <small style="color: #666; display: block;">當網路不佳時使用本地基礎知識</small>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="pref-offline-fallback" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h4><i class="fas fa-comment-dots"></i> 對話風格</h4>
+                <div class="settings-field">
+                    <label for="pref-verbosity">回覆詳細程度</label>
+                    <select id="pref-verbosity" class="settings-select">
+                        <option value="concise">簡潔 (Concise)</option>
+                        <option value="normal" selected>適中 (Normal)</option>
+                        <option value="detailed">詳細 (Detailed)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-secondary" onclick="closePreferencesModal()"><i class="fas fa-times"></i> 取消</button>
+                <button class="btn-primary" onclick="savePreferences()"><i class="fas fa-save"></i> 儲存設定</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 設置彈窗 (Settings Modal) -->
     <div id="settings-modal" class="modal hidden">
         <div class="modal-content settings-content">
@@ -390,6 +485,14 @@
                     <input type="hidden" id="setting-radius-lat">
                     <input type="hidden" id="setting-radius-lng">
                 </div>
+            </div>
+
+            <div class="settings-group">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4><i class="fas fa-brain"></i> AI 助手個人化設定</h4>
+                    <button class="btn-secondary" onclick="openPreferencesModal()" style="padding: 4px 10px; font-size: 0.9em;"><i class="fas fa-sliders-h"></i> 詳細設定</button>
+                </div>
+                <p style="font-size: 0.9em; color: #666; margin-top: 5px;">調整 AI 助手的準確度、速度與個人化程度。</p>
             </div>
 
             <div class="settings-actions">

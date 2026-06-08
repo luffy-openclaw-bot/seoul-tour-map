@@ -31,7 +31,11 @@ _ollama_circuit_open_after = 3
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print(f"DEBUG: BASE_DIR={BASE_DIR}")
 SHARED_LOCATIONS_FILE = os.path.join(BASE_DIR, 'shared_locations.json')
+USER_PROFILES_DIR = os.path.join(BASE_DIR, 'user_profiles')
 file_lock = threading.Lock()
+
+# Create user profiles directory if it doesn't exist
+os.makedirs(USER_PROFILES_DIR, exist_ok=True)
 
 # 導入搜索模組
 import importlib.util
@@ -96,6 +100,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         # 解析路徑以忽略查詢參數或完整 URI
         parsed_path = urllib.parse.urlparse(self.path).path
+        parsed_query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
 
         # API 端點
         if parsed_path == '/api/health':
@@ -106,6 +111,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if parsed_path == '/api/stream-locations':
             self.handle_stream_locations()
+            return
+        if parsed_path == '/api/user-profile':
+            self.handle_get_user_profile(parsed_query)
             return
 
         # 靜態文件
@@ -144,7 +152,91 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if parsed_path == '/api/google-places':
             self.handle_google_places()
             return
+        if parsed_path == '/api/user-profile':
+            self.handle_set_user_profile()
+            return
         self.send_error(404)
+
+    def handle_get_user_profile(self, parsed_query):
+        """處理獲取用戶資料的請求"""
+        try:
+            fingerprint = parsed_query.get('fingerprint', [''])[0]
+            if not fingerprint:
+                self.send_json({'success': False, 'error': 'Missing fingerprint'}, status=400)
+                return
+
+            # 防止路徑遍歷
+            safe_fingerprint = "".join(c for c in fingerprint if c.isalnum() or c in ('-', '_'))
+            profile_path = os.path.join(USER_PROFILES_DIR, f"{safe_fingerprint}.json")
+
+            default_profile = {
+                "fingerprint": safe_fingerprint,
+                "preferences": {
+                    "accuracy": 50,
+                    "speed": 50,
+                    "personalization": 50,
+                    "use_web_search": True,
+                    "use_offline_fallback": True,
+                    "use_map_commands": True,
+                    "verbosity": "normal"
+                },
+                "trip_data": {
+                    "planned_places": [],
+                    "visited_places": [],
+                    "interests": [],
+                    "start_date": "",
+                    "end_date": ""
+                }
+            }
+
+            if os.path.exists(profile_path):
+                with file_lock:
+                    with open(profile_path, 'r', encoding='utf-8') as f:
+                        profile_data = json.load(f)
+                # Merge with default to ensure all fields exist
+                merged_profile = default_profile.copy()
+                if "preferences" in profile_data:
+                    merged_profile["preferences"].update(profile_data["preferences"])
+                if "trip_data" in profile_data:
+                    merged_profile["trip_data"].update(profile_data["trip_data"])
+                self.send_json({'success': True, 'profile': merged_profile})
+            else:
+                self.send_json({'success': True, 'profile': default_profile})
+
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    def handle_set_user_profile(self):
+        """處理儲存用戶資料的請求"""
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+            
+            fingerprint = data.get('fingerprint', '')
+            profile = data.get('profile', {})
+
+            if not fingerprint:
+                self.send_json({'success': False, 'error': 'Missing fingerprint'}, status=400)
+                return
+
+            # 防止路徑遍歷
+            safe_fingerprint = "".join(c for c in fingerprint if c.isalnum() or c in ('-', '_'))
+            profile_path = os.path.join(USER_PROFILES_DIR, f"{safe_fingerprint}.json")
+
+            # 確保儲存的資料有 fingerprint
+            profile['fingerprint'] = safe_fingerprint
+
+            with file_lock:
+                with open(profile_path, 'w', encoding='utf-8') as f:
+                    json.dump(profile, f, ensure_ascii=False, indent=2)
+
+            self.send_json({'success': True, 'message': 'Profile saved successfully'})
+
+        except json.JSONDecodeError:
+            self.send_json({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def handle_chat(self):
         global _ollama_consecutive_failures
@@ -156,9 +248,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             system_prompt = data.get('system', '')
             chat_history = data.get('history', [])  # 獲取對話歷史
             fingerprint = data.get('fingerprint', '') # 獲取指紋授權
+            user_prefs = data.get('preferences', {}) # 獲取用戶偏好
+            trip_data = data.get('trip_data', {}) # 獲取用戶旅行資料
 
             print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | User message received: {user_message[:100]}{'...' if len(user_message) > 100 else ''}")
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | system_prompt={'provided' if system_prompt else 'empty'}, history={len(chat_history)} messages, fingerprint={'provided' if fingerprint else 'none'}")
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | system_prompt={'provided' if system_prompt else 'empty'}, history={len(chat_history)} messages, fingerprint={'provided' if fingerprint else 'none'}, preferences={'provided' if user_prefs else 'none'}")
 
             # 處理系統定位報告
             if user_message == "[SYSTEM_LOCATION_REPORT]":
@@ -209,8 +303,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 【地圖控制指令】
 當用家需要睇地圖、想知道位置、或想去某個地方，你可以喺回覆尾加上一個特殊指令。
-指令格式：將以下 JSON 放喺【...】內，例如 【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
+指令格式：將以下 JSON 放喺【...】內，例如 【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】"""
 
+            # 根據偏好設定控制地圖指令
+            use_map_commands = user_prefs.get('use_map_commands', True)
+            if not use_map_commands:
+                full_system += "\n\n注意：用戶目前已停用自動地圖控制，請純文字回答，不要輸出任何地圖指令。"
+            else:
+                full_system += """
 可用動作：
 1. center：飛去指定坐標 (lat, lng, zoom)
    示例：「去明洞」→【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
@@ -259,7 +359,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 - 用戶問區域（如「明洞有咩玩」），用 add_polygon 顯示範圍
 - 每次新查詢，先加 clear_search_markers 清除之前標記
 - 只喺需要移動地圖、顯示位置、顯示範圍時先用呢啲指令。唔好每個回覆都加指令。
-- 提及具體地點時（咖啡店、酒店、餐廳、景點等），必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker。
+- 提及具體地點時（咖啡店、酒店、餐廳、景點等），必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker。"""
+
+            full_system += """
 
 【韓國交通基本知識 (Rookie Tips)】
 - T-money 卡：最方便嘅支付方式，便利店（如 GS25, CU）有售，可用於巴士、地鐵同的士。
@@ -270,13 +372,44 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 - Slash Command：你可以叫用家輸入 `/places` 或 `/places [半徑]` 嚟搜尋地圖中心附近嘅 Google 地點資訊（預設半徑 500m）。
 - 導航建議：推薦用家下載 Naver Map 或 KakaoMap，因為 Google Maps 喺韓國嘅步行導航唔太準確。
 """
+            
+            # 加入用戶行程與偏好作為個人化上下文
+            if trip_data or user_prefs:
+                full_system += "\n【用戶個人化資料】\n"
+                
+                if user_prefs.get('verbosity') == 'concise':
+                    full_system += "- 對話風格：請非常簡潔直接地回答，不要說多餘的廢話。\n"
+                elif user_prefs.get('verbosity') == 'detailed':
+                    full_system += "- 對話風格：請詳細地回答，並提供豐富的背景資訊。\n"
+                    
+                if trip_data.get('start_date') or trip_data.get('end_date'):
+                    full_system += f"- 行程日期：{trip_data.get('start_date', '未知')} 至 {trip_data.get('end_date', '未知')}\n"
+                
+                interests = trip_data.get('interests', [])
+                if interests:
+                    full_system += f"- 旅遊興趣：{', '.join(interests)}\n"
+                    
+                planned = trip_data.get('planned_places', [])
+                if planned:
+                    full_system += f"- 已計畫前往的地點：{', '.join(planned)}\n"
+                    
+                visited = trip_data.get('visited_places', [])
+                if visited:
+                    full_system += f"- 已去過的地點：{', '.join(visited)}\n"
+                    
+                full_system += "\n請根據以上的個人化資料，提供最適合這位用戶的建議（例如避免推薦已經去過的地方，或根據興趣推薦）。\n"
 
             if system_prompt:
                 full_system += "\n" + system_prompt
 
             # 檢查是否應該委託給 Hermes Agent 處理複雜查詢
-            should_delegate = self._should_delegate_to_hermes(user_message)
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Decision: {should_delegate}")
+            should_delegate = False
+            if user_prefs.get('use_web_search', True):
+                should_delegate = self._should_delegate_to_hermes(user_message)
+                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Decision: {should_delegate}")
+            else:
+                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Skipped due to user preferences (use_web_search=False)")
+
             if should_delegate:
                 print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Starting delegation...")
                 hermes_reply = self._delegate_to_hermes(user_message, full_system, chat_history)
@@ -292,7 +425,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             try:
                 if not circuit_open:
                     print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Calling Ollama API...")
-                    ollama_reply = self._call_ollama_api(full_system, user_message, chat_history)
+                    # 根據速度/準確度偏好調整模型參數 (speed=0-100)
+                    speed_pref = user_prefs.get('speed', 50)
+                    temp = 0.7
+                    max_tokens = 800
+                    if speed_pref > 70:
+                        temp = 0.8
+                        max_tokens = 400 # 較短回覆更快
+                    elif speed_pref < 30:
+                        temp = 0.3 # 較準確
+                        max_tokens = 1200
+
+                    ollama_reply = self._call_ollama_api(full_system, user_message, chat_history, temperature=temp, max_tokens=max_tokens)
                     if ollama_reply:
                         _ollama_consecutive_failures = 0  # reset on success
                         print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Response received (reply_len={len(ollama_reply)}): {ollama_reply[:100]}{'...' if len(ollama_reply) > 100 else ''}")
@@ -306,10 +450,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Circuit OPENED — next requests skip Ollama")
 
             # 回退到離線知識庫
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | offline_kb | Falling back to offline knowledge base...")
-            offline_reply = self._generate_offline_reply(user_message)
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=offline)")
-            self.send_json({'reply': offline_reply, 'source': 'offline'})
+            use_offline_fallback = user_prefs.get('use_offline_fallback', True)
+            if use_offline_fallback:
+                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | offline_kb | Falling back to offline knowledge base...")
+                offline_reply = self._generate_offline_reply(user_message)
+                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=offline)")
+                self.send_json({'reply': offline_reply, 'source': 'offline'})
+            else:
+                self.send_json({'reply': '抱歉，系統暫時未能連接 AI 伺服器，且離線回退功能已被停用。', 'error': True})
 
         except Exception as e:
             self.send_json({'reply': f'系統錯誤：{str(e)}', 'error': True})
@@ -586,7 +734,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Delegation failed: {e}")
             return None
 
-    def _call_ollama_api(self, system_prompt, user_message, history=None):
+    def _call_ollama_api(self, system_prompt, user_message, history=None, temperature=0.7, max_tokens=800):
         """調用 Ollama Cloud API"""
         # 構建訊息列表，加入對話歷史
         messages = [{"role": "system", "content": system_prompt}]
@@ -603,8 +751,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "model": MODEL,
             "messages": messages,
             "stream": False,
-            "temperature": 0.7,
-            "max_tokens": 800
+            "temperature": temperature,
+            "max_tokens": max_tokens
         }
 
         req = urllib.request.Request(
