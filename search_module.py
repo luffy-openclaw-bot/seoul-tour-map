@@ -43,10 +43,12 @@ OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')
 DATA_GO_KR_KEY = os.getenv('DATA_GO_KR_KEY', 'YOUR_SERVICE_KEY_HERE')
 VISIT_KOREA_API_KEY = os.getenv('VISIT_KOREA_API_KEY', 'YOUR_VISIT_KOREA_KEY_HERE')
 SEOUL_DATA_API_KEY = os.getenv('SEOUL_DATA_API_KEY', 'YOUR_SEOUL_DATA_KEY_HERE')
+GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY', '')
 
 # API Endpoints
 VISIT_KOREA_URL = "https://apis.data.go.kr/B551011/KorService1"
 SEOUL_DATA_URL = "http://openapi.seoul.go.kr:8088"
+GOOGLE_PLACES_NEW_URL = "https://places.googleapis.com/v1/places:searchNearby"
 
 
 @dataclass
@@ -179,6 +181,47 @@ class LocationSearcher:
         except Exception as e:
             print(f"[LocationSearcher] Seoul Data Plaza error: {e}")
             return {}
+    
+    def _fetch_google_places_data(self, lat: float, lng: float, radius: int = 500) -> List[Dict]:
+        """
+        Fetch nearby places from Google Places API (New)
+        """
+        if not GOOGLE_PLACES_API_KEY:
+            return []
+
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+                'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.types,places.rating,places.userRatingCount,places.location,places.id'
+            }
+            
+            body = {
+                "maxResultCount": 20,
+                "locationRestriction": {
+                    "circle": {
+                        "center": {
+                            "latitude": lat,
+                            "longitude": lng
+                        },
+                        "radius": float(radius)
+                    }
+                }
+            }
+
+            req = urllib.request.Request(
+                GOOGLE_PLACES_NEW_URL,
+                data=json.dumps(body).encode('utf-8'),
+                headers=headers,
+                method='POST'
+            )
+            
+            with self.opener.open(req, timeout=10) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                return data.get('places', [])
+        except Exception as e:
+            print(f"[LocationSearcher] Google Places API error: {e}")
+            return []
     
     def _calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         """Calculate distance between two points in meters using Haversine formula"""
@@ -653,3 +696,41 @@ def search_location(lat: float, lng: float, query_type: str = "all", radius: int
     """
     searcher = get_searcher()
     return searcher.search(lat, lng, query_type, radius)
+
+
+def get_google_location_info(lat: float, lng: float, radius: int = 500) -> Dict:
+    """
+    獨立方法：使用 Google Places API (New) 獲取指定經緯度的位置資訊
+    
+    Args:
+        lat: 緯度
+        lng: 經度
+        radius: 搜索半徑（預設 500m）
+        
+    Returns:
+        Dict: 包含地點列表和狀態的字典
+    """
+    searcher = get_searcher()
+    places = searcher._fetch_google_places_data(lat, lng, radius)
+    
+    # 格式化結果 (針對 Places API New 格式)
+    formatted_places = []
+    for p in places:
+        location = p.get('location', {})
+        formatted_places.append({
+            'name': p.get('displayName', {}).get('text'),
+            'address': p.get('formattedAddress'),
+            'types': p.get('types', []),
+            'rating': p.get('rating'),
+            'user_ratings_total': p.get('userRatingCount'),
+            'lat': location.get('latitude'),
+            'lng': location.get('longitude'),
+            'place_id': p.get('id')
+        })
+        
+    return {
+        'success': True if places else False,
+        'count': len(formatted_places),
+        'places': formatted_places,
+        'source': 'google_places_new'
+    }

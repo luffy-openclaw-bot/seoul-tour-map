@@ -31,6 +31,7 @@ _ollama_circuit_open_after = 3
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print(f"DEBUG: BASE_DIR={BASE_DIR}")
 SHARED_LOCATIONS_FILE = os.path.join(BASE_DIR, 'shared_locations.json')
+file_lock = threading.Lock()
 
 # 導入搜索模組
 import importlib.util
@@ -43,8 +44,10 @@ if os.path.exists(module_path):
     search_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(search_module)
     search_location = search_module.search_location
+    get_google_location_info = getattr(search_module, 'get_google_location_info', None)
 else:
     search_location = None
+    get_google_location_info = None
 
 PORT = int(os.getenv('PORT', 8082))
 # Ollama Cloud API 設定 - 可通過環境變數覆蓋
@@ -137,6 +140,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if parsed_path == '/api/reverse-geocode':
             self.handle_reverse_geocode()
+            return
+        if parsed_path == '/api/google-places':
+            self.handle_google_places()
             return
         self.send_error(404)
 
@@ -261,6 +267,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 - 巴士：前門上車拍卡，後門落車拍卡。落車前要撳紅色「STOP」鐘。
 - 地鐵：留意月台方向（通常標示終點站）。入錯閘唔使驚，5 分鐘內同站出閘係免費嘅。
 - Slash Command：你可以叫用家輸入 `/transit` 嚟睇地圖中心附近嘅實時巴士同地鐵資訊。
+- Slash Command：你可以叫用家輸入 `/places` 或 `/places [半徑]` 嚟搜尋地圖中心附近嘅 Google 地點資訊（預設半徑 500m）。
 - 導航建議：推薦用家下載 Naver Map 或 KakaoMap，因為 Google Maps 喺韓國嘅步行導航唔太準確。
 """
 
@@ -1076,6 +1083,48 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             import traceback
             print(f"Transit handle error: {traceback.format_exc()}")
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    def handle_google_places(self):
+        """
+        處理 Google Places 查詢
+        POST /api/google-places
+        Body: { lat, lng, radius }
+        """
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+            
+            lat = data.get('lat')
+            lng = data.get('lng')
+            radius = data.get('radius', 500)
+            
+            print(f"Google Places request: lat={lat}, lng={lng}, radius={radius}")
+            
+            if lat is None or lng is None:
+                self.send_json({'success': False, 'error': '缺少經緯度參數 (lat, lng)'}, status=400)
+                return
+
+            if get_google_location_info is None:
+                self.send_json({'success': False, 'error': 'Google Places 功能未啟用或未正確載入'}, status=503)
+                return
+
+            # 調用 Google Places 方法
+            result = get_google_location_info(lat, lng, radius)
+            
+            if result.get('success'):
+                self.send_json({'success': True, 'data': result})
+            else:
+                # 即使 success 為 False，也可能是有 count: 0，這不是錯誤
+                if 'count' in result and result['count'] == 0:
+                    self.send_json({'success': True, 'data': result})
+                else:
+                    self.send_json({'success': False, 'error': '無法從 Google Places 獲取資料', 'details': result}, status=500)
+                
+        except Exception as e:
+            import traceback
+            print(f"Google Places handle error: {traceback.format_exc()}")
             self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def _get_demo_transit_data(self, lat, lng, transit_type):
