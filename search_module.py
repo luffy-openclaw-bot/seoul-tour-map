@@ -58,6 +58,7 @@ class PlaceInfo:
     category: str
     distance: str
     description: str
+    address: str
     highlights: List[str]
     rating: str
     price: str
@@ -261,12 +262,13 @@ class LocationSearcher:
             location_name = location_info.get('display_name', f"{lat}, {lng}")
             print(f"[LocationSearcher] Location identified: {location_name}")
             
-            # Step 2: Fetch data from public APIs (VisitKorea, Seoul Data)
+            # Step 2: Fetch data from public APIs (VisitKorea, Seoul Data, Google Places)
             # API-First Enrichment approach
             print("[LocationSearcher] Fetching public API data...")
             api_data = {
                 'visit_korea': self._fetch_visit_korea_data(lat, lng, query_type, radius),
-                'seoul_city': self._fetch_seoul_city_data(location_info)
+                'seoul_city': self._fetch_seoul_city_data(location_info),
+                'google_places': self._fetch_google_places_data(lat, lng, radius)
             }
             print(f"[LocationSearcher] API fetch complete. VK items: {len(api_data['visit_korea'])}, Seoul data: {bool(api_data['seoul_city'])}")
             
@@ -503,6 +505,15 @@ class LocationSearcher:
                 for item in visit_korea_items:
                     user_content += f"- 名稱: {item.get('title')}, 地址: {item.get('addr1')}, 坐標: ({item.get('mapy')}, {item.get('mapx')})\n"
             
+            google_places_items = api_data.get('google_places', [])
+            if google_places_items:
+                user_content += "\n【Google Places 實時數據】:\n"
+                for item in google_places_items:
+                    name = item.get('displayName', {}).get('text', '未知')
+                    addr = item.get('formattedAddress', '未知')
+                    loc = item.get('location', {})
+                    user_content += f"- 名稱: {name}, 地址: {addr}, 坐標: ({loc.get('latitude')}, {loc.get('longitude')})\n"
+
             if seoul_city_data:
                 user_content += "\n【首爾實時城市數據/活動】:\n"
                 user_content += json.dumps(seoul_city_data, ensure_ascii=False)[:1000]
@@ -569,6 +580,7 @@ class LocationSearcher:
             "category": "類別（如：歷史文化、韓式料理、酒店、購物中心）",
             "lat": 37.5796,
             "lng": 126.9770,
+            "address": "詳細地址（如有提供請務必包含）",
             "description": "簡短描述（30-50字）",
             "highlights": ["亮點1", "亮點2"],
             "rating": "評分（如 4.5/5 或 高/中/低）",
@@ -616,6 +628,7 @@ class LocationSearcher:
                     category=place_data.get('category', '其他'),
                     distance=place_data.get('distance', '步行可達'),
                     description=place_data.get('description', ''),
+                    address=place_data.get('address', ''),
                     highlights=place_data.get('highlights', []),
                     rating=place_data.get('rating', ''),
                     price=place_data.get('price', ''),

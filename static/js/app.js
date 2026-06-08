@@ -7,6 +7,35 @@
 // 請將此處改為後端 Python API 的完整 URL（例如：'https://your-backend.onrender.com'）
 const API_BASE_URL = ''; 
 
+/**
+ * 統一的 JSON 請求 Helper
+ * 處理非 JSON 回應、網路錯誤與狀態碼
+ */
+async function fetchJSON(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        
+        // 檢查回應內容類型
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text();
+            console.error(`Expected JSON from ${url} but received:`, contentType, text.substring(0, 100));
+            return { success: false, error: '伺服器返回了非 JSON 格式的內容' };
+        }
+
+        const data = await response.json();
+        // 處理 HTTP 錯誤但有 JSON 內容的情況 (例如 404, 500)
+        if (!response.ok && data.success !== false) {
+            data.success = false;
+            if (!data.error) data.error = `HTTP error! status: ${response.status}`;
+        }
+        return data;
+    } catch (e) {
+        console.error(`Fetch error for ${url}:`, e);
+        return { success: false, error: e.message };
+    }
+}
+
 // ==================== 全局變量 ====================
 let map;
 let markers = {};
@@ -66,10 +95,9 @@ async function loadUserPreferences() {
         const fingerprint = FingerprintManager.getFingerprint();
         if (!fingerprint) return;
         
-        const response = await fetch(`${API_BASE_URL}/api/user-profile?fingerprint=${encodeURIComponent(fingerprint)}`);
-        const data = await response.json();
+        const data = await fetchJSON(`${API_BASE_URL}/api/user-profile?fingerprint=${encodeURIComponent(fingerprint)}`);
         
-        if (data.success && data.profile) {
+        if (data && data.success && data.profile) {
             if (data.profile.preferences) {
                 userPreferences = { ...userPreferences, ...data.profile.preferences };
             }
@@ -92,7 +120,7 @@ async function saveUserPreferences() {
             trip_data: userTripData
         };
         
-        await fetch(`${API_BASE_URL}/api/user-profile`, {
+        await fetchJSON(`${API_BASE_URL}/api/user-profile`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fingerprint, profile })
@@ -700,19 +728,18 @@ async function searchNearby(lat, lng) {
     }).map(attr => `${attr.name} (${attr.local_name}) - ${attr.category}`).join('\n');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/api/nearby`, {
+        const data = await fetchJSON(`${API_BASE_URL}/api/nearby`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lat, lng, radius: 2000 })
         });
         
-        if (response.ok) {
-            const data = await response.json();
+        if (data && data.success !== false) {
             const reply = data.reply || `附近景點：\n${nearbyAttractions || '未有記錄'}`;
             hideTyping();
             addMessage(reply, 'bot');
         } else {
-            throw new Error('API failed');
+            throw new Error(data.error || 'API failed');
         }
     } catch (e) {
         hideTyping();
@@ -1375,6 +1402,7 @@ function renderAttractionList() {
                 <div class="info">
                     <div class="name">${place.name}</div>
                     <span class="category-tag" style="background:${color}">${category}</span>
+                    ${place.address ? `<div class="addr"><i class="fas fa-map-marker-alt"></i> ${place.address}</div>` : ''}
                     <div class="desc">${place.description ? place.description.substring(0, 60) + '...' : '搜索結果'}</div>
                 </div>
                 <div class="search-item-actions">
@@ -1383,6 +1411,7 @@ function renderAttractionList() {
                     </button>
                     <button class="wishlist-btn ${WishlistManager.has(place.name, place.lat, place.lng) ? 'in-wishlist' : ''}" 
                             data-name="${place.name}" data-lat="${place.lat}" data-lng="${place.lng}" 
+                            data-address="${place.address || ''}"
                             data-category="${category}" data-description="${place.description || ''}"
                             onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
                         <i class="${WishlistManager.has(place.name, place.lat, place.lng) ? 'fas' : 'far'} fa-heart"></i>
@@ -1448,11 +1477,13 @@ function renderAttractionList() {
                 <div class="name">${safeName} ${badges}</div>
                 <span class="category-tag" style="background:${color}">${safeCategory}</span>
                 ${safeTicket ? `<span class="attraction-price">💰 ${safeTicket}</span>` : ''}
+                ${attr.address ? `<div class="addr"><i class="fas fa-map-marker-alt"></i> ${attr.address}</div>` : ''}
                 <div class="desc">${safeDesc}</div>
                 ${remarkHtml}
             </div>
             <button class="wishlist-btn ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : ''}" 
                     data-name="${attr.name || ''}" data-lat="${attr.lat || 0}" data-lng="${attr.lng || 0}" 
+                    data-address="${attr.address || ''}"
                     data-category="${attr.category || ''}" data-price="${attr.ticket || ''}" 
                     data-description="${safeDescShort}"
                     onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
@@ -2809,7 +2840,7 @@ async function fetchAIReply(userText) {
     const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s — covers Hermes(15s) + Ollama(30s) + overhead
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/chat`, {
+        const data = await fetchJSON(`${API_BASE_URL}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: controller.signal,
@@ -2824,11 +2855,10 @@ async function fetchAIReply(userText) {
         });
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        if (data && data.success === false) {
+            throw new Error(data.error || 'AI 回應失敗');
         }
 
-        const data = await response.json();
         let reply = data.reply || generateAIReply(userText);
 
     // 解析並執行回覆中的地圖指令
@@ -3260,9 +3290,11 @@ function renderMobilePanelList() {
                         '<span class="card-dot" style="background:' + color + '"></span>' +
                         category +
                     '</div>' +
+                    (place.address ? '<div class="card-addr"><i class="fas fa-map-marker-alt"></i> ' + place.address + '</div>' : '') +
                 '</div>' +
                 '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(place.name, place.lat, place.lng) ? 'in-wishlist' : '') + '" ' +
                     'data-name="' + place.name + '" data-lat="' + place.lat + '" data-lng="' + place.lng + '" ' +
+                    'data-address="' + (place.address || '') + '" ' +
                     'data-category="' + category + '" data-description="' + (place.description || '') + '" ' +
                     'onclick="event.stopPropagation(); toggleWishlist(this)">' +
                     '<i class="' + (WishlistManager.has(place.name, place.lat, place.lng) ? 'fas' : 'far') + ' fa-heart"></i>' +
@@ -3328,11 +3360,13 @@ function renderMobilePanelList() {
                     '<span class="card-dot" style="background:' + color + '"></span>' +
                     safeCategory + (attr.local_name ? ' · ' + attr.local_name : '') +
                 '</div>' +
+                (attr.address ? '<div class="card-addr"><i class="fas fa-map-marker-alt"></i> ' + attr.address + '</div>' : '') +
                 remarkHtml +
             '</div>' +
             removeBtnHtml +
             '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : '') + '" ' +
                 'data-name="' + (attr.name || '') + '" data-lat="' + (attr.lat || 0) + '" data-lng="' + (attr.lng || 0) + '" ' +
+                'data-address="' + (attr.address || '') + '" ' +
                 'data-category="' + safeCategory + '" data-price="' + safeTicket + '" ' +
                 'data-description="' + safeDescShort + '" ' +
                 'onclick="event.stopPropagation(); toggleWishlist(this)">' +
@@ -3751,10 +3785,42 @@ async function executeMapAction(action, params, targetElement) {
                 if (params.name && params.lat !== undefined && params.lng !== undefined) {
                     const lat = parseFloat(params.lat);
                     const lng = parseFloat(params.lng);
+                    
+                    // 如果缺乏地址，嘗試透過 Google Places API 獲取
+                    let address = params.address || '';
+                    if (!address) {
+                        try {
+                            const gData = await fetchJSON(`${API_BASE_URL}/api/google-places`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ lat, lng, radius: 50 })
+                            });
+                            
+                            if (gData && gData.success && gData.data.places && gData.data.places.length > 0) {
+                                // 找尋最匹配的地點（名稱相似或最接近的一個）
+                                const bestMatch = gData.data.places[0];
+                                address = bestMatch.address;
+                            } else {
+                                // 回退到逆地理編碼
+                                const rData = await fetchJSON(`${API_BASE_URL}/api/reverse-geocode`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ lat, lng })
+                                });
+                                if (rData && rData.display_name) {
+                                    address = rData.display_name;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('[Map Action] Failed to fetch address auto-fill:', e);
+                        }
+                    }
+
                     const listPlace = {
                         name: params.name,
                         lat: lat,
                         lng: lng,
+                        address: address,
                         category: params.category || '地標觀景',
                         description: params.description || ''
                     };
@@ -4560,6 +4626,7 @@ function addChatPlacesToAttractions(places) {
                 local_name: '',
                 lat: place.lat,
                 lng: place.lng,
+                address: place.address || '',
                 category: place.category || '自訂景點',
                 image: place.image || '',
                 ticket: place.price || '',
@@ -4653,6 +4720,7 @@ function persistChatPlace(place) {
             name: place.name,
             lat: place.lat,
             lng: place.lng,
+            address: place.address || '',
             category: place.category || '自訂景點',
             description: place.description || '',
             addedAt: Date.now(),
@@ -4700,6 +4768,7 @@ function createSearchResultPopupContent(place) {
             <div class="place-category" style="display: inline-block; padding: 2px 8px; background: ${color}20; color: ${color}; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 8px;">
                 ${category}
             </div>
+            ${place.address ? `<div class="place-address" style="font-size: 12px; color: #6b7280; margin-bottom: 8px;"><i class="fas fa-map-marker-alt"></i> ${place.address}</div>` : ''}
             <p style="margin: 0 0 8px 0; font-size: 13px; color: #4b5563; line-height: 1.5;">
                 ${place.description ? (place.description.length > 100 ? place.description.substring(0, 100) + '...' : place.description) : '暫無簡介'}
             </p>
@@ -4970,6 +5039,7 @@ const WishlistManager = {
                 category: item.category || items[existingIdx].category,
                 price: item.price || items[existingIdx].price,
                 description: item.description || items[existingIdx].description,
+                address: item.address || items[existingIdx].address || '',
                 deleted: false, // 重新添加或更新時，確保標記為未刪除
                 updatedAt: Date.now()
             };
@@ -4983,6 +5053,7 @@ const WishlistManager = {
                 lng: item.lng,
                 category: item.category || '',
                 price: item.price || '',
+                address: item.address || '',
                 description: item.description || '',
                 addedAt: Date.now(),
                 updatedAt: Date.now(),
@@ -5233,6 +5304,7 @@ function toggleWishlist(btn) {
         name: name,
         lat: lat,
         lng: lng,
+        address: btn.dataset.address || '',
         category: btn.dataset.category || '',
         price: btn.dataset.price || '',
         description: btn.dataset.description || ''

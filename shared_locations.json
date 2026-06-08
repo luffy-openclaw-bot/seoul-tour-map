@@ -399,5 +399,23 @@
     "visited": false,
     "myRemark": "",
     "deleted": false
+  },
+  {
+    "id": "chat_Blue Bottle Coffee 明洞店_37.5625_126.9845",
+    "name": "Blue Bottle Coffee 明洞店",
+    "lat": 37.5625,
+    "lng": 126.9845,
+    "category": "購物美食",
+    "description": "美國超人氣精品咖啡品牌，豆子新鮮烘焙，拿鐵同手沖咖啡都好受歡迎",
+    "address": "首爾市中區明洞街 41",
+    "price": "",
+    "addedAt": 1780927389576,
+    "updatedAt": 1780927389890,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": "",
+    "deleted": false
   }
 ]

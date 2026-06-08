@@ -102,6 +102,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         parsed_path = urllib.parse.urlparse(self.path).path
         parsed_query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
 
+        print(f"DEBUG: do_GET path='{self.path}' parsed_path='{parsed_path}'")
+
         # API 端點
         if parsed_path == '/api/health':
             self.handle_health_check()
@@ -114,6 +116,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if parsed_path == '/api/user-profile':
             self.handle_get_user_profile(parsed_query)
+            return
+
+        # 如果是 /api/ 路徑但未被處理，返回 JSON 404
+        if parsed_path.startswith('/api/'):
+            self.send_json({'success': False, 'error': f'API endpoint not found: {parsed_path}'}, status=404)
             return
 
         # 靜態文件
@@ -155,6 +162,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if parsed_path == '/api/user-profile':
             self.handle_set_user_profile()
             return
+            
+        # 如果是 /api/ 路徑但未被處理，返回 JSON 404
+        if parsed_path.startswith('/api/'):
+            self.send_json({'success': False, 'error': f'API endpoint not found: {parsed_path}'}, status=404)
+            return
+
         self.send_error(404)
 
     def handle_get_user_profile(self, parsed_query):
@@ -351,8 +364,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 10. add_to_list：將提及嘅地點標示在地圖並永久加入景點列表
    用途：每次提及具體地點（咖啡店、酒店、景點、餐廳等）時，使用此指令可自動在地圖加上標記，同時將其加入左側景點列表，方便用戶之後搵返。
-   示例：「機場有 Starbucks」→【{"action":"add_to_list","params":{"name":"Starbucks（仁川機場）","lat":37.4602,"lng":126.4407,"category":"購物美食","description":"機場內連鎖咖啡店"}}】
-   參數：name（地點名稱）, lat, lng（坐標）, category（分類，用現有分類名：地標觀景/購物美食/自然公園/文化藝術/夜生活/住宿/交通）, description（簡短描述，可選）, color（顏色，可選）
+   示例：「機場有 Starbucks」→【{"action":"add_to_list","params":{"name":"Starbucks（仁川機場）","lat":37.4602,"lng":126.4407,"address":"仁川廣域市中區運西洞 2851","category":"購物美食","description":"機場內連鎖咖啡店"}}】
+   參數：name（地點名稱）, lat, lng（坐標）, address（詳細地址）, category（分類，用現有分類名：地標觀景/購物美食/自然公園/文化藝術/夜生活/住宿/交通）, description（簡短描述，可選）, color（顏色，可選）
 
 注意：
 - 用戶問具體景點位置（如「景福宮喺邊」），用 center + add_marker 組合
@@ -608,7 +621,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'add_marker': {'lat': float, 'lng': float, 'title': str, 'color': str, 'popup': str, 'pulse': bool},
                 'add_polygon': {'name': str, 'color': str, 'coords': list},
                 'clear_search_markers': {},
-                'add_to_list': {'name': str, 'lat': float, 'lng': float, 'category': str, 'description': str, 'color': str},
+                'add_to_list': {'name': str, 'lat': float, 'lng': float, 'address': str, 'category': str, 'description': str, 'color': str},
             }
 
             if action not in ALLOWED_ACTIONS:
@@ -1480,6 +1493,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         'lng': lng,
                         'category': str(loc.get('category', '地標觀景')),
                         'description': str(loc.get('description', '')),
+                        'address': str(loc.get('address', '')),
                         'price': str(loc.get('price', '')),
                         'addedAt': int(loc.get('addedAt', time.time() * 1000)),
                         'updatedAt': int(loc.get('updatedAt', time.time() * 1000)),

@@ -213,6 +213,23 @@ body {
     margin-bottom: 4px;
 }
 
+.attraction-item .addr {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attraction-item .addr i {
+    color: #e74c3c;
+    font-size: 10px;
+}
+
 .attraction-item .desc {
     font-size: 12px;
     color: #777;
@@ -2298,6 +2315,23 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.mobile-attraction-card .card-addr {
+    font-size: 11px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mobile-attraction-card .card-addr i {
+    color: #e74c3c;
+    font-size: 10px;
 }
 
 .mobile-attraction-card .card-arrow {
