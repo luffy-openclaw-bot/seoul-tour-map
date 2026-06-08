@@ -24,7 +24,7 @@ HERMES_TASK_DIR = os.getenv('HERMES_TASK_DIR', os.path.join(BASE_DIR, '.hermes_t
 OLLAMA_API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')
 OLLAMA_API_KEY = os.getenv('OLLAMA_API_KEY', '')
-POLL_INTERVAL = 1  # seconds
+POLL_INTERVAL = 5  # seconds
 
 # SSL context to bypass certificate verification
 ssl_context = ssl.create_default_context()
@@ -55,7 +55,7 @@ def web_search_duckduckgo(query, max_results=5):
         )
         
         opener = create_urllib_opener()
-        with opener.open(req, timeout=15) as response:
+        with opener.open(req, timeout=60) as response:
             html = response.read().decode('utf-8')
         
         # Parse HTML for results (simple regex-based parsing)
@@ -162,7 +162,7 @@ def call_ollama_api(system_prompt, user_message, search_context=None, history=No
     
     opener = create_urllib_opener()
     try:
-        with opener.open(req, timeout=60) as resp:
+        with opener.open(req, timeout=120) as resp:
             result = json.loads(resp.read().decode('utf-8'))
             return result.get('choices', [{}])[0].get('message', {}).get('content', 'AI 暫時未能回應，請稍後再試。')
     except Exception as e:
@@ -199,6 +199,8 @@ def should_search_web(user_message):
 
 def process_request(request_file):
     """Process a single request file and write response."""
+    task_id = None
+    request_data = None
     try:
         with open(request_file, 'r', encoding='utf-8') as f:
             request_data = json.load(f)
@@ -207,9 +209,9 @@ def process_request(request_file):
         user_message = request_data.get('message', '')
         system_prompt = request_data.get('system', '')
         context = request_data.get('context', '')
-        chat_history = request_data.get('history', [])  # 獲取對話歷史
+        chat_history = request_data.get('history', [])
         
-        print(f"[{datetime.now()}] Processing task {task_id}: {user_message[:50]}...")
+        print(f"[{datetime.now()}] Task {task_id}: Processing started — '{user_message[:60]}'")
         
         # Build system prompt for Seoul Tour Map expert
         full_system = """你係一個韓國首爾旅遊專家 AI 助手，用粵語（廣東話書面）回答。
@@ -224,17 +226,18 @@ def process_request(request_file):
         
         # Check if we need to search the web
         search_context = None
-        if should_search_web(user_message):
-            print(f"[{datetime.now()}] Performing web search for: {user_message}")
-            
-            # Determine search query
+        do_search = should_search_web(user_message)
+        print(f"[{datetime.now()}] Task {task_id}: should_search_web={do_search}")
+
+        if do_search:
             if 'weather' in user_message.lower() or '天氣' in user_message or '氣溫' in user_message:
+                print(f"[{datetime.now()}] Task {task_id}: Using weather search")
                 search_results = get_weather_from_search(user_message)
             else:
+                print(f"[{datetime.now()}] Task {task_id}: Using generic web search")
                 search_results = web_search_duckduckgo(f"{user_message} Seoul Korea", max_results=5)
             
             if search_results:
-                # Format search results for context
                 context_parts = ["搜索結果："]
                 for i, result in enumerate(search_results[:5], 1):
                     context_parts.append(f"\n{i}. **{result.get('title', 'N/A')}**")
@@ -242,12 +245,20 @@ def process_request(request_file):
                         context_parts.append(f"   來源：{result.get('url')}")
                     if result.get('snippet'):
                         context_parts.append(f"   摘要：{result.get('snippet')}")
-                
                 search_context = "\n".join(context_parts)
-                print(f"[{datetime.now()}] Found {len(search_results)} relevant search results")
+                print(f"[{datetime.now()}] Task {task_id}: Got {len(search_results)} search results")
+                # Print detailed search results for debugging
+                for i, result in enumerate(search_results[:5], 1):
+                    print(f"  [{i}] Title: {result.get('title', 'N/A')}")
+                    print(f"      URL: {result.get('url', 'N/A')}")
+                    print(f"      Snippet: {result.get('snippet', 'N/A')[:200] if result.get('snippet') else 'N/A'}...")
+            else:
+                print(f"[{datetime.now()}] Task {task_id}: Web search returned 0 results")
         
         # Call Ollama API with search context and history
+        print(f"[{datetime.now()}] Task {task_id}: Calling Ollama API (model={OLLAMA_MODEL}, timeout=120s, has_context={search_context is not None})...")
         reply = call_ollama_api(full_system, user_message, search_context, chat_history)
+        print(f"[{datetime.now()}] Task {task_id}: Ollama reply received (len={len(reply)})")
         
         # Prepare response
         response_data = {
@@ -262,55 +273,72 @@ def process_request(request_file):
         response_file = os.path.join(HERMES_TASK_DIR, f'response_{task_id}.json')
         with open(response_file, 'w', encoding='utf-8') as f:
             json.dump(response_data, f, ensure_ascii=False, indent=2)
+        print(f"[{datetime.now()}] Task {task_id}: Response file written → {os.path.basename(response_file)}")
         
         # Remove request file
         os.remove(request_file)
-        print(f"[{datetime.now()}] Completed task {task_id}")
+        print(f"[{datetime.now()}] Task {task_id}: Completed successfully")
         
     except Exception as e:
-        print(f"[{datetime.now()}] Error processing request {request_file}: {e}")
+        print(f"[{datetime.now()}] Task {task_id}: ERROR — {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         
-        # Write error response
+        # Write error response so server doesn't wait forever
         try:
-            task_id = 'unknown'
-            if 'request_data' in locals():
-                task_id = request_data.get('id', 'unknown')
+            error_task_id = task_id or 'unknown'
             error_response = {
-                "id": task_id,
+                "id": error_task_id,
                 "reply": f"處理請求時發生錯誤：{str(e)}",
                 "source": "hermes_worker_error",
                 "timestamp": time.time()
             }
-            response_file = os.path.join(HERMES_TASK_DIR, f'response_{task_id}.json')
+            response_file = os.path.join(HERMES_TASK_DIR, f'response_{error_task_id}.json')
             with open(response_file, 'w', encoding='utf-8') as f:
                 json.dump(error_response, f, ensure_ascii=False, indent=2)
-            if os.path.exists(request_file):
+            print(f"[{datetime.now()}] Task {error_task_id}: Error response file written")
+            if request_file and os.path.exists(request_file):
                 os.remove(request_file)
         except Exception as e2:
-            print(f"[{datetime.now()}] Failed to write error response: {e2}")
+            print(f"[{datetime.now()}] Task {error_task_id}: Failed to write error response: {e2}")
 
 def main():
     """Main worker loop."""
-    print(f"[{datetime.now()}] Hermes worker for Seoul Tour Map started (with Web Search)")
-    print(f"[{datetime.now()}] Task directory: {HERMES_TASK_DIR}")
-    print(f"[{datetime.now()}] Ollama base: {OLLAMA_API_BASE}")
-    print(f"[{datetime.now()}] Model: {OLLAMA_MODEL}")
-    
     # Ensure task directory exists
     os.makedirs(HERMES_TASK_DIR, exist_ok=True)
+
+    print(f"[{datetime.now()}] Hermes worker for Seoul Tour Map started (with Web Search)")
+    print(f"[{datetime.now()}] Config — Task dir: {HERMES_TASK_DIR}")
+    print(f"[{datetime.now()}] Config — Ollama base: {OLLAMA_API_BASE}")
+    print(f"[{datetime.now()}] Config — Model: {OLLAMA_MODEL}")
+    print(f"[{datetime.now()}] Config — API key set: {bool(OLLAMA_API_KEY)}")
+    print(f"[{datetime.now()}] Config — Poll interval: {POLL_INTERVAL}s")
     
+    task_dir_check = os.path.exists(HERMES_TASK_DIR)
+    print(f"[{datetime.now()}] Task dir exists: {task_dir_check}")
+
     while True:
         try:
             # List request files
+            if not os.path.isdir(HERMES_TASK_DIR):
+                print(f"[{datetime.now()}] ERROR: Task dir does not exist: {HERMES_TASK_DIR}")
+                time.sleep(POLL_INTERVAL)
+                continue
+
             request_files = []
-            for filename in os.listdir(HERMES_TASK_DIR):
-                if filename.startswith('request_') and filename.endswith('.json'):
-                    request_files.append(os.path.join(HERMES_TASK_DIR, filename))
-            
+            try:
+                all_files = os.listdir(HERMES_TASK_DIR)
+                for filename in all_files:
+                    if filename.startswith('request_') and filename.endswith('.json'):
+                        request_files.append(os.path.join(HERMES_TASK_DIR, filename))
+            except Exception as e:
+                print(f"[{datetime.now()}] ERROR: Cannot list task dir: {e}")
+
+            if request_files:
+                print(f"[{datetime.now()}] Found {len(request_files)} pending task(s): {[os.path.basename(f) for f in request_files]}")
+
             # Process each request file (sorted by creation time)
-            for request_file in sorted(request_files):
+            for request_file in request_files:
                 process_request(request_file)
             
             # Sleep before next poll
@@ -319,7 +347,7 @@ def main():
             print(f"[{datetime.now()}] Worker stopped by user")
             break
         except Exception as e:
-            print(f"[{datetime.now()}] Worker error: {e}")
+            print(f"[{datetime.now()}] Worker loop error: {e}")
             time.sleep(POLL_INTERVAL)
 
 if __name__ == '__main__':
