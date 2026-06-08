@@ -365,5 +365,39 @@
     "pinned": true,
     "visited": false,
     "myRemark": "my-test-a"
+  },
+  {
+    "id": "chat_N首爾塔 (N Seoul Tower)_37.5511_126.9882",
+    "name": "N首爾塔 (N Seoul Tower)",
+    "lat": 37.5511,
+    "lng": 126.9882,
+    "category": "地標觀景",
+    "description": "首爾地標，俯瞰市區夜景及著名情人鎖牆",
+    "price": "",
+    "addedAt": 1780881732363,
+    "updatedAt": 1780881763033,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": "",
+    "deleted": false
+  },
+  {
+    "id": "chat_Namsan Centralview Suite Hotel_37.5565_126.9862",
+    "name": "Namsan Centralview Suite Hotel",
+    "lat": 37.5565,
+    "lng": 126.9862,
+    "category": "住宿",
+    "description": "位於南山附近，交通方便且景觀優美嘅套房酒店",
+    "price": "",
+    "addedAt": 1780881762715,
+    "updatedAt": 1780881763033,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": "",
+    "deleted": false
   }
 ]

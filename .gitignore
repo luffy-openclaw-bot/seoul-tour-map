@@ -177,7 +177,7 @@ package-lock.json
 # IDE / Editor Folders
 .trae/
 
-shared_locations.json
+/shared_locations.json
 
 # Project Specific
 .hermes_tasks/
