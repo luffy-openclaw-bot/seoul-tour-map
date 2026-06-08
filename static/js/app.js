@@ -2469,6 +2469,9 @@ async function sendMessage() {
         if (command === '/transit') {
             handleTransitCommand();
             return;
+        } else if (command === '/help') {
+            handleHelpCommand();
+            return;
         } else if (command === '/places') {
             handlePlacesCommand(parts.slice(1).join(' '));
             return;
@@ -2584,6 +2587,45 @@ async function handleTransitCommand() {
         console.error('Transit error:', e);
         addMessage('❌ 系統錯誤，暫時無法獲取實時交通資訊。', 'bot');
     }
+}
+
+/**
+ * 處理 /help 指令
+ */
+function handleHelpCommand() {
+    const helpText = `### 🏮 **首爾旅遊助手 - 幫助中心**
+
+歡迎使用首爾旅遊地圖平台！我可以幫你計劃行程、搜尋景點並提供實時交通資訊。
+
+---
+
+#### 1️⃣ **常用指令 (Slash Commands)**
+- \`/help\` - 顯示此幫助信息
+- \`/transit\` - 獲取地圖中心附近的實時巴士與地鐵到站資訊 🚌🚇
+- \`/radius [緯度] [經度] [距離]\` - 在地圖開啟圓形範圍搜索（例如：\`/radius 37.56 126.97 5km\`）📍
+- \`/places [半徑]\` - 獲取附近的 Google Places 推薦地點（預設 500m，最大 5000m）🏨
+
+#### 2️⃣ **智能對話功能 (AI Chat)**
+你可以直接使用廣東話與我交流，例如：
+- 「景福宮點去？」、「明洞附近有咩好食？」
+- 「聽日首爾天氣點樣？」
+- 「幫我排一個三日兩夜嘅行程」
+
+#### 3️⃣ **地圖控制與操作**
+- **自動漫游**：對我說「去弘大」或「睇下江南區」，地圖會自動移動。
+- **標記地點**：我會在回覆中為你在地圖加標記，點擊標記可查看詳情。
+- **路線顯示**：例如「由明洞去東大門」，我會為你找出路線。
+- **自動清單**：提及的具體地點會自動加入左側「景點列表」方便查看。
+
+#### 4️⃣ **介面功能**
+- **點擊地圖**：點擊地圖任意位置，可儲存位置或搜尋附近交通與景點。
+- **搜尋過濾**：在左側列表頂部可使用關鍵字篩選景點。
+- **範圍濾鏡**：點擊地圖上方的「範圍搜尋」按鈕，可按距離篩選景點。
+
+---
+💡 **小貼士**：推薦配合 Naver Map 或 KakaoMap 使用，在韓國步行導航會更準確！`;
+
+    addMessage(helpText, 'bot');
 }
 
 /**

@@ -31,6 +31,7 @@ _ollama_circuit_open_after = 3
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print(f"DEBUG: BASE_DIR={BASE_DIR}")
 SHARED_LOCATIONS_FILE = os.path.join(BASE_DIR, 'shared_locations.json')
+file_lock = threading.Lock()
 
 # 導入搜索模組
 import importlib.util
