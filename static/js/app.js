@@ -2469,6 +2469,9 @@ async function sendMessage() {
         if (command === '/transit') {
             handleTransitCommand();
             return;
+        } else if (command === '/places') {
+            handlePlacesCommand(parts.slice(1).join(' '));
+            return;
         } else if (command === '/radius') {
             parseRadiusSlashCommand(parts.slice(1).join(' '));
             return;
@@ -2580,6 +2583,63 @@ async function handleTransitCommand() {
         hideTyping();
         console.error('Transit error:', e);
         addMessage('❌ 系統錯誤，暫時無法獲取實時交通資訊。', 'bot');
+    }
+}
+
+/**
+ * 處理 /places 指令
+ */
+async function handlePlacesCommand(args) {
+    showTyping();
+    
+    // 獲取地圖中心坐標作為搜索點
+    const center = map.getCenter();
+    const lat = center.lat;
+    const lng = center.lng;
+    
+    // 解析半徑參數 (如果提供)
+    let radius = 500;
+    if (args && !isNaN(parseInt(args))) {
+        radius = Math.min(Math.max(parseInt(args), 100), 5000);
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/google-places`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng, radius })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        hideTyping();
+
+        if (result.success && result.data.places && result.data.places.length > 0) {
+            let html = `### 📍 **Google Places 推薦 (半徑 ${radius}m)**\n\n`;
+            
+            result.data.places.forEach((place, index) => {
+                const ratingStr = place.rating ? `⭐ ${place.rating} (${place.user_ratings_total})` : '暫無評分';
+                html += `**${index + 1}. ${place.name}**\n`;
+                html += `- 類別：${place.types.join(', ')}\n`;
+                html += `- 地址：${place.address}\n`;
+                html += `- 評分：${ratingStr}\n\n`;
+            });
+            
+            addMessage(html, 'bot');
+        } else if (result.success) {
+            addMessage(`附近 ${radius} 米內未發現 Google Places 地點。`, 'bot');
+        } else {
+            addMessage(`❌ 獲取 Google Places 資訊失敗：${result.error || '未知錯誤'}`, 'bot');
+        }
+
+    } catch (e) {
+        hideTyping();
+        console.error('Places command error:', e);
+        addMessage(`❌ 系統錯誤，暫時無法獲取 Google Places 資訊：${e.message}`, 'bot');
     }
 }
 
