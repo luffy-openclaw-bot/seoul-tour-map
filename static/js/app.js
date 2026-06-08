@@ -2915,7 +2915,7 @@ function getSystemContext() {
 5. add_marker (搜索結果/特定位置時添加標記)：【{"action":"add_marker","params":{"lat":37.5500,"lng":126.9200,"title":"弘大","color":"#e74c3c","popup":"弘大購物區"}}】
 6. add_polygon (顯示區域範圍)：【{"action":"add_polygon","params":{"coords":[[37.56,126.98],[37.56,126.99],[37.57,126.99],[37.57,126.98]],"name":"明洞商圈","color":"#3498db"}}】
 7. clear_search_markers (清除搜索標記)：【{"action":"clear_search_markers"}】
-8. add_to_list (將提及嘅地點加入景點列表)：【{"action":"add_to_list","params":{"name":"地點名稱","lat":37.46,"lng":126.44,"category":"購物美食","description":"簡短描述"}}】
+8. add_to_list (將提及嘅地點標示在地圖並永久加入景點列表)：【{"action":"add_to_list","params":{"name":"地點名稱","lat":37.46,"lng":126.44,"address":"詳細地址","category":"購物美食","description":"簡短描述"}}】
 
 景點ID：${attractionsData.map(a=>a.id).join(', ')}
 分類：${categories}
@@ -4919,12 +4919,12 @@ const WishlistManager = {
     async syncToServer(items) {
         try {
             toggleLoadingState(true);
-            const response = await fetch(`${API_BASE_URL}/api/sync-locations`, {
+            const data = await fetchJSON(`${API_BASE_URL}/api/sync-locations`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(items)
             });
-            if (response.ok) {
+            if (data && data.success !== false) {
                 console.log('[Wishlist] Synced to server');
             }
         } catch (e) {

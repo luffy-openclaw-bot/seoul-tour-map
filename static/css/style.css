@@ -227,7 +227,7 @@ body {
 
 .attraction-item .addr i {
     color: #e74c3c;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .attraction-item .desc {
@@ -2320,18 +2320,19 @@ body {
 
 .mobile-attraction-card .card-addr {
     font-size: 11px;
-    color: #999;
+    color: #888;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     display: flex;
     align-items: center;
     gap: 4px;
+    margin-top: 2px;
 }
 
 .mobile-attraction-card .card-addr i {
     color: #e74c3c;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .mobile-attraction-card .card-arrow {
