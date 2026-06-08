@@ -2584,23 +2584,29 @@ async function handleTransitCommand() {
 }
 
 async function fetchAIReply(userText) {
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            message: userText,
-            system: getSystemContext(),
-            history: chatHistory.slice(0, -1),  // 唔包剛加入嘅 user message
-            fingerprint: FingerprintManager.getFingerprint()
-        })
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s — covers Hermes(15s) + Ollama(30s) + overhead
 
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-    }
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+                message: userText,
+                system: getSystemContext(),
+                history: chatHistory.slice(0, -1),  // 唔包剛加入嘅 user message
+                fingerprint: FingerprintManager.getFingerprint()
+            })
+        });
+        clearTimeout(timeoutId);
 
-    const data = await response.json();
-    let reply = data.reply || generateAIReply(userText);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        let reply = data.reply || generateAIReply(userText);
 
     // 解析並執行回覆中的地圖指令
     const actionPattern = /【([^】]+)】/g;
@@ -2623,7 +2629,14 @@ async function fetchAIReply(userText) {
         executeMapAction(actName, actParams);
     });
 
-    return reply;
+        return reply;
+    } catch (e) {
+        clearTimeout(timeoutId);
+        if (e.name === 'AbortError') {
+            throw new Error('timeout');
+        }
+        throw e;
+    }
 }
 
 function getSystemContext() {

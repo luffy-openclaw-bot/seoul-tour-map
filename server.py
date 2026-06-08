@@ -23,8 +23,10 @@ import glob
 import xml.etree.ElementTree as ET
 import threading
 
-# 全局鎖用於文件操作
-file_lock = threading.Lock()
+# Ollama consecutive failure counter (circuit breaker)
+_ollama_consecutive_failures = 0
+_ollama_circuit_open_after = 3
+
 # 使用絕對路徑
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print(f"DEBUG: BASE_DIR={BASE_DIR}")
@@ -56,9 +58,11 @@ ODSAY_API_KEY = os.getenv('ODSAY_API_KEY', 'YOUR_ODSAY_KEY_HERE')
 
 # Hermes Agent 任務隊列設定
 HERMES_ENABLED = os.getenv('HERMES_ENABLED', 'false').lower() == 'true'
+print(f"DEBUG: HERMES_ENABLED={HERMES_ENABLED}")
 HERMES_TASK_DIR = os.getenv('HERMES_TASK_DIR', os.path.join(BASE_DIR, '.hermes_tasks'))
 os.makedirs(HERMES_TASK_DIR, exist_ok=True)
-HERMES_TIMEOUT = 120  # 秒
+HERMES_TIMEOUT = 300  # 秒 (TEMPORARY for testing worker response time)
+print(f"DEBUG: HERMES_TIMEOUT={HERMES_TIMEOUT}s")
 
 try:
     import ssl
@@ -137,6 +141,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_error(404)
 
     def handle_chat(self):
+        global _ollama_consecutive_failures
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')
@@ -145,6 +150,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             system_prompt = data.get('system', '')
             chat_history = data.get('history', [])  # 獲取對話歷史
             fingerprint = data.get('fingerprint', '') # 獲取指紋授權
+
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | User message received: {user_message[:100]}{'...' if len(user_message) > 100 else ''}")
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | system_prompt={'provided' if system_prompt else 'empty'}, history={len(chat_history)} messages, fingerprint={'provided' if fingerprint else 'none'}")
 
             # 處理系統定位報告
             if user_message == "[SYSTEM_LOCATION_REPORT]":
@@ -261,23 +269,39 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
             # 檢查是否應該委託給 Hermes Agent 處理複雜查詢
             should_delegate = self._should_delegate_to_hermes(user_message)
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Decision: {should_delegate}")
             if should_delegate:
+                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Starting delegation...")
                 hermes_reply = self._delegate_to_hermes(user_message, full_system, chat_history)
                 if hermes_reply:
+                    print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=hermes, reply_len={len(hermes_reply)})")
                     self.send_json({'reply': hermes_reply, 'source': 'hermes'})
                     return
 
-            # 嘗試使用 Ollama Cloud API
+            # 嘗試使用 Ollama Cloud API（若電路熔斷則跳過）
+            circuit_open = (_ollama_consecutive_failures >= _ollama_circuit_open_after)
+            if circuit_open:
+                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Circuit open (failures={_ollama_consecutive_failures}), skipping Ollama")
             try:
-                ollama_reply = self._call_ollama_api(full_system, user_message, chat_history)
-                if ollama_reply:
-                    self.send_json({'reply': ollama_reply, 'source': 'ollama'})
-                    return
+                if not circuit_open:
+                    print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Calling Ollama API...")
+                    ollama_reply = self._call_ollama_api(full_system, user_message, chat_history)
+                    if ollama_reply:
+                        _ollama_consecutive_failures = 0  # reset on success
+                        print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Response received (reply_len={len(ollama_reply)}): {ollama_reply[:100]}{'...' if len(ollama_reply) > 100 else ''}")
+                        print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=ollama)")
+                        self.send_json({'reply': ollama_reply, 'source': 'ollama'})
+                        return
             except Exception as e:
-                print(f"Ollama API failed: {e}")
+                _ollama_consecutive_failures += 1
+                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Error: {e} (failures={_ollama_consecutive_failures})")
+                if _ollama_consecutive_failures >= _ollama_circuit_open_after:
+                    print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Circuit OPENED — next requests skip Ollama")
 
             # 回退到離線知識庫
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | offline_kb | Falling back to offline knowledge base...")
             offline_reply = self._generate_offline_reply(user_message)
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=offline)")
             self.send_json({'reply': offline_reply, 'source': 'offline'})
 
         except Exception as e:
@@ -457,6 +481,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """決定是否應該將查詢委託給 Hermes Agent"""
         if not HERMES_ENABLED:
             return False
+        print(f"[CHAT LOG] should_delegate | hermes_enabled={HERMES_ENABLED}, checking: {user_message[:50]}")
 
         # 複雜查詢的關鍵字，表明可能需要工具使用
         complex_indicators = [
@@ -482,9 +507,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '比較', '對比', '評價', '推薦',
             'compare', 'recommend', 'review',
             # 需要深度研究
-            '詳細', '深入', '全面', '綜合'
+            '詳細', '深入', '全面', '綜合',
+            # 旅行行程（多天、多景點路線規劃，需要 web search + 推理）
+            '日', '天', '行程', '路線', '幾日', '幾天',
+            'days', 'day trip', 'itinerary', 'route', 'plan',
+            '景點', '全部', '最少', '盡量', '所有',
+            'visit all', 'as many as possible', 'all famous',
+            'all the places', 'everything', 'everywhere'
         ]
-        
+
         message_lower = user_message.lower()
         return any(indicator in message_lower for indicator in complex_indicators)
 
@@ -494,6 +525,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # 生成唯一任務ID
             import uuid
             task_id = str(uuid.uuid4())
+            
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Task created: task_id={task_id}")
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | user_message: {user_message[:80]}{'...' if len(user_message) > 80 else ''}")
             
             # 創建任務請求文件
             task_request = {
@@ -509,6 +543,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             with open(request_file, 'w', encoding='utf-8') as f:
                 json.dump(task_request, f, ensure_ascii=False, indent=2)
             
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Waiting for response (timeout={HERMES_TIMEOUT}s)...")
+            
             # 等待響應（帶超時）
             start_time = time.time()
             response_file = os.path.join(HERMES_TASK_DIR, f'response_{task_id}.json')
@@ -518,6 +554,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     try:
                         with open(response_file, 'r', encoding='utf-8') as f:
                             response_data = json.load(f)
+                        reply = response_data.get('reply', '')
+                        print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Response received (reply_len={len(reply)})")
                         # 清理任務文件（忽略文件不存在錯誤）
                         try:
                             if os.path.exists(request_file):
@@ -525,20 +563,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             os.remove(response_file)
                         except FileNotFoundError:
                             pass  # Worker 可能已經刪除咗
-                        return response_data.get('reply', '')
+                        return reply
                     except Exception as e:
-                        print(f"Error reading Hermes response: {e}")
+                        print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Error reading response: {e}")
                 time.sleep(0.5)  # 每500ms檢查一次
             
             # 超時
-            print(f"Hermes delegation timeout for task {task_id}")
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Timeout after {HERMES_TIMEOUT}s")
             # 清理請求文件
             if os.path.exists(request_file):
                 os.remove(request_file)
             return None
             
         except Exception as e:
-            print(f"Hermes delegation failed: {e}")
+            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Delegation failed: {e}")
             return None
 
     def _call_ollama_api(self, system_prompt, user_message, history=None):
@@ -573,15 +611,66 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         # 使用 custom opener with SSL context
         opener = create_urllib_opener()
-        with opener.open(req, timeout=30) as resp:
+        with opener.open(req, timeout=120) as resp:
             result = json.loads(resp.read().decode('utf-8'))
             return result.get('choices', [{}])[0].get('message', {}).get('content', 'AI 暫時未能回應，請稍後再試。')
 
     def _generate_offline_reply(self, user_message):
-        """Generate offline knowledge base reply"""
-        if '測試提取' in user_message or 'test extraction' in user_message.lower():
-            return '這是一個測試地點：星巴克明洞店！【{"action":"add_to_list","params":{"name":"星巴克明洞店","lat":37.5635,"lng":126.9895,"category":"購物美食","description":"位於明洞的星巴克"}}】還有另一個地點：弘大！【{"action":"add_to_list","params":{"name":"弘大","lat":37.5568,"lng":126.9245,"category":"地標觀景","description":"弘益大學周邊"}}】'
-        return 'AI 伺服器暫時未能連接，已啟用離線知識庫回答。'
+        """Generate offline knowledge base reply with keyword-matched Seoul attractions."""
+
+        # Hardcoded popular Seoul attractions for offline fallback
+        seoul_attractions = [
+            {"name": "景福宮", "lat": 37.5796, "lng": 126.9770, "category": "歷史文化", "description": "朝鮮王朝正宮，旅客必到"},
+            {"name": "明洞", "lat": 37.5635, "lng": 126.9895, "category": "購物美食", "description": "首爾購物天堂"},
+            {"name": "弘大", "lat": 37.5568, "lng": 126.9245, "category": "夜生活", "description": "年輕人藝術與音樂勝地"},
+            {"name": "南山塔", "lat": 37.5511, "lng": 126.9882, "category": "地標觀景", "description": "首爾地標，可俯瞰全市夜景"},
+            {"name": "仁寺洞", "lat": 37.5755, "lng": 126.9858, "category": "歷史文化", "description": "傳統韓屋與工藝品街道"},
+            {"name": "北村韓屋村", "lat": 37.5799, "lng": 126.9831, "category": "歷史文化", "description": "傳統韓屋建築群"},
+            {"name": "東大門設計廣場", "lat": 37.5657, "lng": 127.0105, "category": "地標觀景", "description": "未來感建築地標"},
+            {"name": "清溪川", "lat": 37.5678, "lng": 127.0047, "category": "自然公園", "description": "市區清溪川散步徑"},
+            {"name": "首爾塔", "lat": 37.5511, "lng": 126.9882, "category": "地標觀景", "description": "南山塔夜景"},
+            {"name": "江南", "lat": 37.5048, "lng": 127.0248, "category": "購物美食", "description": "高端購物與時尚區"},
+            {"name": "三清洞", "lat": 37.5777, "lng": 126.9833, "category": "歷史文化", "description": "美術館與咖啡街"},
+            {"name": "益善洞", "lat": 37.5668, "lng": 126.9927, "category": "歷史文化", "description": "首爾最古老韓屋村"},
+            {"name": "聖水洞", "lat": 37.5456, "lng": 127.0546, "category": "購物美食", "description": "潮牌咖啡與藝術聖地"},
+            {"name": "梨泰院", "lat": 37.5352, "lng": 126.9955, "category": "夜生活", "description": "多元文化與異國美食"},
+            {"name": "乙支路", "lat": 37.5661, "lng": 127.0033, "category": "購物美食", "description": "年輕人潮流街"},
+        ]
+
+        msg_lower = user_message.lower()
+        matched = []
+        for attr in seoul_attractions:
+            if any(kw in msg_lower for kw in [attr["name"], attr["category"]]):
+                matched.append(attr)
+            elif any(kw in msg_lower for kw in ["景點", "推薦", "好玩", "值得", "全部", "所有", "日", "天", "遊覽"]):
+                matched.append(attr)
+            if len(matched) >= 5:
+                break
+
+        # Fallback: show top picks if nothing matched
+        if not matched:
+            matched = seoul_attractions[:5]
+
+        action_parts = []
+        for a in matched:
+            action_parts.append(
+                f'【{{"action":"add_to_list","params":{{"name":"{a["name"]}","lat":{a["lat"]},"lng":{a["lng"]},"category":"{a["category"]}","description":"{a["description"]}"}}}}】'
+            )
+
+        attractions_text = "\n".join(
+            f"- **{a['name']}**（{a['category']}）：{a['description']}"
+            for a in matched
+        )
+
+        return f"""⚠️ AI 伺服器暫時未能連接（離線模式）。
+
+以下係首爾人氣景點，或許幫到你：
+
+{attractions_text}
+
+{chr(10).join(action_parts)}
+
+你可以繼續操作地圖，點擊左側景點列表睇更多地點。AI 恢復後我會繼續為你服務！"""
 
     def handle_analyze_image(self):
         """處理圖片上傳並使用 AI Vision 識別地點"""
