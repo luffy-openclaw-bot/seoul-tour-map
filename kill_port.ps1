@@ -1,4 +1,4 @@
-$Port = 8080
+$Port = 8092
 
 # Read PORT from .env if it exists
 if (Test-Path .env) {

@@ -244,6 +244,12 @@ body {
     height: 100%;
 }
 
+@media (pointer: coarse) {
+    #map {
+        touch-action: none;
+    }
+}
+
 /* Leaflet 自定義樣式 */
 .leaflet-popup-content-wrapper {
     border-radius: 10px;
