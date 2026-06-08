@@ -3441,6 +3441,14 @@ function addLocationButtonToLastBotMessage(locationData, targetElement) {
             flyToSearchResult(data.lat, data.lng, data.title || '位置');
             addSearchMarker(data.lat, data.lng, data.title || '位置', data.color || '#e74c3c', data.title || '位置', true);
         }
+        
+        // Collapse chatbot
+        const chat = document.getElementById('ai-chat');
+        if (chat && !chat.classList.contains('collapsed')) {
+            chat.classList.add('collapsed');
+            const statusBar = document.getElementById('system-status-bar');
+            if (statusBar) statusBar.classList.add('hidden');
+        }
     });
     
     // Append button to bubble
