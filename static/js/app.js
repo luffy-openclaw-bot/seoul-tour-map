@@ -243,6 +243,249 @@ function getFallbackImage(category) {
     return CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES['default'];
 }
 
+function setupMobileDoubleTapDragZoom(leafletMap) {
+    if (!leafletMap) return;
+
+    const isTouchDevice =
+        (typeof L !== 'undefined' && L.Browser && L.Browser.touch) ||
+        (typeof window !== 'undefined' &&
+            ((window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window));
+    if (!isTouchDevice) return;
+
+    const container = leafletMap.getContainer();
+    if (!container) return;
+
+    const DOUBLE_TAP_MAX_DELAY_MS = 320;
+    const DOUBLE_TAP_MAX_DIST_PX = 20;
+    const DRAG_ACTIVATE_THRESHOLD_PX = 10;
+    const ZOOM_PER_PX = 0.01;
+
+    const prevZoomSnap = leafletMap.options.zoomSnap;
+    const prevZoomDelta = leafletMap.options.zoomDelta;
+    if (typeof prevZoomSnap === 'number' && prevZoomSnap >= 1) {
+        leafletMap.options.zoomSnap = 0.25;
+        leafletMap.options.zoomDelta = 0.25;
+    }
+
+    let lastTapTime = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+
+    let armed = false;
+    let active = false;
+    let activePointerId = null;
+
+    let startClientY = 0;
+    let startZoom = 0;
+    let anchorPoint = null;
+    let minZoom = 0;
+    let maxZoom = 19;
+
+    let didDrag = false;
+
+    let rafId = 0;
+    let pendingClientY = 0;
+
+    function getMaxZoomFromLayers() {
+        let detectedMax = null;
+        leafletMap.eachLayer(layer => {
+            const mz = layer && layer.options && layer.options.maxZoom;
+            if (typeof mz === 'number') {
+                detectedMax = detectedMax === null ? mz : Math.max(detectedMax, mz);
+            }
+        });
+        return detectedMax;
+    }
+
+    function clamp(n, min, max) {
+        if (n < min) return min;
+        if (n > max) return max;
+        return n;
+    }
+
+    function getClientXYFromPointerEvent(e) {
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    function getClientXYFromTouchEvent(e) {
+        const t =
+            (e.touches && e.touches[0]) ||
+            (e.changedTouches && e.changedTouches[0]) ||
+            null;
+        if (!t) return null;
+        return { x: t.clientX, y: t.clientY };
+    }
+
+    function containerPointFromClientXY(x, y) {
+        const rect = container.getBoundingClientRect();
+        return L.point(x - rect.left, y - rect.top);
+    }
+
+    function disarm() {
+        armed = false;
+        active = false;
+        activePointerId = null;
+        anchorPoint = null;
+        didDrag = false;
+        if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = 0;
+        }
+    }
+
+    function beginActiveDrag(clientX, clientY, pointerId) {
+        active = true;
+        activePointerId = pointerId;
+        startClientY = clientY;
+        startZoom = leafletMap.getZoom();
+        anchorPoint = containerPointFromClientXY(clientX, clientY);
+        minZoom = typeof leafletMap.getMinZoom === 'function' ? leafletMap.getMinZoom() : 0;
+        maxZoom = typeof leafletMap.getMaxZoom === 'function' ? leafletMap.getMaxZoom() : Infinity;
+        if (!isFinite(maxZoom)) {
+            const detected = getMaxZoomFromLayers();
+            maxZoom = typeof detected === 'number' ? detected : 19;
+        }
+        if (leafletMap.dragging && leafletMap.dragging.enabled()) leafletMap.dragging.disable();
+        if (leafletMap.doubleClickZoom && leafletMap.doubleClickZoom.enabled()) leafletMap.doubleClickZoom.disable();
+    }
+
+    function endActiveDrag(e, suppressLeaflet) {
+        if (leafletMap.dragging && !leafletMap.dragging.enabled()) leafletMap.dragging.enable();
+        if (leafletMap.doubleClickZoom && !leafletMap.doubleClickZoom.enabled()) leafletMap.doubleClickZoom.enable();
+        if (suppressLeaflet && e) {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        }
+        disarm();
+    }
+
+    function scheduleZoomUpdate() {
+        if (rafId) return;
+        rafId = requestAnimationFrame(() => {
+            rafId = 0;
+            if (!active) return;
+            const dy = pendingClientY - startClientY;
+            const nextZoom = clamp(startZoom + -dy * ZOOM_PER_PX, minZoom, maxZoom);
+            leafletMap.setZoomAround(anchorPoint, nextZoom, { animate: false });
+        });
+    }
+
+    function onPointerDown(e) {
+        if (!e || (e.pointerType && e.pointerType !== 'touch')) return;
+        const { x, y } = getClientXYFromPointerEvent(e);
+        const now = Date.now();
+        const dx = x - lastTapX;
+        const dy = y - lastTapY;
+        const distOk = dx * dx + dy * dy <= DOUBLE_TAP_MAX_DIST_PX * DOUBLE_TAP_MAX_DIST_PX;
+        const timeOk = now - lastTapTime <= DOUBLE_TAP_MAX_DELAY_MS;
+
+        if (timeOk && distOk) {
+            armed = true;
+            didDrag = false;
+            if (typeof container.setPointerCapture === 'function') {
+                try {
+                    container.setPointerCapture(e.pointerId);
+                } catch (_) {}
+            }
+        } else {
+            lastTapTime = now;
+            lastTapX = x;
+            lastTapY = y;
+            armed = false;
+        }
+    }
+
+    function onPointerMove(e) {
+        if (!armed) return;
+        if (!e || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+        const { x, y } = getClientXYFromPointerEvent(e);
+
+        if (!active) {
+            const deltaY = y - lastTapY;
+            if (Math.abs(deltaY) < DRAG_ACTIVATE_THRESHOLD_PX) return;
+            beginActiveDrag(x, y, e.pointerId);
+        }
+
+        didDrag = true;
+        pendingClientY = y;
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        scheduleZoomUpdate();
+    }
+
+    function onPointerUp(e) {
+        if (!armed) return;
+        const shouldSuppressLeaflet = active && didDrag;
+        endActiveDrag(e, shouldSuppressLeaflet);
+    }
+
+    function onTouchStart(e) {
+        if (!e) return;
+        const xy = getClientXYFromTouchEvent(e);
+        if (!xy) return;
+        const now = Date.now();
+        const dx = xy.x - lastTapX;
+        const dy = xy.y - lastTapY;
+        const distOk = dx * dx + dy * dy <= DOUBLE_TAP_MAX_DIST_PX * DOUBLE_TAP_MAX_DIST_PX;
+        const timeOk = now - lastTapTime <= DOUBLE_TAP_MAX_DELAY_MS;
+
+        if (timeOk && distOk) {
+            armed = true;
+            didDrag = false;
+        } else {
+            lastTapTime = now;
+            lastTapX = xy.x;
+            lastTapY = xy.y;
+            armed = false;
+        }
+    }
+
+    function onTouchMove(e) {
+        if (!armed) return;
+        const xy = getClientXYFromTouchEvent(e);
+        if (!xy) return;
+
+        if (!active) {
+            const deltaY = xy.y - lastTapY;
+            if (Math.abs(deltaY) < DRAG_ACTIVATE_THRESHOLD_PX) return;
+            beginActiveDrag(xy.x, xy.y, null);
+        }
+
+        didDrag = true;
+        pendingClientY = xy.y;
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        scheduleZoomUpdate();
+    }
+
+    function onTouchEnd(e) {
+        if (!armed) return;
+        const shouldSuppressLeaflet = active && didDrag;
+        endActiveDrag(e, shouldSuppressLeaflet);
+    }
+
+    const eventOptions = { capture: true, passive: false };
+    if (typeof window !== 'undefined' && window.PointerEvent) {
+        container.addEventListener('pointerdown', onPointerDown, eventOptions);
+        container.addEventListener('pointermove', onPointerMove, eventOptions);
+        container.addEventListener('pointerup', onPointerUp, eventOptions);
+        container.addEventListener('pointercancel', onPointerUp, eventOptions);
+    } else {
+        container.addEventListener('touchstart', onTouchStart, eventOptions);
+        container.addEventListener('touchmove', onTouchMove, eventOptions);
+        container.addEventListener('touchend', onTouchEnd, eventOptions);
+        container.addEventListener('touchcancel', onTouchEnd, eventOptions);
+    }
+
+    container.addEventListener(
+        'removed',
+        () => {
+            leafletMap.options.zoomSnap = prevZoomSnap;
+            leafletMap.options.zoomDelta = prevZoomDelta;
+        },
+        { once: true }
+    );
+}
+
 // ==================== 地圖初始化 ====================
 function initMap() {
     map = L.map('map', {
@@ -281,6 +524,7 @@ function initMap() {
     searchMarkersLayerGroup = L.layerGroup().addTo(map); // 初始化搜索標記圖層
 
     map.on("click", onMapClick);
+    setupMobileDoubleTapDragZoom(map);
 }
 
 // ==================== 地圖點擊搜尋 ====================
