@@ -64,6 +64,7 @@ class PlaceInfo:
     price: str
     latest_review: str
     tips: str
+    source: str = "AI Knowledge"
     source_url: str = ""
     lat: Optional[float] = None
     lng: Optional[float] = None
@@ -270,7 +271,7 @@ class LocationSearcher:
                 'seoul_city': self._fetch_seoul_city_data(location_info),
                 'google_places': self._fetch_google_places_data(lat, lng, radius)
             }
-            print(f"[LocationSearcher] API fetch complete. VK items: {len(api_data['visit_korea'])}, Seoul data: {bool(api_data['seoul_city'])}")
+            print(f"[LocationSearcher] API fetch complete. VK items: {len(api_data['visit_korea'])}, Google items: {len(api_data['google_places'])}, Seoul data: {bool(api_data['seoul_city'])}")
             
             # Step 3: AI Result Analysis
             # Pass API data as context for AI to summarize and enrich
@@ -298,8 +299,14 @@ class LocationSearcher:
             
             # Step 4: Determine data source label
             source_label = "ai_knowledge"
-            if api_data['visit_korea'] or api_data['seoul_city']:
+            sources_found = []
+            if api_data['visit_korea']: sources_found.append("VisitKorea")
+            if api_data['google_places']: sources_found.append("Google Places")
+            if api_data['seoul_city']: sources_found.append("Seoul Data")
+            
+            if sources_found:
                 source_label = "official_public_api"
+                print(f"[LocationSearcher] Data sources: {', '.join(sources_found)}")
             
             # Step 5: Build final result
             result = SearchResult(
@@ -566,7 +573,7 @@ class LocationSearcher:
         if not has_search_results:
             data_source_note = f"\n\n注意：由於實時 API 數據暫時不可用，請基於你對首爾的旅遊知識庫推薦附近地點。請確保推薦的地點必須位於搜索中心點的 {radius} 米範圍內。"
         else:
-            data_source_note = f"\n\n注意：請優先使用提供的【VisitKorea】或【首爾城市數據】進行分析，並將其轉化為用戶友好的廣東話描述。請確保推薦的地點必須位於搜索中心點的 {radius} 米範圍內。"
+            data_source_note = f"\n\n注意：請優先使用提供的【VisitKorea】、【Google Places】或【首爾城市數據】進行分析，並將其轉化為用戶友好的廣東話描述。請確保推薦的地點必須位於搜索中心點的 {radius} 米範圍內。"
         
         return f"""你係韓國旅遊資訊分析專家。{data_source_note}
 
@@ -586,10 +593,11 @@ class LocationSearcher:
             "rating": "評分（如 4.5/5 或 高/中/低）",
             "price": "價格資訊（如：免費、₩3000、₩30000-50000、$$、$$$）",
             "latest_review": "最新評論摘要（如有）",
-            "tips": "旅遊貼士（如：最佳造訪時間、交通建議）"
+            "tips": "旅遊貼士（如：最佳造訪時間、交通建議）",
+            "source": "資訊來源（例如：Google Places, VisitKorea, Seoul Data, AI Knowledge）"
         }}
     ],
-    "summary": "整體摘要（50-80字）"
+    "summary": "整體摘要（50-80字），請在摘要中提及資訊來源。"
 }}
 ```
 
@@ -634,6 +642,7 @@ class LocationSearcher:
                     price=place_data.get('price', ''),
                     latest_review=place_data.get('latest_review', ''),
                     tips=place_data.get('tips', ''),
+                    source=place_data.get('source', 'AI Knowledge'),
                     lat=place_data.get('lat'),
                     lng=place_data.get('lng')
                 ))

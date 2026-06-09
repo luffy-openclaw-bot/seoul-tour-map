@@ -304,9 +304,9 @@ const SearchUI = {
             
             let sourceText = "實時網頁搜索 (DuckDuckGo) + AI 分析";
             if (data.source === 'official_public_api') {
-                sourceText = "🏛️ 韓國官方公共數據 (VisitKorea / Seoul Data) + AI 總結";
+                sourceText = "🏛️ 官方數據 (VisitKorea / Google Places / Seoul Data) + AI 總結";
             } else if (data.source === 'ai_knowledge') {
-                sourceText = "🤖 AI 內置旅遊知識 (Gemma 31B)";
+                sourceText = "🤖 AI 內置旅遊知識";
             }
             
             markdown += `📊 **數據來源**：${sourceText}\n`;
@@ -332,6 +332,7 @@ const SearchUI = {
 
         const rating = place.rating ? `\n⭐ **評分**：${place.rating}` : '';
         const price = place.price ? `\n💰 **價格**：${place.price}` : '';
+        const source = place.source ? `\n🔍 **來源**：${place.source}` : '';
         const tips = place.tips ? `\n💡 **貼士**：${place.tips}` : '';
         const review = place.latest_review ? `\n💬 **最新評價**：${place.latest_review}` : '';
 
@@ -355,7 +356,7 @@ const SearchUI = {
 
         return `
 ### ${index}. ${place.name} ${titleSuffix} ${flyToAction}
-**類別**：${place.category}${rating}${price}
+**類別**：${place.category}${rating}${price}${source}
 
 ${place.description}
 
