@@ -87,7 +87,17 @@ global.CATEGORY_EMOJIS = { '地標觀景': '🗼', '歷史文化': '🏯', '購�
 global.FingerprintManager = { getFingerprint: () => 'test-fp' };
 // Load the module
 const app = require('../static/js/app.js');
-const { getFilteredAttractions, setPanelSearchQuery, handlePanelSearchInput, clearPanelSearch, WishlistManager, setAttractionsDataForTest, setMapForTest } = app;
+const {
+    getFilteredAttractions,
+    setPanelSearchQuery,
+    handlePanelSearchInput,
+    clearPanelSearch,
+    WishlistManager,
+    setAttractionsDataForTest,
+    setMapForTest,
+    getFallbackImage,
+    getDefaultFallbackImage
+} = app;
 
 setAttractionsDataForTest([
     { name: 'Seoul Tower', local_name: '서울타워', category: '地標觀景', description: 'Tall tower in Seoul', ticket: '10000 KRW', lat: 37.5, lng: 127.0 },
@@ -208,5 +218,31 @@ describe('Location Panel Search - Integration Tests', () => {
         // Verify getFilteredAttractions uses empty query now
         const results = getFilteredAttractions('all');
         expect(results.length).toBe(3);
+    });
+});
+
+describe('Category Fallback Images', () => {
+    test('category fallbacks use deterministic inline SVG placeholders', () => {
+        const shoppingFallback = getFallbackImage('購物美食');
+        const scenicFallback = getFallbackImage('地標觀景');
+
+        expect(shoppingFallback.startsWith('data:image/svg+xml')).toBe(true);
+        expect(scenicFallback.startsWith('data:image/svg+xml')).toBe(true);
+        expect(decodeURIComponent(shoppingFallback)).toContain('購物美食');
+        expect(decodeURIComponent(scenicFallback)).toContain('地標觀景');
+        expect(shoppingFallback).not.toContain('text_to_image');
+        expect(scenicFallback).not.toContain('text_to_image');
+        expect(shoppingFallback).not.toContain('images.unsplash.com');
+        expect(scenicFallback).not.toContain('images.unsplash.com');
+    });
+
+    test('unknown categories fall back to the shared inline default image', () => {
+        const defaultFallback = getDefaultFallbackImage();
+
+        expect(getFallbackImage('不存在的分類')).toBe(defaultFallback);
+        expect(defaultFallback.startsWith('data:image/svg+xml')).toBe(true);
+        expect(decodeURIComponent(defaultFallback)).toContain('Seoul Pick');
+        expect(defaultFallback).not.toContain('text_to_image');
+        expect(defaultFallback).not.toContain('images.unsplash.com');
     });
 });

@@ -372,22 +372,58 @@ const CATEGORY_COLORS = {
     '願望s': '#ff4757'
 };
 
-const CATEGORY_FALLBACK_IMAGES = {
-    '歷史文化': 'https://images.unsplash.com/photo-1546874177-9e664107314e?w=800&q=80',
-    '地標觀景': 'https://images.unsplash.com/photo-1538622156152-f4bf54c60d92?w=800&q=80',
-    '購物美食': 'https://images.unsplash.com/photo-1583234035650-8b4e72ec0b4d?w=800&q=80',
-    '夜生活文化': 'https://images.unsplash.com/photo-1517154586052-192e2c7a6e12?w=800&q=80',
-    '娛樂': 'https://images.unsplash.com/photo-1513889961551-628c1e5e2ee9?w=800&q=80',
-    '休閒': 'https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?w=800&q=80',
-    '自然景觀': 'https://images.unsplash.com/photo-1490604001847-b712b0c2f965?w=800&q=80',
-    '用戶釘選': 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80',
-    '自訂景點': 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=800&q=80',
-    '願望s': 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=800&q=80',
-    'default': 'https://images.unsplash.com/photo-1610312278520-bcc893a3ff1d?w=800&q=80',
-};
+function escapeSvgText(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function buildInlineFallbackImage(category) {
+    const normalizedCategory = category || 'default';
+    const color = CATEGORY_COLORS[normalizedCategory] || '#667eea';
+    const label = normalizedCategory === 'default' ? 'Seoul Pick' : normalizedCategory;
+    const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="${escapeSvgText(label)} placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#f3f4f6" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="18" fill="url(#bg)"/>
+  <rect x="18" y="18" width="284" height="144" rx="14" fill="rgba(255,255,255,0.82)"/>
+  <circle cx="70" cy="72" r="26" fill="${color}" fill-opacity="0.15"/>
+  <path d="M70 52c-12.1 0-22 9.9-22 22 0 16.2 22 42 22 42s22-25.8 22-42c0-12.1-9.9-22-22-22zm0 30.5A8.5 8.5 0 1 1 70 65a8.5 8.5 0 0 1 0 17.5z" fill="${color}"/>
+  <text x="112" y="74" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">${escapeSvgText(label)}</text>
+  <text x="112" y="102" font-family="Arial, sans-serif" font-size="14" fill="#4b5563">Preview unavailable</text>
+  <text x="112" y="124" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">Seoul Tour Map</text>
+</svg>`.trim();
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+const CATEGORY_FALLBACK_IMAGES = Object.freeze({
+    '歷史文化': buildInlineFallbackImage('歷史文化'),
+    '地標觀景': buildInlineFallbackImage('地標觀景'),
+    '購物美食': buildInlineFallbackImage('購物美食'),
+    '夜生活文化': buildInlineFallbackImage('夜生活文化'),
+    '娛樂': buildInlineFallbackImage('娛樂'),
+    '休閒': buildInlineFallbackImage('休閒'),
+    '自然景觀': buildInlineFallbackImage('自然景觀'),
+    '用戶釘選': buildInlineFallbackImage('用戶釘選'),
+    '自訂景點': buildInlineFallbackImage('自訂景點'),
+    '願望s': buildInlineFallbackImage('願望s'),
+    'default': buildInlineFallbackImage('default'),
+});
 
 function getFallbackImage(category) {
-    return CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES['default'];
+    return CATEGORY_FALLBACK_IMAGES[category] || getDefaultFallbackImage();
+}
+
+function getDefaultFallbackImage() {
+    return CATEGORY_FALLBACK_IMAGES['default'];
 }
 
 function setupMobileDoubleTapDragZoom(leafletMap) {
@@ -1398,7 +1434,7 @@ function renderAttractionList() {
 
             item.innerHTML = `
                 <img class="thumb" src="${place.image || getFallbackImage(category)}" alt="Photo of ${place.name}" loading="lazy"
-                     onerror="this.onerror=null; this.src=getFallbackImage('${category}');">
+                     onerror="this.onerror=null; this.src=getDefaultFallbackImage();">
                 <div class="info">
                     <div class="name">${place.name}</div>
                     <span class="category-tag" style="background:${color}">${category}</span>
@@ -1472,7 +1508,7 @@ function renderAttractionList() {
 
         item.innerHTML = `
             <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${safeName}" loading="lazy"
-                 onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
+                 onerror="this.onerror=null; this.src=getDefaultFallbackImage();">
             <div class="info">
                 <div class="name">${safeName} ${badges}</div>
                 <span class="category-tag" style="background:${color}">${safeCategory}</span>
@@ -5810,6 +5846,8 @@ if (typeof module !== 'undefined' && module.exports) {
         clearPanelSearch,
         CATEGORY_COLORS,
         CATEGORY_EMOJIS,
+        getFallbackImage,
+        getDefaultFallbackImage,
         setAttractionsDataForTest: (data) => { attractionsData = data; },       
         setMapForTest: (testMap) => { map = testMap; },
         showAttractionDetailById,
