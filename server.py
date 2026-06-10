@@ -25,19 +25,35 @@ import threading
 
 # Ollama consecutive failure counter (circuit breaker) — thread-safe wrapper
 class _CircuitBreaker:
-    """Thread-safe circuit breaker for Ollama failures."""
-    def __init__(self, open_after=3):
+    """Thread-safe circuit breaker for Ollama failures.
+    
+    Opens after `open_after` consecutive failures, blocking further requests.
+    Auto-resets (half-open) after `cooldown_seconds` so the next request
+    gets a chance to prove the API is healthy again.
+    """
+    def __init__(self, open_after=3, cooldown_seconds=60):
         self._lock = threading.Lock()
         self._failures = 0
         self._open_after = open_after
+        self._cooldown_seconds = cooldown_seconds
+        self._last_failure_time = 0  # epoch seconds of the failure that opened the circuit
 
     def is_open(self):
         with self._lock:
+            # Auto-half-open after cooldown: allow one probe request
+            if self._failures >= self._open_after:
+                import time as _time
+                elapsed = _time.time() - self._last_failure_time
+                if elapsed >= self._cooldown_seconds:
+                    self._failures = self._open_after - 1  # allow one more try
+                    return False
             return self._failures >= self._open_after
 
     def record_failure(self):
         with self._lock:
+            import time as _time
             self._failures += 1
+            self._last_failure_time = _time.time()
             return self._failures
 
     def record_success(self):
@@ -49,7 +65,11 @@ class _CircuitBreaker:
             return self._failures
 
 
-_ollama_breaker = _CircuitBreaker(open_after=3)
+_ollama_breaker = _CircuitBreaker(open_after=3, cooldown_seconds=60)
+
+# Health check cache — avoid hammering Ollama API on every /api/health call
+_health_cache = {'result': None, 'timestamp': 0}
+_HEALTH_CACHE_TTL = 15  # seconds
 
 
 def _safe_print(*args, **kwargs):
@@ -852,6 +872,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         reply = result.get('reply', '').strip()
         if not reply:
+            return None
+        # Safety net: detect error messages that slipped through the client
+        if 'Error code:' in reply and 'error' in reply.lower():
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Error in reply body, discarding: {reply[:200]}")
             return None
         _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Success (source={result.get('source')}, reply_len={len(reply)})")
         return reply
@@ -1740,10 +1764,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def handle_health_check(self):
         """啟動時狀態檢查：檢查 AI backend 同 Hermes Worker 可達性"""
         import time
+        global _health_cache
+        
+        # Return cached result if still fresh
+        now = time.time()
+        if _health_cache['result'] and (now - _health_cache['timestamp']) < _HEALTH_CACHE_TTL:
+            self.send_json(_health_cache['result'])
+            return
+
         result = {
             'status': 'ok',
             'server': 'running',
-            'timestamp': int(time.time()),
+            'timestamp': int(now),
             'services': {}
         }
 
@@ -1824,6 +1856,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             result['status'] = 'degraded'  # 伺服器在行但 AI 唔通
         else:
             result['status'] = 'unknown'
+
+        # Cache the result
+        _health_cache['result'] = result
+        _health_cache['timestamp'] = time.time()
 
         self.send_json(result)
 
