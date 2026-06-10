@@ -1,0 +1,17 @@
+[
+  {
+    "id": "example_景福宮_37.5796_126.9770",
+    "name": "景福宮",
+    "lat": 37.5796,
+    "lng": 126.977,
+    "category": "歷史文化",
+    "description": "韓國最大嘅宮殿，朝鮮王朝嘅正宮。",
+    "price": "3000韓元",
+    "addedAt": 0,
+    "ownerFingerprint": "",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": ""
+  }
+]

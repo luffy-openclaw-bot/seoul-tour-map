@@ -2653,6 +2653,7 @@ function toggleChat() {
             const statusDot = document.getElementById('system-status');
             if (statusDot) statusDot.classList.remove('hidden');
             checkSystemStatus();
+            startStatusAutoRefresh();
             systemStatusChecked = true;
         }
 
@@ -5882,6 +5883,15 @@ async function checkSystemStatus() {
 
         statusBar.classList.remove('hidden');
     }
+}
+
+// Auto-refresh system status every 30 seconds so stale "offline" state doesn't persist
+let _statusRefreshInterval = null;
+function startStatusAutoRefresh() {
+    if (_statusRefreshInterval) return; // already running
+    _statusRefreshInterval = setInterval(() => {
+        checkSystemStatus();
+    }, 30000);
 }
 
 // 點擊狀態指示器展開/收起詳情

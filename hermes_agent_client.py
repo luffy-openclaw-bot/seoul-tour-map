@@ -119,6 +119,11 @@ class HermesAgentClient:
             with opener.open(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode('utf-8'))
                 content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
+                # Detect error messages embedded in a 200 response
+                # (e.g., "Error code: 401 - {...}" from misconfigured proxies)
+                if content and ('Error code:' in content and "'error'" in content):
+                    self.last_error = f"Hermes Agent API returned error in response body: {content[:200]}"
+                    return False, self.last_error, "error"
                 return True, content, "hermes_agent"
                 
         except urllib.error.HTTPError as e:
