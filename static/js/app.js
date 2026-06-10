@@ -1781,8 +1781,19 @@ function showAttractionDetail(attr) {
     const modal = document.getElementById('modal');
     const body = document.getElementById('modal-body');
     const color = CATEGORY_COLORS[attr.category] || '#666';
+    const matchedItem = WishlistManager.get(attr.name, attr.lat, attr.lng);
+    const canRemoveFromModal = matchedItem && !matchedItem.deleted;
 
     const highlights = attr.highlights.map(h => `<li>${h}</li>`).join('');
+    const modalDeleteBtnHtml = canRemoveFromModal ? `
+                <button class="btn-delete-modal"
+                        data-name="${attr.name}" data-lat="${attr.lat}" data-lng="${attr.lng}"
+                        onclick="removeFromWishlistFromModal(this)"
+                        title="從清單移除"
+                        aria-label="從清單移除 ${attr.name}">
+                    <i class="fas fa-trash-alt"></i> 從清單移除
+                </button>
+    ` : '';
 
     body.classList.add('no-hero');
     body.innerHTML = `
@@ -1864,7 +1875,8 @@ function showAttractionDetail(attr) {
                     <i class="${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far'} fa-heart"></i>
                     ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? '已收藏' : '加入願望清單'}
                 </button>
-                <button class="btn-route" style="background-color: #f39c12; margin-top: 10px; width: 100%;" onclick="openSaveLocationModal(${attr.lat}, ${attr.lng}, '${attr.name.replace(/'/g, "\\'")}')">
+                ${modalDeleteBtnHtml}
+                <button class="btn-note-modal" onclick="openSaveLocationModal(${attr.lat}, ${attr.lng}, '${attr.name.replace(/'/g, "\\'")}')">
                     <i class="fas fa-edit"></i> 加入/編輯備註
                 </button>
             </div>
@@ -5715,18 +5727,18 @@ function toggleWishlist(btn) {
 /**
  * 從清單中徹底移除地點（邏輯刪除）
  */
-function removeFromWishlist(btn) {
+function performWishlistRemoval(btn) {
     const name = btn.dataset.name;
     const lat = parseFloat(btn.dataset.lat);
     const lng = parseFloat(btn.dataset.lng);
-    if (!name || isNaN(lat) || isNaN(lng)) return;
+    if (!name || isNaN(lat) || isNaN(lng)) return false;
 
     // 獲取項目以確認存在且獲取 ID
     const item = WishlistManager.get(name, lat, lng);
-    if (!item) return;
+    if (!item) return false;
 
     // 彈出確認對話框
-    if (!confirm(`確定要移除「${name}」嗎？\n這將會清除所有收藏狀態及備註。`)) return;
+    if (!confirm(`確定要移除「${name}」嗎？\n這將會清除所有收藏狀態及備註。`)) return false;
 
     // 執行邏輯刪除
     WishlistManager.remove(item.id);
@@ -5737,6 +5749,19 @@ function removeFromWishlist(btn) {
     toast.innerHTML = `<i class="fas fa-trash-alt"></i> 已從清單移除地點`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
+    return true;
+}
+
+function removeFromWishlist(btn) {
+    return performWishlistRemoval(btn);
+}
+
+function removeFromWishlistFromModal(btn) {
+    const removed = performWishlistRemoval(btn);
+    if (removed) {
+        closeModal();
+    }
+    return removed;
 }
 
 // ==================== 系統狀態檢查 ====================
@@ -5904,6 +5929,8 @@ if (typeof module !== 'undefined' && module.exports) {
         setAttractionsDataForTest: (data) => { attractionsData = data; },       
         setMapForTest: (testMap) => { map = testMap; },
         showAttractionDetailById,
+        removeFromWishlist,
+        removeFromWishlistFromModal,
         addMarkers,
         calculateHaversineDistance,
         radiusState,

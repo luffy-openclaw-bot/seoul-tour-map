@@ -609,13 +609,13 @@
     "address": "中區筆洞2街83-4",
     "price": "",
     "addedAt": 1781086310184,
-    "updatedAt": 1781086312440,
+    "updatedAt": 1781093931347,
     "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
     "wish": false,
     "pinned": false,
     "visited": false,
     "myRemark": "",
-    "deleted": false
+    "deleted": true
   },
   {
     "id": "chat_Blue Bottle 三清洞店_37.5817_126.9825",
@@ -663,13 +663,13 @@
     "address": "江南區新沙洞523",
     "price": "",
     "addedAt": 1781086311510,
-    "updatedAt": 1781086312440,
+    "updatedAt": 1781093929280,
     "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
     "wish": false,
     "pinned": false,
     "visited": false,
     "myRemark": "",
-    "deleted": false
+    "deleted": true
   },
   {
     "id": "chat_Blue Bottle 現代首爾店_37.5656_126.9794",
@@ -681,13 +681,13 @@
     "address": "中區小公路52",
     "price": "",
     "addedAt": 1781086312134,
-    "updatedAt": 1781086312440,
+    "updatedAt": 1781097240904,
     "ownerFingerprint": "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQg",
     "wish": false,
     "pinned": false,
     "visited": false,
     "myRemark": "",
-    "deleted": false
+    "deleted": true
   },
   {
     "id": "wl_Blue Bottle 清溪川店_37.5678_126.9825",

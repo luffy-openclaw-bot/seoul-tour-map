@@ -65,7 +65,9 @@ const {
     getFilteredAttractions,
     setAttractionsDataForTest,
     setPanelSearchQuery,
-    radiusState
+    radiusState,
+    showAttractionDetailById,
+    removeFromWishlistFromModal
 } = app;
 
 describe('Wishlist fuzzy match', () => {
@@ -156,6 +158,33 @@ describe('Wishlist fuzzy match', () => {
         const deletedItem = items.find(item => item.id === 'wl_Blue Bottle 清溪川店_37.5678_126.9825');
         expect(activeItem.deleted).toBe(true);
         expect(deletedItem.deleted).toBe(true);
+    });
+
+    test('modal delete keeps item and modal open when confirmation is cancelled', () => {
+        setAttractionsDataForTest([
+            { id: 'chat_cancel_delete', name: 'Blue Bottle 安國店', lat: 37.5761, lng: 126.9851, category: '購物美食', description: '安國站附近。' }
+        ]);
+        WishlistManager.add({
+            name: 'Blue Bottle 安國店',
+            lat: 37.5761,
+            lng: 126.9851,
+            category: '購物美食',
+            description: '安國站附近。',
+            wish: true
+        });
+
+        showAttractionDetailById('chat_cancel_delete');
+        const deleteBtn = document.querySelector('.btn-delete-modal');
+        const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+        expect(removeFromWishlistFromModal(deleteBtn)).toBe(false);
+
+        const savedItem = WishlistManager.getAll().find(item => item.name === 'Blue Bottle 安國店');
+        expect(confirmSpy).toHaveBeenCalled();
+        expect(savedItem.deleted).toBe(false);
+        expect(document.getElementById('modal').classList.contains('hidden')).toBe(false);
+
+        confirmSpy.mockRestore();
     });
 });
 

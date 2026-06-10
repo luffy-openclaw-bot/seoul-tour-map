@@ -1621,18 +1621,30 @@ body {
 
 .modal-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 16px;
 }
 
 .modal-actions button {
-    flex: 1;
+    flex: 1 1 calc(50% - 10px);
+    min-width: 160px;
     padding: 10px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     font-size: 13px;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.modal-actions button:focus-visible {
+    outline: 3px solid rgba(102, 126, 234, 0.22);
+    outline-offset: 2px;
 }
 
 /* 釘選輸入框樣式 */
@@ -1681,10 +1693,38 @@ body {
     background: #3367D6;
 }
 
+.btn-note-modal {
+    background: #f39c12;
+    color: white;
+    flex-basis: 100%;
+}
+
+.btn-note-modal:hover {
+    background: #d68910;
+}
+
+.btn-delete-modal {
+    background: #fff5f5;
+    color: #e74c3c;
+    border: 2px solid #e74c3c;
+}
+
+.btn-delete-modal:hover {
+    background: #e74c3c;
+    color: white;
+}
+
 .btn-nearby {
     background: #f0f4ff;
     color: #667eea;
     border: 1px solid #667eea;
+}
+
+@media (max-width: 768px) {
+    .modal-actions button {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
 }
 
 /* ==================== 響應式設計 ==================== */

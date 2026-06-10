@@ -76,7 +76,9 @@ const {
     getChatHistory,
     CHAT_HISTORY_KEY,
     setAttractionsDataForTest,
-    showAttractionDetailById
+    showAttractionDetailById,
+    WishlistManager,
+    removeFromWishlistFromModal
 } = app;
 
 describe('Chat History Persistence', () => {
@@ -172,6 +174,7 @@ describe('Chat History Persistence', () => {
 
 describe('Chat-added location detail modal', () => {
     beforeEach(() => {
+        localStorage.clear();
         document.getElementById('modal').className = 'hidden';
         document.getElementById('modal-body').innerHTML = '';
         setAttractionsDataForTest([]);
@@ -193,5 +196,84 @@ describe('Chat-added location detail modal', () => {
         expect(document.getElementById('modal').classList.contains('hidden')).toBe(false);
         expect(document.getElementById('modal-body').textContent).toContain('Blue Bottle 清溪川店');
         expect(document.getElementById('modal-body').textContent).toContain('暫無亮點資料');
+    });
+
+    test('detail modal shows trash button when location has a saved active record', () => {
+        setAttractionsDataForTest([
+            {
+                id: 'chat_saved_blue_bottle',
+                name: 'Blue Bottle 三清洞店',
+                lat: 37.5817,
+                lng: 126.9825,
+                category: '購物美食',
+                description: '三清洞人氣咖啡店。'
+            }
+        ]);
+        WishlistManager.add({
+            name: 'Blue Bottle 三清洞店',
+            lat: 37.5817,
+            lng: 126.9825,
+            category: '購物美食',
+            description: '三清洞人氣咖啡店。',
+            wish: true
+        });
+
+        showAttractionDetailById('chat_saved_blue_bottle');
+
+        const deleteBtn = document.querySelector('.btn-delete-modal');
+        expect(deleteBtn).not.toBeNull();
+        expect(deleteBtn.textContent).toContain('從清單移除');
+        expect(deleteBtn.getAttribute('aria-label')).toContain('Blue Bottle 三清洞店');
+    });
+
+    test('detail modal hides trash button when location has no saved record', () => {
+        setAttractionsDataForTest([
+            {
+                id: 'chat_unsaved_blue_bottle',
+                name: 'Blue Bottle 北村店',
+                lat: 37.5822,
+                lng: 126.9831,
+                category: '購物美食',
+                description: '北村韓屋附近分店。'
+            }
+        ]);
+
+        showAttractionDetailById('chat_unsaved_blue_bottle');
+
+        expect(document.querySelector('.btn-delete-modal')).toBeNull();
+    });
+
+    test('confirmed modal delete soft-deletes the item and closes the modal', () => {
+        setAttractionsDataForTest([
+            {
+                id: 'chat_delete_blue_bottle',
+                name: 'Blue Bottle 現代首爾店',
+                lat: 37.5251,
+                lng: 126.9280,
+                category: '購物美食',
+                description: '現代百貨內分店。'
+            }
+        ]);
+        WishlistManager.add({
+            name: 'Blue Bottle 現代首爾店',
+            lat: 37.5251,
+            lng: 126.9280,
+            category: '購物美食',
+            description: '現代百貨內分店。',
+            wish: true
+        });
+        showAttractionDetailById('chat_delete_blue_bottle');
+
+        const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+        const deleteBtn = document.querySelector('.btn-delete-modal');
+
+        expect(removeFromWishlistFromModal(deleteBtn)).toBe(true);
+
+        const savedItem = WishlistManager.getAll().find(item => item.name === 'Blue Bottle 現代首爾店');
+        expect(confirmSpy).toHaveBeenCalled();
+        expect(savedItem.deleted).toBe(true);
+        expect(document.getElementById('modal').classList.contains('hidden')).toBe(true);
+
+        confirmSpy.mockRestore();
     });
 });
