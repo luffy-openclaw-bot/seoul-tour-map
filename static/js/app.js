@@ -1293,27 +1293,37 @@ function getFilteredAttractions(category) {
             ticket: item.price || '',
             description: item.description || '',
             addedAt: item.addedAt,
-            updatedAt: item.updatedAt
+            updatedAt: item.updatedAt,
+            _source: 'saved'
         };
     });
 
     // 合併內建景點與自訂景點（避免重複）
-    let combined = [...attractionsData];
+    let combined = attractionsData.map(item => ({
+        ...item,
+        _source: 'preset'
+    }));
     customItems.forEach(customItem => {
-        const tol = 0.0001;
+        const tol = WishlistManager.MATCH_TOLERANCE;
         const clat = parseFloat(customItem.lat);
         const clng = parseFloat(customItem.lng);
         const exists = combined.some(a => {
             const alat = parseFloat(a.lat);
             const alng = parseFloat(a.lng);
             if (isNaN(alat) || isNaN(alng) || isNaN(clat) || isNaN(clng)) return false;
-            return a.name === customItem.name &&
+            return WishlistManager._normalizeName(a.name) === WishlistManager._normalizeName(customItem.name) &&
                 Math.abs(alat - clat) < tol &&
                 Math.abs(alng - clng) < tol;
         });
         if (!exists) {
             combined.push(customItem);
         }
+    });
+
+    combined = combined.filter(item => {
+        if (item._source !== 'preset') return true;
+        const match = WishlistManager._resolveMatch(item.name, item.lat, item.lng);
+        return !(match.deleted && !match.active);
     });
 
     // 根據排序偏好進行排序
@@ -1377,7 +1387,7 @@ function getFilteredAttractions(category) {
     }
 
     if (category === 'all') {
-        return items;
+        return items.map(({ _source, ...rest }) => rest);
     } else if (category === '願望s' || category === 'pinned' || category === 'visited') {
         if (category === '願望s') {
             items = items.filter(item => {
@@ -1395,9 +1405,11 @@ function getFilteredAttractions(category) {
                 return w && w.visited;
             });
         }
-        return items;
+        return items.map(({ _source, ...rest }) => rest);
     } else {
-        return items.filter(a => a.category === category);
+        return items
+            .filter(a => a.category === category)
+            .map(({ _source, ...rest }) => rest);
     }
 }
 
@@ -5211,6 +5223,7 @@ function toggleLoadingState(isSyncing) {
  */
 const WishlistManager = {
     STORAGE_KEY: 'seoul_tour_wishlist',
+    MATCH_TOLERANCE: 0.0001,
 
     _normalizeName(name) {
         return String(name || '').normalize('NFKC').replace(/\s+/g, ' ').trim();
@@ -5221,6 +5234,94 @@ const WishlistManager = {
         const nlng = Number(lng);
         if (isNaN(nlat) || isNaN(nlng)) return null;
         return `${nlat.toFixed(4)}_${nlng.toFixed(4)}`;
+    },
+
+    _pickBestCandidate(candidates, preferNameMatch = false) {
+        if (!candidates || candidates.length === 0) return null;
+        const ranked = [...candidates].sort((a, b) => {
+            if (preferNameMatch && a.nameMatch !== b.nameMatch) {
+                return a.nameMatch ? -1 : 1;
+            }
+            if (a.dist !== b.dist) return a.dist - b.dist;
+            const atime = a.item.updatedAt || a.item.addedAt || 0;
+            const btime = b.item.updatedAt || b.item.addedAt || 0;
+            if (atime !== btime) return btime - atime;
+            return String(a.item.id || '').localeCompare(String(b.item.id || ''));
+        });
+        return ranked[0].item;
+    },
+
+    _pickCoordCandidate(candidates) {
+        if (!candidates || candidates.length === 0) return null;
+        if (candidates.length === 1) return candidates[0].item;
+        const nameMatches = candidates.filter(candidate => candidate.nameMatch);
+        if (nameMatches.length === 1) return nameMatches[0].item;
+        return null;
+    },
+
+    _resolveMatch(name, lat, lng) {
+        const targetName = this._normalizeName(name);
+        const targetLat = Number(lat);
+        const targetLng = Number(lng);
+        if (!targetName || isNaN(targetLat) || isNaN(targetLng)) {
+            return { active: null, deleted: null };
+        }
+
+        const items = this.getAll();
+        const targetId = this._generateId(name, lat, lng);
+        const targetKey = this._coordKey(targetLat, targetLng);
+        const tol = this.MATCH_TOLERANCE;
+        const exactActive = [];
+        const exactDeleted = [];
+        const fuzzyActive = [];
+        const fuzzyDeleted = [];
+        const coordActive = [];
+        const coordDeleted = [];
+
+        for (const item of items) {
+            if (!item) continue;
+            const isDeleted = !!item.deleted;
+            const normalizedName = this._normalizeName(item.name);
+            const ilat = Number(item.lat);
+            const ilng = Number(item.lng);
+            const hasCoords = !isNaN(ilat) && !isNaN(ilng);
+            const nameMatch = normalizedName === targetName;
+            const exactIdMatch = item.id === targetId;
+            let dist = Number.POSITIVE_INFINITY;
+            let fuzzyMatch = false;
+            let coordMatch = false;
+
+            if (hasCoords) {
+                const dlat = ilat - targetLat;
+                const dlng = ilng - targetLng;
+                dist = dlat * dlat + dlng * dlng;
+                fuzzyMatch = nameMatch &&
+                    Math.abs(dlat) <= tol &&
+                    Math.abs(dlng) <= tol;
+                const itemCoordKey = this._coordKey(ilat, ilng);
+                coordMatch = !!targetKey && !!itemCoordKey && itemCoordKey === targetKey;
+            }
+
+            const candidate = { item, dist, nameMatch };
+            if (exactIdMatch) {
+                (isDeleted ? exactDeleted : exactActive).push(candidate);
+            }
+            if (fuzzyMatch) {
+                (isDeleted ? fuzzyDeleted : fuzzyActive).push(candidate);
+            }
+            if (coordMatch) {
+                (isDeleted ? coordDeleted : coordActive).push(candidate);
+            }
+        }
+
+        const active = this._pickBestCandidate(exactActive) ||
+            this._pickBestCandidate(fuzzyActive) ||
+            this._pickCoordCandidate(coordActive);
+        const deleted = this._pickBestCandidate(exactDeleted) ||
+            this._pickBestCandidate(fuzzyDeleted) ||
+            this._pickCoordCandidate(coordDeleted);
+
+        return { active, deleted };
     },
 
     /** 獲取所有願望清單項目 */
@@ -5417,56 +5518,8 @@ const WishlistManager = {
 
     /** 獲取指定地點 */
     get(name, lat, lng) {
-        const id = this._generateId(name, lat, lng);
-        const items = this.getAll();
-        const exact = items.find(i => i.id === id);
-        if (exact) return exact;
-
-        const targetName = this._normalizeName(name);
-        const targetLat = Number(lat);
-        const targetLng = Number(lng);
-        if (!targetName || isNaN(targetLat) || isNaN(targetLng)) return null;
-
-        const tol = 0.0001;
-        let best = null;
-        let bestDist = Infinity;
-        for (const i of items) {
-            if (!i || !i.name) continue;
-            if (this._normalizeName(i.name) !== targetName) continue;
-            const ilat = Number(i.lat);
-            const ilng = Number(i.lng);
-            if (isNaN(ilat) || isNaN(ilng)) continue;
-            const dlat = ilat - targetLat;
-            const dlng = ilng - targetLng;
-            if (Math.abs(dlat) <= tol && Math.abs(dlng) <= tol) {
-                const dist = dlat * dlat + dlng * dlng;
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    best = i;
-                }
-            }
-        }
-        if (best) return best;
-
-        const targetKey = this._coordKey(targetLat, targetLng);
-        if (!targetKey) return null;
-
-        const candidates = [];
-        for (const i of items) {
-            if (!i) continue;
-            const k = this._coordKey(i.lat, i.lng);
-            if (k && k === targetKey) {
-                candidates.push(i);
-            }
-        }
-
-        if (candidates.length === 1) return candidates[0];
-        if (candidates.length > 1) {
-            const nameMatches = candidates.filter(c => c && c.name && this._normalizeName(c.name) === targetName);
-            if (nameMatches.length === 1) return nameMatches[0];
-        }
-
-        return null;
+        const match = this._resolveMatch(name, lat, lng);
+        return match.active || match.deleted || null;
     },
 
     /** 切換願望清單狀態（切換 wish 屬性） */
