@@ -69,7 +69,15 @@ global.addMarkers = jest.fn();
 global.activeCategory = 'all';
 
 const app = require('../static/js/app.js');
-const { addMessage, saveChatHistory, loadChatHistory, getChatHistory, CHAT_HISTORY_KEY } = app;
+const {
+    addMessage,
+    saveChatHistory,
+    loadChatHistory,
+    getChatHistory,
+    CHAT_HISTORY_KEY,
+    setAttractionsDataForTest,
+    showAttractionDetailById
+} = app;
 
 describe('Chat History Persistence', () => {
     beforeEach(() => {
@@ -159,5 +167,31 @@ describe('Chat History Persistence', () => {
         expect(setItemSpy).toHaveBeenCalledWith(CHAT_HISTORY_KEY, expect.any(String));
         
         setItemSpy.mockRestore();
+    });
+});
+
+describe('Chat-added location detail modal', () => {
+    beforeEach(() => {
+        document.getElementById('modal').className = 'hidden';
+        document.getElementById('modal-body').innerHTML = '';
+        setAttractionsDataForTest([]);
+    });
+
+    test('showAttractionDetailById opens modal for minimal chat-added locations', () => {
+        setAttractionsDataForTest([
+            {
+                id: 'chat_blue_bottle_cheonggye',
+                name: 'Blue Bottle 清溪川店',
+                lat: 37.5691,
+                lng: 126.9846,
+                category: '購物美食',
+                description: '美國超人氣精品咖啡品牌，新世界站。'
+            }
+        ]);
+
+        expect(() => showAttractionDetailById('chat_blue_bottle_cheonggye')).not.toThrow();
+        expect(document.getElementById('modal').classList.contains('hidden')).toBe(false);
+        expect(document.getElementById('modal-body').textContent).toContain('Blue Bottle 清溪川店');
+        expect(document.getElementById('modal-body').textContent).toContain('暫無亮點資料');
     });
 });

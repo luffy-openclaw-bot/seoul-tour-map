@@ -1675,6 +1675,33 @@ function focusAttraction(attr) {
 }
 
 // ==================== 景點詳情彈窗 ====================
+function normalizeAttractionDetail(attr) {
+    const safeAttr = attr || {};
+
+    return {
+        ...safeAttr,
+        local_name: safeAttr.local_name || '',
+        category: safeAttr.category || '未分類',
+        image: safeAttr.image || '',
+        ticket: safeAttr.ticket || '',
+        description: safeAttr.description || '無詳細描述',
+        highlights: Array.isArray(safeAttr.highlights) && safeAttr.highlights.length > 0
+            ? safeAttr.highlights
+            : ['暫無亮點資料'],
+        local_cuisine: safeAttr.local_cuisine || '無',
+        best_seasons: safeAttr.best_seasons || '四季皆宜',
+        stay_duration: safeAttr.stay_duration || '無',
+        visitor_insights: safeAttr.visitor_insights || '無',
+        transport: {
+            subway: safeAttr.transport?.subway || '無',
+            time_from_station: safeAttr.transport?.time_from_station || '無'
+        },
+        hours: safeAttr.hours || '無',
+        tips: safeAttr.tips || '無',
+        source_urls: Array.isArray(safeAttr.source_urls) ? safeAttr.source_urls : []
+    };
+}
+
 function showAttractionDetailById(id) {
     let attr = attractionsData.find(a => a.id === id);
     if (!attr) {
@@ -1702,6 +1729,7 @@ function showAttractionDetailById(id) {
 }
 
 function showAttractionDetail(attr) {
+    attr = normalizeAttractionDetail(attr);
     const modal = document.getElementById('modal');
     const body = document.getElementById('modal-body');
     const color = CATEGORY_COLORS[attr.category] || '#666';
@@ -5784,6 +5812,7 @@ if (typeof module !== 'undefined' && module.exports) {
         CATEGORY_EMOJIS,
         setAttractionsDataForTest: (data) => { attractionsData = data; },       
         setMapForTest: (testMap) => { map = testMap; },
+        showAttractionDetailById,
         addMarkers,
         calculateHaversineDistance,
         radiusState,
