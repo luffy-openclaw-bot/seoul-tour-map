@@ -2835,6 +2835,241 @@ async function handlePlacesCommand(args) {
     }
 }
 
+const ADD_SUCCESS_TEXT_RE = /(\bdone\b|added\s+(them|it|all)?\s*to\s+(the\s+)?list|added\s+to\s+list|已加入|已为你加入|已為你加入|加入全部)/i;
+
+function normalizeActionResponseText(text) {
+    return String(text || '')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/[【]/g, '【')
+        .replace(/[】]/g, '】');
+}
+
+function isExecutableActionCommand(candidate) {
+    return !!(candidate && typeof candidate === 'object' && (candidate.action || candidate.type));
+}
+
+function escapeRawNewlinesInJsonString(text) {
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+
+        if (inString) {
+            if (escapeNext) {
+                result += char;
+                escapeNext = false;
+                continue;
+            }
+            if (char === '\\') {
+                result += char;
+                escapeNext = true;
+                continue;
+            }
+            if (char === '"') {
+                result += char;
+                inString = false;
+                continue;
+            }
+            if (char === '\n') {
+                result += '\\n';
+                continue;
+            }
+            if (char === '\r') {
+                result += '\\r';
+                continue;
+            }
+            result += char;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = true;
+        }
+        result += char;
+    }
+
+    return result;
+}
+
+function parseActionCandidate(fragment) {
+    const normalized = escapeRawNewlinesInJsonString(
+        normalizeActionResponseText(fragment)
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim()
+        .replace(/^,\s*/, '')
+        .replace(/\s*,$/, '')
+    );
+
+    if (!normalized) {
+        return { commands: [], normalized, error: 'empty fragment' };
+    }
+
+    try {
+        const parsed = JSON.parse(normalized);
+        if (Array.isArray(parsed)) {
+            return {
+                commands: parsed.filter(isExecutableActionCommand),
+                normalized,
+                error: null
+            };
+        }
+        return {
+            commands: isExecutableActionCommand(parsed) ? [parsed] : [],
+            normalized,
+            error: null
+        };
+    } catch (error) {
+        const nestedFragments = scanJsonActionObjects(normalized);
+        if (nestedFragments.length > 1) {
+            const nestedCommands = [];
+            nestedFragments.forEach((nestedFragment) => {
+                const nestedParsed = parseActionCandidate(nestedFragment);
+                if (nestedParsed.commands.length > 0) {
+                    nestedCommands.push(...nestedParsed.commands);
+                }
+            });
+            if (nestedCommands.length > 0) {
+                return { commands: nestedCommands, normalized, error: null };
+            }
+        }
+        return { commands: [], normalized, error };
+    }
+}
+
+function scanJsonActionObjects(text) {
+    const fragments = [];
+    let start = -1;
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+
+        if (start === -1) {
+            if (char === '{') {
+                start = i;
+                depth = 1;
+                inString = false;
+                escapeNext = false;
+            }
+            continue;
+        }
+
+        if (inString) {
+            if (escapeNext) {
+                escapeNext = false;
+            } else if (char === '\\') {
+                escapeNext = true;
+            } else if (char === '"') {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (char === '"') {
+            inString = true;
+            continue;
+        }
+
+        if (char === '{') {
+            depth += 1;
+            continue;
+        }
+
+        if (char === '}') {
+            depth -= 1;
+            if (depth === 0) {
+                const fragment = text.slice(start, i + 1);
+                if (/"(?:action|type)"\s*:/.test(fragment)) {
+                    fragments.push(fragment);
+                }
+                start = -1;
+            }
+        }
+    }
+
+    return fragments;
+}
+
+function extractActionCommands(text, sourceLabel = 'unknown') {
+    let cleanText = normalizeActionResponseText(text);
+    const actions = [];
+    const malformedFragments = [];
+
+    cleanText = cleanText.replace(/【([^】]+)】/g, (fullMatch, innerText) => {
+        const parsed = parseActionCandidate(innerText);
+        if (parsed.commands.length > 0) {
+            actions.push(...parsed.commands);
+            return '';
+        }
+        if (/"(?:action|type)"\s*:/.test(parsed.normalized)) {
+            malformedFragments.push(parsed.normalized);
+            console.warn(`[AI Action Parser] ${sourceLabel}: malformed bracket action`, parsed.normalized, parsed.error);
+        }
+        return fullMatch;
+    });
+
+    scanJsonActionObjects(cleanText).forEach((fragment) => {
+        const parsed = parseActionCandidate(fragment);
+        if (parsed.commands.length > 0) {
+            actions.push(...parsed.commands);
+            cleanText = cleanText.replace(fragment, '');
+            return;
+        }
+        malformedFragments.push(parsed.normalized);
+        console.warn(`[AI Action Parser] ${sourceLabel}: malformed object action`, parsed.normalized, parsed.error);
+    });
+
+    console.log(`[AI Action Parser] ${sourceLabel}: extracted ${actions.length} action(s), malformed=${malformedFragments.length}`);
+
+    return {
+        cleanText: cleanText.trim(),
+        actions,
+        malformedFragments
+    };
+}
+
+function stripPrematureAddSuccessText(text) {
+    return String(text || '')
+        .split('\n')
+        .filter(line => !ADD_SUCCESS_TEXT_RE.test(line.trim()))
+        .join('\n')
+        .trim();
+}
+
+function formatAddToListStatusMessage(addResults, malformedAddCount = 0) {
+    if (!addResults || addResults.length === 0) {
+        return malformedAddCount > 0
+            ? '\n\n⚠️ The app could not confirm any location addition because the reply contained malformed add actions.'
+            : '';
+    }
+
+    const succeeded = addResults.filter(result => result.success);
+    const failed = addResults.filter(result => !result.success);
+    const parts = [];
+
+    if (succeeded.length > 0) {
+        const successNames = succeeded.map(result => result.name).filter(Boolean);
+        parts.push(`✅ App confirmed ${succeeded.length} location(s) added to the list${successNames.length ? `: ${successNames.join(', ')}` : ''}.`);
+    }
+
+    if (failed.length > 0) {
+        const failedNames = failed.map(result => result.name || result.action).filter(Boolean);
+        parts.push(`⚠️ ${failed.length} location add request(s) failed${failedNames.length ? `: ${failedNames.join(', ')}` : ''}. Check console logs for details.`);
+    }
+
+    if (malformedAddCount > 0) {
+        parts.push(`⚠️ ${malformedAddCount} add action fragment(s) were malformed and skipped before request dispatch.`);
+    }
+
+    return parts.length > 0 ? `\n\n${parts.join('\n')}` : '';
+}
+
 async function fetchAIReply(userText) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s — covers Hermes(15s) + Ollama(30s) + overhead
@@ -2859,30 +3094,38 @@ async function fetchAIReply(userText) {
             throw new Error(data.error || 'AI 回應失敗');
         }
 
-        let reply = data.reply || generateAIReply(userText);
+        const rawReply = data.reply || generateAIReply(userText);
+        console.log('[AI Add Flow] Raw reply received:', rawReply);
 
-    // 解析並執行回覆中的地圖指令
-    const actionPattern = /【([^】]+)】/g;
-    let match;
-    const actions = [];
-    while ((match = actionPattern.exec(reply)) !== null) {
-        try {
-            const cmd = JSON.parse(match[1]);
-            if (cmd.type === 'map_action' || cmd.action) {
-                actions.push(cmd);
+        const parsed = extractActionCommands(rawReply, 'fetchAIReply');
+        const actionResults = [];
+
+        // Execute in order so multi-location additions complete deterministically.
+        for (const actionCommand of parsed.actions) {
+            const actName = actionCommand.action || actionCommand.type;
+            const actParams = actionCommand.params || {};
+            const result = await executeMapAction(actName, actParams);
+            actionResults.push(result);
+        }
+
+        const malformedAddCount = parsed.malformedFragments.filter(fragment => /"action"\s*:\s*"add_to_list"/.test(fragment)).length;
+        const addResults = actionResults.filter(result => result && result.action === 'add_to_list');
+        const hasAddActions = parsed.actions.some(actionCommand => (actionCommand.action || actionCommand.type) === 'add_to_list');
+        const hasAddIntent = hasAddActions || malformedAddCount > 0 || ADD_SUCCESS_TEXT_RE.test(rawReply);
+
+        let reply = parsed.cleanText;
+        if (hasAddIntent) {
+            reply = stripPrematureAddSuccessText(reply);
+            if (addResults.length === 0) {
+                console.warn('[AI Add Flow] AI claimed completion but no confirmed add_to_list action completed.', {
+                    malformedAddCount,
+                    parsedActionCount: parsed.actions.length
+                });
             }
-        } catch (e) { /* 無視格式錯誤 */ }
-        reply = reply.replace(match[0], ''); // 移除指令標記
-    }
+            reply += formatAddToListStatusMessage(addResults, malformedAddCount);
+        }
 
-    // 異步執行所有地圖動作
-    actions.forEach(action => {
-        const actName = action.action || action.type;
-        const actParams = action.params || {};
-        executeMapAction(actName, actParams);
-    });
-
-        return reply;
+        return reply.trim();
     } catch (e) {
         clearTimeout(timeoutId);
         if (e.name === 'AbortError') {
@@ -2938,41 +3181,36 @@ function addMessage(text, sender, isRestore = false) {
 
     let displayText = text;
     let autoActions = [];
+    let botParsed = null;
 
     if (sender === 'bot') {
-        // Step 1: Extract and process 【{"action":"...","params":{...}}】 tags
+        // Step 1: Extract and process action tags or JSON-like action objects
         // We need to handle fly_to separately because marked.parse() would mangle HTML links
-        const actionPattern = /【([^】]+)】/g;
-        let match;
-        let cleanText = text;
+        botParsed = extractActionCommands(text, 'addMessage');
+        let cleanText = botParsed.cleanText;
+        const malformedAddCount = botParsed.malformedFragments.filter(fragment => /"action"\s*:\s*"add_to_list"/.test(fragment)).length;
+        const hasAddIntent = botParsed.actions.some(cmd => (cmd.action || cmd.type) === 'add_to_list') || malformedAddCount > 0;
         const flyToLinks = []; // Store fly_to link HTML, use placeholders
 
-        while ((match = actionPattern.exec(text)) !== null) {
-            try {
-                const cmd = JSON.parse(match[1]);
-                if (cmd.action === 'fly_to' && cmd.params) {
-                    // Replace fly_to tag with a placeholder, store link HTML separately
-                    const lat = cmd.params.lat;
-                    const lng = cmd.params.lng;
-                    const title = cmd.params.title || '位置';
-                    const placeholderId = `FLYTO_PLACEHOLDER_${flyToLinks.length}`;
-                    const linkHtml = `<a href="javascript:void(0)" class="fly-to-link" data-lat="${lat}" data-lng="${lng}" data-title="${title.replace(/"/g, '&quot;')}" title="點擊飛到 ${title}">${title} 🗺️</a>`;
-                    flyToLinks.push(linkHtml);
-                    cleanText = cleanText.replace(match[0], placeholderId);
-                    
-                    // Also push to autoActions so we can recreate the button during restore
-                    autoActions.push(cmd);
-                } else if (cmd.action === 'add_marker' && cmd.params) {
-                    // add_marker actions are auto-executed after render
-                    autoActions.push(cmd);
-                    cleanText = cleanText.replace(match[0], '');
-                } else if (cmd.action) {
-                    // Other action types: auto-execute and remove from text
-                    autoActions.push(cmd);
-                    cleanText = cleanText.replace(match[0], '');
-                }
-            } catch (e) { /* ignore malformed JSON */ }
+        if (hasAddIntent) {
+            cleanText = stripPrematureAddSuccessText(cleanText);
         }
+
+        botParsed.actions.forEach((cmd) => {
+            const actionName = cmd.action || cmd.type;
+            if (actionName === 'fly_to' && cmd.params) {
+                const lat = cmd.params.lat;
+                const lng = cmd.params.lng;
+                const title = cmd.params.title || '位置';
+                const placeholderId = `FLYTO_PLACEHOLDER_${flyToLinks.length}`;
+                const linkHtml = `<a href="javascript:void(0)" class="fly-to-link" data-lat="${lat}" data-lng="${lng}" data-title="${title.replace(/"/g, '&quot;')}" title="點擊飛到 ${title}">${title} 🗺️</a>`;
+                flyToLinks.push(linkHtml);
+                cleanText += cleanText ? `\n\n${placeholderId}` : placeholderId;
+                autoActions.push(cmd);
+            } else if (actionName) {
+                autoActions.push(cmd);
+            }
+        });
 
         // Step 2: Parse Markdown first
         displayText = marked.parse(cleanText);
@@ -3012,18 +3250,39 @@ function addMessage(text, sender, isRestore = false) {
             });
         });
 
-        // Auto-execute add_marker and other actions
-        autoActions.forEach(cmd => {
-            const actName = cmd.action || cmd.type;
-            const actParams = cmd.params || {};
-            if (!isRestore) {
-                // Pass current message element to executeMapAction to avoid race conditions
-                executeMapAction(actName, actParams, div);
-            } else {
+        const malformedAddCount = botParsed ? botParsed.malformedFragments.filter(fragment => /"action"\s*:\s*"add_to_list"/.test(fragment)).length : 0;
+        const hasAddIntent = botParsed ? botParsed.actions.some(cmd => (cmd.action || cmd.type) === 'add_to_list') || malformedAddCount > 0 : false;
+
+        if (!isRestore) {
+            (async () => {
+                const actionResults = [];
+                for (const cmd of autoActions) {
+                    const actName = cmd.action || cmd.type;
+                    const actParams = cmd.params || {};
+                    // Pass current message element to executeMapAction to avoid race conditions
+                    const result = await executeMapAction(actName, actParams, div);
+                    actionResults.push(result);
+                }
+
+                if (hasAddIntent) {
+                    const addResults = actionResults.filter(result => result && result.action === 'add_to_list');
+                    const statusMessage = formatAddToListStatusMessage(addResults, malformedAddCount);
+                    if (statusMessage) {
+                        const bubble = div.querySelector('.bubble');
+                        if (bubble) {
+                            bubble.insertAdjacentHTML('beforeend', marked.parse(statusMessage.trim()));
+                        }
+                    }
+                }
+            })();
+        } else {
+            autoActions.forEach(cmd => {
+                const actName = cmd.action || cmd.type;
+                const actParams = cmd.params || {};
                 // Recreate buttons during history restore, passing current message element
                 recreateMapActionButton(actName, actParams, div);
-            }
-        });
+            });
+        }
     }
 
     container.scrollTop = container.scrollHeight;
@@ -3618,14 +3877,14 @@ async function executeMapAction(action, params, targetElement) {
         params.lat = parseFloat(params.lat);
         if (isNaN(params.lat) || params.lat < -90 || params.lat > 90) {
             console.error('[Map Action] Invalid latitude:', params.lat);
-            return false;
+            return { success: false, action, name: params.name || params.title || '', error: 'invalid latitude' };
         }
     }
     if (params.lng !== undefined) {
         params.lng = parseFloat(params.lng);
         if (isNaN(params.lng) || params.lng < -180 || params.lng > 180) {
             console.error('[Map Action] Invalid longitude:', params.lng);
-            return false;
+            return { success: false, action, name: params.name || params.title || '', error: 'invalid longitude' };
         }
     }
     if (params.zoom !== undefined) {
@@ -3636,6 +3895,12 @@ async function executeMapAction(action, params, targetElement) {
     const msgElement = targetElement || lastBotMessageElement;
     
     try {
+        if (action === 'add_to_list' && !params.name) {
+            console.error('[AI Add Flow] add_to_list rejected before dispatch: missing name', params);
+            return { success: false, action, name: '', error: 'missing name before dispatch' };
+        }
+
+        console.log('[AI Add Flow] Dispatching request to /api/execute', { action, params });
         const response = await fetch(`${API_BASE_URL}/api/execute`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3644,8 +3909,9 @@ async function executeMapAction(action, params, targetElement) {
         const data = await response.json();
         if (!data.success) {
             console.error('Map action failed:', data.error);
-            return false;
+            return { success: false, action, name: params.name || params.title || '', error: data.error || 'api execute rejected' };
         }
+        console.log('[AI Add Flow] /api/execute completed', { action, params, data });
 
         // 前端執行實際地圖動作
         switch (action) {
@@ -3847,12 +4113,12 @@ async function executeMapAction(action, params, targetElement) {
                 break;
             default:
                 console.warn('[Map Action] Unknown action:', action);
-                return false;
+                return { success: false, action, name: params.name || params.title || '', error: 'unknown action on frontend' };
         }
-        return true;
+        return { success: true, action, name: params.name || params.title || '' };
     } catch (e) {
         console.error('executeMapAction error:', e);
-        return false;
+        return { success: false, action, name: params.name || params.title || '', error: e.message || String(e) };
     }
 }
 

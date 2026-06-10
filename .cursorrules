@@ -12,3 +12,8 @@ When performing local service tests, note that the correct working URL is `http:
 # Plan Recording Rule
 
 After finishing the implementation of any planned change (feature, bug fix, refactor), you MUST invoke the `plan-recorder` skill to record the finalized plan and verification steps into `docs/plans/` (preferred) or `.trae/documents/`.
+
+# Hermes Bugfix Documentation Rule
+
+After any Hermes-related bug fix (including Hermes routing, delegation, response parsing, or Hermes-driven chatbot behavior), you MUST add or update a markdown note in `docs/plans/` or `docs/troubleshooting_log.md`.
+The note must include: symptom, root cause, files changed, and verification steps.

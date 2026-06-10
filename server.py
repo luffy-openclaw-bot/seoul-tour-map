@@ -666,6 +666,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             data = json.loads(body)
             action = data.get('action', '')
             params = data.get('params', {})
+            _safe_print(f"[EXECUTE] action={action} params={json.dumps(params, ensure_ascii=False)}")
 
             # 白名單驗證
             ALLOWED_ACTIONS = {
@@ -682,6 +683,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             }
 
             if action not in ALLOWED_ACTIONS:
+                _safe_print(f"[EXECUTE] rejected unknown action={action}")
                 self.send_json({'success': False, 'error': f'Unknown action: {action}'}, status=400)
                 return
 
@@ -692,14 +694,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     try:
                         params[key] = expected_type(params[key])
                     except (ValueError, TypeError):
+                        _safe_print(f"[EXECUTE] invalid param type action={action} key={key} value={params.get(key)} expected={expected_type}")
                         self.send_json({'success': False, 'error': f'Invalid type for {key}'}, status=400)
                         return
 
+            _safe_print(f"[EXECUTE] accepted action={action}")
             self.send_json({'success': True, 'action': action, 'params': params})
 
         except json.JSONDecodeError:
+            _safe_print("[EXECUTE] invalid JSON payload")
             self.send_json({'success': False, 'error': 'Invalid JSON'}, status=400)
         except Exception as e:
+            _safe_print(f"[EXECUTE] unexpected error: {e}")
             self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def _should_delegate_to_hermes(self, user_message):
