@@ -60,12 +60,23 @@ document.body.innerHTML = `
 `;
 
 const app = require('../static/js/app.js');
-const { WishlistManager } = app;
+const {
+    WishlistManager,
+    getFilteredAttractions,
+    setAttractionsDataForTest,
+    setPanelSearchQuery,
+    radiusState,
+    showAttractionDetailById,
+    removeFromWishlistFromModal
+} = app;
 
 describe('Wishlist fuzzy match', () => {
     beforeEach(() => {
         localStorage.clear();
         jest.clearAllMocks();
+        setAttractionsDataForTest([]);
+        setPanelSearchQuery('');
+        radiusState.active = false;
     });
 
     test('WishlistManager.get falls back to near-coordinate match within tolerance', () => {
@@ -108,6 +119,72 @@ describe('Wishlist fuzzy match', () => {
 
         const found = WishlistManager.get('Preset Name', 37.5665, 126.9780);
         expect(found).toBeNull();
+    });
+
+    test('WishlistManager.get prefers an active duplicate over a deleted exact-id record', () => {
+        localStorage.setItem(WishlistManager.STORAGE_KEY, JSON.stringify([
+            { id: 'chat_Blue Bottle 清溪川店_37.5678_126.9825', name: 'Blue Bottle 清溪川店', lat: 37.5678, lng: 126.9825, addedAt: 1, updatedAt: 10, deleted: false },
+            { id: 'wl_Blue Bottle 清溪川店_37.5678_126.9825', name: 'Blue Bottle 清溪川店', lat: 37.5678, lng: 126.9825, addedAt: 2, updatedAt: 20, deleted: true }
+        ]));
+
+        const found = WishlistManager.get('Blue Bottle 清溪川店', 37.5678, 126.9825);
+        expect(found).not.toBeNull();
+        expect(found.id).toBe('chat_Blue Bottle 清溪川店_37.5678_126.9825');
+    });
+
+    test('getFilteredAttractions hides preset rows when only a deleted saved match exists', () => {
+        setAttractionsDataForTest([
+            { id: 'preset_blue_bottle_seongsu', name: 'Blue Bottle 聖水店', lat: 37.5467, lng: 127.0544, category: '購物美食', description: '' }
+        ]);
+        localStorage.setItem(WishlistManager.STORAGE_KEY, JSON.stringify([
+            { id: 'chat_Blue Bottle 聖水店_37.5467_127.0544', name: 'Blue Bottle 聖水店', lat: 37.5467, lng: 127.0544, addedAt: 1, updatedAt: 1, deleted: true }
+        ]));
+
+        const filtered = getFilteredAttractions('all');
+        expect(filtered.some(item => item.name === 'Blue Bottle 聖水店')).toBe(false);
+    });
+
+    test('removing a matched duplicate soft-deletes the active record', () => {
+        localStorage.setItem(WishlistManager.STORAGE_KEY, JSON.stringify([
+            { id: 'chat_Blue Bottle 清溪川店_37.5678_126.9825', name: 'Blue Bottle 清溪川店', lat: 37.5678, lng: 126.9825, addedAt: 1, updatedAt: 10, deleted: false },
+            { id: 'wl_Blue Bottle 清溪川店_37.5678_126.9825', name: 'Blue Bottle 清溪川店', lat: 37.5678, lng: 126.9825, addedAt: 2, updatedAt: 20, deleted: true }
+        ]));
+
+        const found = WishlistManager.get('Blue Bottle 清溪川店', 37.5678, 126.9825);
+        WishlistManager.remove(found.id);
+
+        const items = WishlistManager.getAll();
+        const activeItem = items.find(item => item.id === 'chat_Blue Bottle 清溪川店_37.5678_126.9825');
+        const deletedItem = items.find(item => item.id === 'wl_Blue Bottle 清溪川店_37.5678_126.9825');
+        expect(activeItem.deleted).toBe(true);
+        expect(deletedItem.deleted).toBe(true);
+    });
+
+    test('modal delete keeps item and modal open when confirmation is cancelled', () => {
+        setAttractionsDataForTest([
+            { id: 'chat_cancel_delete', name: 'Blue Bottle 安國店', lat: 37.5761, lng: 126.9851, category: '購物美食', description: '安國站附近。' }
+        ]);
+        WishlistManager.add({
+            name: 'Blue Bottle 安國店',
+            lat: 37.5761,
+            lng: 126.9851,
+            category: '購物美食',
+            description: '安國站附近。',
+            wish: true
+        });
+
+        showAttractionDetailById('chat_cancel_delete');
+        const deleteBtn = document.querySelector('.btn-delete-modal');
+        const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+        expect(removeFromWishlistFromModal(deleteBtn)).toBe(false);
+
+        const savedItem = WishlistManager.getAll().find(item => item.name === 'Blue Bottle 安國店');
+        expect(confirmSpy).toHaveBeenCalled();
+        expect(savedItem.deleted).toBe(false);
+        expect(document.getElementById('modal').classList.contains('hidden')).toBe(false);
+
+        confirmSpy.mockRestore();
     });
 });
 

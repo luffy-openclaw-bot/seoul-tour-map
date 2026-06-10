@@ -31,6 +31,19 @@ ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
+
+def _safe_print(*args, **kwargs):
+    """Print that survives Windows cp1252 console encoding (Chinese/emoji/arrow)."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        msg = " ".join(str(a) for a in args)
+        try:
+            print(msg.encode("ascii", "backslashreplace").decode("ascii"), **kwargs)
+        except Exception:
+            pass
+
+
 def create_urllib_opener():
     opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl_context))
     return opener
@@ -39,13 +52,16 @@ def web_search_duckduckgo(query, max_results=5):
     """
     Perform a web search using DuckDuckGo HTML version (no API key needed).
     Returns a list of search results with title, snippet, and URL.
+
+    優先用 broad result-block regex (穩定過 legacy result__a selector)，
+    失敗先 fallback 去 legacy pattern。
     """
     results = []
     try:
         # Use DuckDuckGo HTML version for simpler parsing
         encoded_query = urllib.parse.quote(query)
         url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
-        
+
         req = urllib.request.Request(
             url,
             headers={
@@ -53,50 +69,44 @@ def web_search_duckduckgo(query, max_results=5):
                 'Accept': 'text/html'
             }
         )
-        
+
         opener = create_urllib_opener()
-        with opener.open(req, timeout=60) as response:
+        with opener.open(req, timeout=15) as response:
             html = response.read().decode('utf-8')
-        
-        # Parse HTML for results (simple regex-based parsing)
-        # DuckDuckGo HTML has result divs with class 'result'
-        result_pattern = r'<a[^>]*class="result__a"[^>]*>(.*?)</a>.*?<a[^>]*class="result__url"[^>]*>(.*?)</a>'
-        matches = re.findall(result_pattern, html, re.DOTALL)[:max_results]
-        
-        for title, url_snippet in matches:
-            # Clean HTML tags
-            title = re.sub(r'<[^>]+>', '', title).strip()
-            # Get URL from href or data-link
-            url_match = re.search(r'href="([^"]*)"', url_snippet)
-            url = url_match.group(1) if url_match else url_snippet.strip()
-            
-            if title and url:
-                results.append({
-                    'title': title,
-                    'url': url,
-                    'snippet': ''
-                })
-        
-        # Alternative: extract from more specific pattern
-        if not results:
-            # Try another pattern for DuckDuckGo results
-            result_divs = re.findall(r'<div class="result[^"]*"[^>]*>(.*?)</div>\s*</div>', html, re.DOTALL)[:max_results]
-            for div in result_divs:
-                title_match = re.search(r'<a[^>]*class="[^"]*result__a[^"]*"[^>]*>([^<]+)</a>', div)
-                url_match = re.search(r'<a[^>]*class="[^"]*result__url[^"]*"[^>]*>([^<]+)</a>', div)
-                snippet_match = re.search(r'<a[^>]*class="[^"]*result__snippet[^"]*"[^>*>([^<]+)</a>', div)
-                
-                if title_match:
-                    title = title_match.group(1).strip()
-                    url = url_match.group(1).strip() if url_match else ''
-                    snippet = snippet_match.group(1).strip() if snippet_match else ''
+
+        # 1) Primary: broad result-block regex (less brittle than class selectors)
+        result_divs = re.findall(r'<div class="result[^"]*"[^>]*>(.*?)</div>\s*</div>', html, re.DOTALL)[:max_results]
+        for div in result_divs:
+            title_match = re.search(r'<a[^>]*class="[^"]*result__a[^"]*"[^>]*>([^<]+)</a>', div)
+            url_match = re.search(r'<a[^>]*class="[^"]*result__url[^"]*"[^>]*>([^<]+)</a>', div)
+            snippet_match = re.search(r'<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([^<]+)</a>', div)
+
+            if title_match:
+                title = title_match.group(1).strip()
+                url = url_match.group(1).strip() if url_match else ''
+                snippet = snippet_match.group(1).strip() if snippet_match else ''
+                if title and url:
                     results.append({'title': title, 'url': url, 'snippet': snippet})
-        
-        print(f"[{datetime.now()}] Web search found {len(results)} results for: {query}")
-        
+
+        # 2) Fallback: legacy <a class="result__a"> pattern
+        if not results:
+            result_pattern = r'<a[^>]*class="result__a"[^>]*>(.*?)</a>.*?<a[^>]*class="result__url"[^>]*>(.*?)</a>'
+            matches = re.findall(result_pattern, html, re.DOTALL)[:max_results]
+            for title, url_snippet in matches:
+                title = re.sub(r'<[^>]+>', '', title).strip()
+                url_match = re.search(r'href="([^"]*)"', url_snippet)
+                url = url_match.group(1) if url_match else url_snippet.strip()
+                if title and url:
+                    results.append({'title': title, 'url': url, 'snippet': ''})
+
+        if not results:
+            _safe_print(f"[{datetime.now()}] WARN: web_search_duckduckgo returned 0 results for: {query[:60]}")
+
+        _safe_print(f"[{datetime.now()}] Web search found {len(results)} results for: {query[:80]}")
+
     except Exception as e:
-        print(f"[{datetime.now()}] Web search error: {e}")
-    
+        _safe_print(f"[{datetime.now()}] Web search error: {e}")
+
     return results
 
 def get_weather_from_search(query):
@@ -162,11 +172,11 @@ def call_ollama_api(system_prompt, user_message, search_context=None, history=No
     
     opener = create_urllib_opener()
     try:
-        with opener.open(req, timeout=120) as resp:
+        with opener.open(req, timeout=30) as resp:
             result = json.loads(resp.read().decode('utf-8'))
             return result.get('choices', [{}])[0].get('message', {}).get('content', 'AI 暫時未能回應，請稍後再試。')
     except Exception as e:
-        print(f"[{datetime.now()}] Ollama API error: {e}")
+        _safe_print(f"[{datetime.now()}] Ollama API error: {e}")
         raise
 
 def should_search_web(user_message):
@@ -211,7 +221,7 @@ def process_request(request_file):
         context = request_data.get('context', '')
         chat_history = request_data.get('history', [])
         
-        print(f"[{datetime.now()}] Task {task_id}: Processing started — '{user_message[:60]}'")
+        _safe_print(f"[{datetime.now()}] Task {task_id}: Processing started — '{user_message[:60]}'")
         
         # Build system prompt for Seoul Tour Map expert
         full_system = """你係一個韓國首爾旅遊專家 AI 助手，用粵語（廣東話書面）回答。
@@ -226,17 +236,18 @@ def process_request(request_file):
         
         # Check if we need to search the web
         search_context = None
+        search_status = None  # 'ok' | 'failed' | None
         do_search = should_search_web(user_message)
-        print(f"[{datetime.now()}] Task {task_id}: should_search_web={do_search}")
+        _safe_print(f"[{datetime.now()}] Task {task_id}: should_search_web={do_search}")
 
         if do_search:
             if 'weather' in user_message.lower() or '天氣' in user_message or '氣溫' in user_message:
-                print(f"[{datetime.now()}] Task {task_id}: Using weather search")
+                _safe_print(f"[{datetime.now()}] Task {task_id}: Using weather search")
                 search_results = get_weather_from_search(user_message)
             else:
-                print(f"[{datetime.now()}] Task {task_id}: Using generic web search")
+                _safe_print(f"[{datetime.now()}] Task {task_id}: Using generic web search")
                 search_results = web_search_duckduckgo(f"{user_message} Seoul Korea", max_results=5)
-            
+
             if search_results:
                 context_parts = ["搜索結果："]
                 for i, result in enumerate(search_results[:5], 1):
@@ -246,44 +257,57 @@ def process_request(request_file):
                     if result.get('snippet'):
                         context_parts.append(f"   摘要：{result.get('snippet')}")
                 search_context = "\n".join(context_parts)
-                print(f"[{datetime.now()}] Task {task_id}: Got {len(search_results)} search results")
+                search_status = 'ok'
+                _safe_print(f"[{datetime.now()}] Task {task_id}: Got {len(search_results)} search results")
                 # Print detailed search results for debugging
                 for i, result in enumerate(search_results[:5], 1):
-                    print(f"  [{i}] Title: {result.get('title', 'N/A')}")
-                    print(f"      URL: {result.get('url', 'N/A')}")
-                    print(f"      Snippet: {result.get('snippet', 'N/A')[:200] if result.get('snippet') else 'N/A'}...")
+                    _safe_print(f"  [{i}] Title: {result.get('title', 'N/A')}")
+                    _safe_print(f"      URL: {result.get('url', 'N/A')}")
+                    _safe_print(f"      Snippet: {result.get('snippet', 'N/A')[:200] if result.get('snippet') else 'N/A'}...")
             else:
-                print(f"[{datetime.now()}] Task {task_id}: Web search returned 0 results")
-        
+                search_status = 'failed'
+                # B7: 注入明確「搜尋失敗」訊息，避免模型 hallucinate
+                search_context = (
+                    "搜索結果：\n"
+                    "（⚠️ 網頁搜尋失敗或冇結果 — DuckDuckGo 暫時不可用，"
+                    "請根據你已有嘅知識誠實回答，並提醒用戶資料可能唔係最新。）"
+                )
+                _safe_print(f"[{datetime.now()}] Task {task_id}: Web search returned 0 results — injected 'search failed' context")
+
         # Call Ollama API with search context and history
-        print(f"[{datetime.now()}] Task {task_id}: Calling Ollama API (model={OLLAMA_MODEL}, timeout=120s, has_context={search_context is not None})...")
+        _safe_print(f"[{datetime.now()}] Task {task_id}: Calling Ollama API (model={OLLAMA_MODEL}, timeout=30s, has_context={search_context is not None}, search_status={search_status})...")
         reply = call_ollama_api(full_system, user_message, search_context, chat_history)
-        print(f"[{datetime.now()}] Task {task_id}: Ollama reply received (len={len(reply)})")
-        
+        _safe_print(f"[{datetime.now()}] Task {task_id}: Ollama reply received (len={len(reply)})")
+
         # Prepare response
         response_data = {
             "id": task_id,
             "reply": reply,
-            "source": "hermes_worker_web_search" if search_context else "hermes_worker",
+            "source": "hermes_worker_web_search" if search_status == 'ok' else "hermes_worker",
             "search_performed": search_context is not None,
+            "search_status": search_status,
             "timestamp": time.time()
         }
-        
+
         # Write response file
         response_file = os.path.join(HERMES_TASK_DIR, f'response_{task_id}.json')
         with open(response_file, 'w', encoding='utf-8') as f:
             json.dump(response_data, f, ensure_ascii=False, indent=2)
-        print(f"[{datetime.now()}] Task {task_id}: Response file written → {os.path.basename(response_file)}")
-        
-        # Remove request file
-        os.remove(request_file)
-        print(f"[{datetime.now()}] Task {task_id}: Completed successfully")
-        
+        _safe_print(f"[{datetime.now()}] Task {task_id}: Response file written → {os.path.basename(response_file)}")
+
+        # B3: Idempotent file remove (server.py may have already deleted it)
+        try:
+            if os.path.exists(request_file):
+                os.remove(request_file)
+        except FileNotFoundError:
+            pass
+        _safe_print(f"[{datetime.now()}] Task {task_id}: Completed successfully")
+
     except Exception as e:
-        print(f"[{datetime.now()}] Task {task_id}: ERROR — {type(e).__name__}: {e}")
+        _safe_print(f"[{datetime.now()}] Task {task_id}: ERROR — {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
-        
+
         # Write error response so server doesn't wait forever
         try:
             error_task_id = task_id or 'unknown'
@@ -296,32 +320,37 @@ def process_request(request_file):
             response_file = os.path.join(HERMES_TASK_DIR, f'response_{error_task_id}.json')
             with open(response_file, 'w', encoding='utf-8') as f:
                 json.dump(error_response, f, ensure_ascii=False, indent=2)
-            print(f"[{datetime.now()}] Task {error_task_id}: Error response file written")
-            if request_file and os.path.exists(request_file):
-                os.remove(request_file)
+            _safe_print(f"[{datetime.now()}] Task {error_task_id}: Error response file written")
+            # B3: Idempotent remove
+            if request_file:
+                try:
+                    if os.path.exists(request_file):
+                        os.remove(request_file)
+                except FileNotFoundError:
+                    pass
         except Exception as e2:
-            print(f"[{datetime.now()}] Task {error_task_id}: Failed to write error response: {e2}")
+            _safe_print(f"[{datetime.now()}] Task {error_task_id}: Failed to write error response: {e2}")
 
 def main():
     """Main worker loop."""
     # Ensure task directory exists
     os.makedirs(HERMES_TASK_DIR, exist_ok=True)
 
-    print(f"[{datetime.now()}] Hermes worker for Seoul Tour Map started (with Web Search)")
-    print(f"[{datetime.now()}] Config — Task dir: {HERMES_TASK_DIR}")
-    print(f"[{datetime.now()}] Config — Ollama base: {OLLAMA_API_BASE}")
-    print(f"[{datetime.now()}] Config — Model: {OLLAMA_MODEL}")
-    print(f"[{datetime.now()}] Config — API key set: {bool(OLLAMA_API_KEY)}")
-    print(f"[{datetime.now()}] Config — Poll interval: {POLL_INTERVAL}s")
+    _safe_print(f"[{datetime.now()}] Hermes worker for Seoul Tour Map started (with Web Search)")
+    _safe_print(f"[{datetime.now()}] Config — Task dir: {HERMES_TASK_DIR}")
+    _safe_print(f"[{datetime.now()}] Config — Ollama base: {OLLAMA_API_BASE}")
+    _safe_print(f"[{datetime.now()}] Config — Model: {OLLAMA_MODEL}")
+    _safe_print(f"[{datetime.now()}] Config — API key set: {bool(OLLAMA_API_KEY)}")
+    _safe_print(f"[{datetime.now()}] Config — Poll interval: {POLL_INTERVAL}s")
     
     task_dir_check = os.path.exists(HERMES_TASK_DIR)
-    print(f"[{datetime.now()}] Task dir exists: {task_dir_check}")
+    _safe_print(f"[{datetime.now()}] Task dir exists: {task_dir_check}")
 
     while True:
         try:
             # List request files
             if not os.path.isdir(HERMES_TASK_DIR):
-                print(f"[{datetime.now()}] ERROR: Task dir does not exist: {HERMES_TASK_DIR}")
+                _safe_print(f"[{datetime.now()}] ERROR: Task dir does not exist: {HERMES_TASK_DIR}")
                 time.sleep(POLL_INTERVAL)
                 continue
 
@@ -332,10 +361,10 @@ def main():
                     if filename.startswith('request_') and filename.endswith('.json'):
                         request_files.append(os.path.join(HERMES_TASK_DIR, filename))
             except Exception as e:
-                print(f"[{datetime.now()}] ERROR: Cannot list task dir: {e}")
+                _safe_print(f"[{datetime.now()}] ERROR: Cannot list task dir: {e}")
 
             if request_files:
-                print(f"[{datetime.now()}] Found {len(request_files)} pending task(s): {[os.path.basename(f) for f in request_files]}")
+                _safe_print(f"[{datetime.now()}] Found {len(request_files)} pending task(s): {[os.path.basename(f) for f in request_files]}")
 
             # Process each request file (sorted by creation time)
             for request_file in request_files:
@@ -344,10 +373,10 @@ def main():
             # Sleep before next poll
             time.sleep(POLL_INTERVAL)
         except KeyboardInterrupt:
-            print(f"[{datetime.now()}] Worker stopped by user")
+            _safe_print(f"[{datetime.now()}] Worker stopped by user")
             break
         except Exception as e:
-            print(f"[{datetime.now()}] Worker loop error: {e}")
+            _safe_print(f"[{datetime.now()}] Worker loop error: {e}")
             time.sleep(POLL_INTERVAL)
 
 if __name__ == '__main__':

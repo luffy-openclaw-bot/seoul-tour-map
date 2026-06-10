@@ -7,6 +7,35 @@
 // 請將此處改為後端 Python API 的完整 URL（例如：'https://your-backend.onrender.com'）
 const API_BASE_URL = ''; 
 
+/**
+ * 統一的 JSON 請求 Helper
+ * 處理非 JSON 回應、網路錯誤與狀態碼
+ */
+async function fetchJSON(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        
+        // 檢查回應內容類型
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text();
+            console.error(`Expected JSON from ${url} but received:`, contentType, text.substring(0, 100));
+            return { success: false, error: '伺服器返回了非 JSON 格式的內容' };
+        }
+
+        const data = await response.json();
+        // 處理 HTTP 錯誤但有 JSON 內容的情況 (例如 404, 500)
+        if (!response.ok && data.success !== false) {
+            data.success = false;
+            if (!data.error) data.error = `HTTP error! status: ${response.status}`;
+        }
+        return data;
+    } catch (e) {
+        console.error(`Fetch error for ${url}:`, e);
+        return { success: false, error: e.message };
+    }
+}
+
 // ==================== 全局變量 ====================
 let map;
 let markers = {};
@@ -40,6 +69,124 @@ function setSortPreference(pref) {
     if (typeof renderMobilePanelList === 'function') {
         renderMobilePanelList();
     }
+}
+
+// ==================== User Preferences API ====================
+let userPreferences = {
+    accuracy: 50,
+    speed: 50,
+    personalization: 50,
+    use_web_search: true,
+    use_offline_fallback: true,
+    use_map_commands: true,
+    verbosity: 'normal'
+};
+
+let userTripData = {
+    planned_places: [],
+    visited_places: [],
+    interests: [],
+    start_date: "",
+    end_date: ""
+};
+
+async function loadUserPreferences() {
+    try {
+        const fingerprint = FingerprintManager.getFingerprint();
+        if (!fingerprint) return;
+        
+        const data = await fetchJSON(`${API_BASE_URL}/api/user-profile?fingerprint=${encodeURIComponent(fingerprint)}`);
+        
+        if (data && data.success && data.profile) {
+            if (data.profile.preferences) {
+                userPreferences = { ...userPreferences, ...data.profile.preferences };
+            }
+            if (data.profile.trip_data) {
+                userTripData = { ...userTripData, ...data.profile.trip_data };
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load user preferences:', e);
+    }
+}
+
+async function saveUserPreferences() {
+    try {
+        const fingerprint = FingerprintManager.getFingerprint();
+        if (!fingerprint) return;
+        
+        const profile = {
+            preferences: userPreferences,
+            trip_data: userTripData
+        };
+        
+        await fetchJSON(`${API_BASE_URL}/api/user-profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fingerprint, profile })
+        });
+    } catch (e) {
+        console.error('Failed to save user preferences:', e);
+    }
+}
+
+function openPreferencesModal() {
+    // Populate modal with current preferences
+    document.getElementById('pref-accuracy').value = userPreferences.accuracy;
+    document.getElementById('pref-accuracy-val').textContent = userPreferences.accuracy;
+    
+    document.getElementById('pref-speed').value = userPreferences.speed;
+    document.getElementById('pref-speed-val').textContent = userPreferences.speed;
+    
+    document.getElementById('pref-personalization').value = userPreferences.personalization;
+    document.getElementById('pref-personalization-val').textContent = userPreferences.personalization;
+    
+    document.getElementById('pref-web-search').checked = userPreferences.use_web_search;
+    document.getElementById('pref-map-commands').checked = userPreferences.use_map_commands;
+    document.getElementById('pref-offline-fallback').checked = userPreferences.use_offline_fallback;
+    
+    document.getElementById('pref-verbosity').value = userPreferences.verbosity;
+    
+    document.getElementById('preferences-modal').classList.remove('hidden');
+    // Hide settings modal if open
+    document.getElementById('settings-modal').classList.add('hidden');
+}
+
+function closePreferencesModal() {
+    document.getElementById('preferences-modal').classList.add('hidden');
+}
+
+async function savePreferences() {
+    // Update preferences object from UI
+    userPreferences.accuracy = parseInt(document.getElementById('pref-accuracy').value, 10);
+    userPreferences.speed = parseInt(document.getElementById('pref-speed').value, 10);
+    userPreferences.personalization = parseInt(document.getElementById('pref-personalization').value, 10);
+    
+    userPreferences.use_web_search = document.getElementById('pref-web-search').checked;
+    userPreferences.use_map_commands = document.getElementById('pref-map-commands').checked;
+    userPreferences.use_offline_fallback = document.getElementById('pref-offline-fallback').checked;
+    
+    userPreferences.verbosity = document.getElementById('pref-verbosity').value;
+    
+    closePreferencesModal();
+    
+    // Save to backend
+    await saveUserPreferences();
+    
+    // Show success message
+    const msg = document.createElement('div');
+    msg.style.position = 'fixed';
+    msg.style.bottom = '20px';
+    msg.style.left = '50%';
+    msg.style.transform = 'translateX(-50%)';
+    msg.style.background = 'var(--primary-color)';
+    msg.style.color = 'white';
+    msg.style.padding = '10px 20px';
+    msg.style.borderRadius = '20px';
+    msg.style.zIndex = '9999';
+    msg.innerHTML = '<i class="fas fa-check"></i> 個人化設定已儲存';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3000);
 }
 
 // ==================== Radius Filter 狀態 ====================
@@ -225,22 +372,58 @@ const CATEGORY_COLORS = {
     '願望s': '#ff4757'
 };
 
-const CATEGORY_FALLBACK_IMAGES = {
-    '歷史文化': 'https://images.unsplash.com/photo-1546874177-9e664107314e?w=800&q=80',
-    '地標觀景': 'https://images.unsplash.com/photo-1538622156152-f4bf54c60d92?w=800&q=80',
-    '購物美食': 'https://images.unsplash.com/photo-1583234035650-8b4e72ec0b4d?w=800&q=80',
-    '夜生活文化': 'https://images.unsplash.com/photo-1517154586052-192e2c7a6e12?w=800&q=80',
-    '娛樂': 'https://images.unsplash.com/photo-1513889961551-628c1e5e2ee9?w=800&q=80',
-    '休閒': 'https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?w=800&q=80',
-    '自然景觀': 'https://images.unsplash.com/photo-1490604001847-b712b0c2f965?w=800&q=80',
-    '用戶釘選': 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80',
-    '自訂景點': 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=800&q=80',
-    '願望s': 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=800&q=80',
-    'default': 'https://images.unsplash.com/photo-1610312278520-bcc893a3ff1d?w=800&q=80',
-};
+function escapeSvgText(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function buildInlineFallbackImage(category) {
+    const normalizedCategory = category || 'default';
+    const color = CATEGORY_COLORS[normalizedCategory] || '#667eea';
+    const label = normalizedCategory === 'default' ? 'Seoul Pick' : normalizedCategory;
+    const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="${escapeSvgText(label)} placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#f3f4f6" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="18" fill="url(#bg)"/>
+  <rect x="18" y="18" width="284" height="144" rx="14" fill="rgba(255,255,255,0.82)"/>
+  <circle cx="70" cy="72" r="26" fill="${color}" fill-opacity="0.15"/>
+  <path d="M70 52c-12.1 0-22 9.9-22 22 0 16.2 22 42 22 42s22-25.8 22-42c0-12.1-9.9-22-22-22zm0 30.5A8.5 8.5 0 1 1 70 65a8.5 8.5 0 0 1 0 17.5z" fill="${color}"/>
+  <text x="112" y="74" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">${escapeSvgText(label)}</text>
+  <text x="112" y="102" font-family="Arial, sans-serif" font-size="14" fill="#4b5563">Preview unavailable</text>
+  <text x="112" y="124" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">Seoul Tour Map</text>
+</svg>`.trim();
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+const CATEGORY_FALLBACK_IMAGES = Object.freeze({
+    '歷史文化': buildInlineFallbackImage('歷史文化'),
+    '地標觀景': buildInlineFallbackImage('地標觀景'),
+    '購物美食': buildInlineFallbackImage('購物美食'),
+    '夜生活文化': buildInlineFallbackImage('夜生活文化'),
+    '娛樂': buildInlineFallbackImage('娛樂'),
+    '休閒': buildInlineFallbackImage('休閒'),
+    '自然景觀': buildInlineFallbackImage('自然景觀'),
+    '用戶釘選': buildInlineFallbackImage('用戶釘選'),
+    '自訂景點': buildInlineFallbackImage('自訂景點'),
+    '願望s': buildInlineFallbackImage('願望s'),
+    'default': buildInlineFallbackImage('default'),
+});
 
 function getFallbackImage(category) {
-    return CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES['default'];
+    return CATEGORY_FALLBACK_IMAGES[category] || getDefaultFallbackImage();
+}
+
+function getDefaultFallbackImage() {
+    return CATEGORY_FALLBACK_IMAGES['default'];
 }
 
 function setupMobileDoubleTapDragZoom(leafletMap) {
@@ -581,19 +764,18 @@ async function searchNearby(lat, lng) {
     }).map(attr => `${attr.name} (${attr.local_name}) - ${attr.category}`).join('\n');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/api/nearby`, {
+        const data = await fetchJSON(`${API_BASE_URL}/api/nearby`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lat, lng, radius: 2000 })
         });
         
-        if (response.ok) {
-            const data = await response.json();
+        if (data && data.success !== false) {
             const reply = data.reply || `附近景點：\n${nearbyAttractions || '未有記錄'}`;
             hideTyping();
             addMessage(reply, 'bot');
         } else {
-            throw new Error('API failed');
+            throw new Error(data.error || 'API failed');
         }
     } catch (e) {
         hideTyping();
@@ -1111,27 +1293,37 @@ function getFilteredAttractions(category) {
             ticket: item.price || '',
             description: item.description || '',
             addedAt: item.addedAt,
-            updatedAt: item.updatedAt
+            updatedAt: item.updatedAt,
+            _source: 'saved'
         };
     });
 
     // 合併內建景點與自訂景點（避免重複）
-    let combined = [...attractionsData];
+    let combined = attractionsData.map(item => ({
+        ...item,
+        _source: 'preset'
+    }));
     customItems.forEach(customItem => {
-        const tol = 0.0001;
+        const tol = WishlistManager.MATCH_TOLERANCE;
         const clat = parseFloat(customItem.lat);
         const clng = parseFloat(customItem.lng);
         const exists = combined.some(a => {
             const alat = parseFloat(a.lat);
             const alng = parseFloat(a.lng);
             if (isNaN(alat) || isNaN(alng) || isNaN(clat) || isNaN(clng)) return false;
-            return a.name === customItem.name &&
+            return WishlistManager._normalizeName(a.name) === WishlistManager._normalizeName(customItem.name) &&
                 Math.abs(alat - clat) < tol &&
                 Math.abs(alng - clng) < tol;
         });
         if (!exists) {
             combined.push(customItem);
         }
+    });
+
+    combined = combined.filter(item => {
+        if (item._source !== 'preset') return true;
+        const match = WishlistManager._resolveMatch(item.name, item.lat, item.lng);
+        return !(match.deleted && !match.active);
     });
 
     // 根據排序偏好進行排序
@@ -1195,7 +1387,7 @@ function getFilteredAttractions(category) {
     }
 
     if (category === 'all') {
-        return items;
+        return items.map(({ _source, ...rest }) => rest);
     } else if (category === '願望s' || category === 'pinned' || category === 'visited') {
         if (category === '願望s') {
             items = items.filter(item => {
@@ -1213,9 +1405,11 @@ function getFilteredAttractions(category) {
                 return w && w.visited;
             });
         }
-        return items;
+        return items.map(({ _source, ...rest }) => rest);
     } else {
-        return items.filter(a => a.category === category);
+        return items
+            .filter(a => a.category === category)
+            .map(({ _source, ...rest }) => rest);
     }
 }
 
@@ -1252,10 +1446,11 @@ function renderAttractionList() {
 
             item.innerHTML = `
                 <img class="thumb" src="${place.image || getFallbackImage(category)}" alt="Photo of ${place.name}" loading="lazy"
-                     onerror="this.onerror=null; this.src=getFallbackImage('${category}');">
+                     onerror="this.onerror=null; this.src=getDefaultFallbackImage();">
                 <div class="info">
                     <div class="name">${place.name}</div>
                     <span class="category-tag" style="background:${color}">${category}</span>
+                    ${place.address ? `<div class="addr"><i class="fas fa-map-marker-alt"></i> ${place.address}</div>` : ''}
                     <div class="desc">${place.description ? place.description.substring(0, 60) + '...' : '搜索結果'}</div>
                 </div>
                 <div class="search-item-actions">
@@ -1264,6 +1459,7 @@ function renderAttractionList() {
                     </button>
                     <button class="wishlist-btn ${WishlistManager.has(place.name, place.lat, place.lng) ? 'in-wishlist' : ''}" 
                             data-name="${place.name}" data-lat="${place.lat}" data-lng="${place.lng}" 
+                            data-address="${place.address || ''}"
                             data-category="${category}" data-description="${place.description || ''}"
                             onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
                         <i class="${WishlistManager.has(place.name, place.lat, place.lng) ? 'fas' : 'far'} fa-heart"></i>
@@ -1324,16 +1520,18 @@ function renderAttractionList() {
 
         item.innerHTML = `
             <img class="thumb" src="${attr.image || getFallbackImage(attr.category)}" alt="Photo of ${safeName}" loading="lazy"
-                 onerror="this.onerror=null; this.src=getFallbackImage('${attr.category}');">
+                 onerror="this.onerror=null; this.src=getDefaultFallbackImage();">
             <div class="info">
                 <div class="name">${safeName} ${badges}</div>
                 <span class="category-tag" style="background:${color}">${safeCategory}</span>
                 ${safeTicket ? `<span class="attraction-price">💰 ${safeTicket}</span>` : ''}
+                ${attr.address ? `<div class="addr"><i class="fas fa-map-marker-alt"></i> ${attr.address}</div>` : ''}
                 <div class="desc">${safeDesc}</div>
                 ${remarkHtml}
             </div>
             <button class="wishlist-btn ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : ''}" 
                     data-name="${attr.name || ''}" data-lat="${attr.lat || 0}" data-lng="${attr.lng || 0}" 
+                    data-address="${attr.address || ''}"
                     data-category="${attr.category || ''}" data-price="${attr.ticket || ''}" 
                     data-description="${safeDescShort}"
                     onclick="event.stopPropagation(); toggleWishlist(this)" title="加入願望清單">
@@ -1525,6 +1723,33 @@ function focusAttraction(attr) {
 }
 
 // ==================== 景點詳情彈窗 ====================
+function normalizeAttractionDetail(attr) {
+    const safeAttr = attr || {};
+
+    return {
+        ...safeAttr,
+        local_name: safeAttr.local_name || '',
+        category: safeAttr.category || '未分類',
+        image: safeAttr.image || '',
+        ticket: safeAttr.ticket || '',
+        description: safeAttr.description || '無詳細描述',
+        highlights: Array.isArray(safeAttr.highlights) && safeAttr.highlights.length > 0
+            ? safeAttr.highlights
+            : ['暫無亮點資料'],
+        local_cuisine: safeAttr.local_cuisine || '無',
+        best_seasons: safeAttr.best_seasons || '四季皆宜',
+        stay_duration: safeAttr.stay_duration || '無',
+        visitor_insights: safeAttr.visitor_insights || '無',
+        transport: {
+            subway: safeAttr.transport?.subway || '無',
+            time_from_station: safeAttr.transport?.time_from_station || '無'
+        },
+        hours: safeAttr.hours || '無',
+        tips: safeAttr.tips || '無',
+        source_urls: Array.isArray(safeAttr.source_urls) ? safeAttr.source_urls : []
+    };
+}
+
 function showAttractionDetailById(id) {
     let attr = attractionsData.find(a => a.id === id);
     if (!attr) {
@@ -1552,11 +1777,23 @@ function showAttractionDetailById(id) {
 }
 
 function showAttractionDetail(attr) {
+    attr = normalizeAttractionDetail(attr);
     const modal = document.getElementById('modal');
     const body = document.getElementById('modal-body');
     const color = CATEGORY_COLORS[attr.category] || '#666';
+    const matchedItem = WishlistManager.get(attr.name, attr.lat, attr.lng);
+    const canRemoveFromModal = matchedItem && !matchedItem.deleted;
 
     const highlights = attr.highlights.map(h => `<li>${h}</li>`).join('');
+    const modalDeleteBtnHtml = canRemoveFromModal ? `
+                <button class="btn-delete-modal"
+                        data-name="${attr.name}" data-lat="${attr.lat}" data-lng="${attr.lng}"
+                        onclick="removeFromWishlistFromModal(this)"
+                        title="從清單移除"
+                        aria-label="從清單移除 ${attr.name}">
+                    <i class="fas fa-trash-alt"></i> 從清單移除
+                </button>
+    ` : '';
 
     body.classList.add('no-hero');
     body.innerHTML = `
@@ -1638,7 +1875,8 @@ function showAttractionDetail(attr) {
                     <i class="${WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'fas' : 'far'} fa-heart"></i>
                     ${WishlistManager.has(attr.name, attr.lat, attr.lng) ? '已收藏' : '加入願望清單'}
                 </button>
-                <button class="btn-route" style="background-color: #f39c12; margin-top: 10px; width: 100%;" onclick="openSaveLocationModal(${attr.lat}, ${attr.lng}, '${attr.name.replace(/'/g, "\\'")}')">
+                ${modalDeleteBtnHtml}
+                <button class="btn-note-modal" onclick="openSaveLocationModal(${attr.lat}, ${attr.lng}, '${attr.name.replace(/'/g, "\\'")}')">
                     <i class="fas fa-edit"></i> 加入/編輯備註
                 </button>
             </div>
@@ -2685,12 +2923,247 @@ async function handlePlacesCommand(args) {
     }
 }
 
+const ADD_SUCCESS_TEXT_RE = /(\bdone\b|added\s+(them|it|all)?\s*to\s+(the\s+)?list|added\s+to\s+list|已加入|已为你加入|已為你加入|加入全部)/i;
+
+function normalizeActionResponseText(text) {
+    return String(text || '')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/[【]/g, '【')
+        .replace(/[】]/g, '】');
+}
+
+function isExecutableActionCommand(candidate) {
+    return !!(candidate && typeof candidate === 'object' && (candidate.action || candidate.type));
+}
+
+function escapeRawNewlinesInJsonString(text) {
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+
+        if (inString) {
+            if (escapeNext) {
+                result += char;
+                escapeNext = false;
+                continue;
+            }
+            if (char === '\\') {
+                result += char;
+                escapeNext = true;
+                continue;
+            }
+            if (char === '"') {
+                result += char;
+                inString = false;
+                continue;
+            }
+            if (char === '\n') {
+                result += '\\n';
+                continue;
+            }
+            if (char === '\r') {
+                result += '\\r';
+                continue;
+            }
+            result += char;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = true;
+        }
+        result += char;
+    }
+
+    return result;
+}
+
+function parseActionCandidate(fragment) {
+    const normalized = escapeRawNewlinesInJsonString(
+        normalizeActionResponseText(fragment)
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim()
+        .replace(/^,\s*/, '')
+        .replace(/\s*,$/, '')
+    );
+
+    if (!normalized) {
+        return { commands: [], normalized, error: 'empty fragment' };
+    }
+
+    try {
+        const parsed = JSON.parse(normalized);
+        if (Array.isArray(parsed)) {
+            return {
+                commands: parsed.filter(isExecutableActionCommand),
+                normalized,
+                error: null
+            };
+        }
+        return {
+            commands: isExecutableActionCommand(parsed) ? [parsed] : [],
+            normalized,
+            error: null
+        };
+    } catch (error) {
+        const nestedFragments = scanJsonActionObjects(normalized);
+        if (nestedFragments.length > 1) {
+            const nestedCommands = [];
+            nestedFragments.forEach((nestedFragment) => {
+                const nestedParsed = parseActionCandidate(nestedFragment);
+                if (nestedParsed.commands.length > 0) {
+                    nestedCommands.push(...nestedParsed.commands);
+                }
+            });
+            if (nestedCommands.length > 0) {
+                return { commands: nestedCommands, normalized, error: null };
+            }
+        }
+        return { commands: [], normalized, error };
+    }
+}
+
+function scanJsonActionObjects(text) {
+    const fragments = [];
+    let start = -1;
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+
+        if (start === -1) {
+            if (char === '{') {
+                start = i;
+                depth = 1;
+                inString = false;
+                escapeNext = false;
+            }
+            continue;
+        }
+
+        if (inString) {
+            if (escapeNext) {
+                escapeNext = false;
+            } else if (char === '\\') {
+                escapeNext = true;
+            } else if (char === '"') {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (char === '"') {
+            inString = true;
+            continue;
+        }
+
+        if (char === '{') {
+            depth += 1;
+            continue;
+        }
+
+        if (char === '}') {
+            depth -= 1;
+            if (depth === 0) {
+                const fragment = text.slice(start, i + 1);
+                if (/"(?:action|type)"\s*:/.test(fragment)) {
+                    fragments.push(fragment);
+                }
+                start = -1;
+            }
+        }
+    }
+
+    return fragments;
+}
+
+function extractActionCommands(text, sourceLabel = 'unknown') {
+    let cleanText = normalizeActionResponseText(text);
+    const actions = [];
+    const malformedFragments = [];
+
+    cleanText = cleanText.replace(/【([^】]+)】/g, (fullMatch, innerText) => {
+        const parsed = parseActionCandidate(innerText);
+        if (parsed.commands.length > 0) {
+            actions.push(...parsed.commands);
+            return '';
+        }
+        if (/"(?:action|type)"\s*:/.test(parsed.normalized)) {
+            malformedFragments.push(parsed.normalized);
+            console.warn(`[AI Action Parser] ${sourceLabel}: malformed bracket action`, parsed.normalized, parsed.error);
+        }
+        return fullMatch;
+    });
+
+    scanJsonActionObjects(cleanText).forEach((fragment) => {
+        const parsed = parseActionCandidate(fragment);
+        if (parsed.commands.length > 0) {
+            actions.push(...parsed.commands);
+            cleanText = cleanText.replace(fragment, '');
+            return;
+        }
+        malformedFragments.push(parsed.normalized);
+        console.warn(`[AI Action Parser] ${sourceLabel}: malformed object action`, parsed.normalized, parsed.error);
+    });
+
+    console.log(`[AI Action Parser] ${sourceLabel}: extracted ${actions.length} action(s), malformed=${malformedFragments.length}`);
+
+    return {
+        cleanText: cleanText.trim(),
+        actions,
+        malformedFragments
+    };
+}
+
+function stripPrematureAddSuccessText(text) {
+    return String(text || '')
+        .split('\n')
+        .filter(line => !ADD_SUCCESS_TEXT_RE.test(line.trim()))
+        .join('\n')
+        .trim();
+}
+
+function formatAddToListStatusMessage(addResults, malformedAddCount = 0) {
+    if (!addResults || addResults.length === 0) {
+        return malformedAddCount > 0
+            ? '\n\n⚠️ The app could not confirm any location addition because the reply contained malformed add actions.'
+            : '';
+    }
+
+    const succeeded = addResults.filter(result => result.success);
+    const failed = addResults.filter(result => !result.success);
+    const parts = [];
+
+    if (succeeded.length > 0) {
+        const successNames = succeeded.map(result => result.name).filter(Boolean);
+        parts.push(`✅ App confirmed ${succeeded.length} location(s) added to the list${successNames.length ? `: ${successNames.join(', ')}` : ''}.`);
+    }
+
+    if (failed.length > 0) {
+        const failedNames = failed.map(result => result.name || result.action).filter(Boolean);
+        parts.push(`⚠️ ${failed.length} location add request(s) failed${failedNames.length ? `: ${failedNames.join(', ')}` : ''}. Check console logs for details.`);
+    }
+
+    if (malformedAddCount > 0) {
+        parts.push(`⚠️ ${malformedAddCount} add action fragment(s) were malformed and skipped before request dispatch.`);
+    }
+
+    return parts.length > 0 ? `\n\n${parts.join('\n')}` : '';
+}
+
 async function fetchAIReply(userText) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s — covers Hermes(15s) + Ollama(30s) + overhead
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/chat`, {
+        const data = await fetchJSON(`${API_BASE_URL}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: controller.signal,
@@ -2698,40 +3171,49 @@ async function fetchAIReply(userText) {
                 message: userText,
                 system: getSystemContext(),
                 history: chatHistory.slice(0, -1),  // 唔包剛加入嘅 user message
-                fingerprint: FingerprintManager.getFingerprint()
+                fingerprint: FingerprintManager.getFingerprint(),
+                preferences: userPreferences,
+                trip_data: userTripData
             })
         });
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        if (data && data.success === false) {
+            throw new Error(data.error || 'AI 回應失敗');
         }
 
-        const data = await response.json();
-        let reply = data.reply || generateAIReply(userText);
+        const rawReply = data.reply || generateAIReply(userText);
+        console.log('[AI Add Flow] Raw reply received:', rawReply);
 
-    // 解析並執行回覆中的地圖指令
-    const actionPattern = /【([^】]+)】/g;
-    let match;
-    const actions = [];
-    while ((match = actionPattern.exec(reply)) !== null) {
-        try {
-            const cmd = JSON.parse(match[1]);
-            if (cmd.type === 'map_action' || cmd.action) {
-                actions.push(cmd);
+        const parsed = extractActionCommands(rawReply, 'fetchAIReply');
+        const actionResults = [];
+
+        // Execute in order so multi-location additions complete deterministically.
+        for (const actionCommand of parsed.actions) {
+            const actName = actionCommand.action || actionCommand.type;
+            const actParams = actionCommand.params || {};
+            const result = await executeMapAction(actName, actParams);
+            actionResults.push(result);
+        }
+
+        const malformedAddCount = parsed.malformedFragments.filter(fragment => /"action"\s*:\s*"add_to_list"/.test(fragment)).length;
+        const addResults = actionResults.filter(result => result && result.action === 'add_to_list');
+        const hasAddActions = parsed.actions.some(actionCommand => (actionCommand.action || actionCommand.type) === 'add_to_list');
+        const hasAddIntent = hasAddActions || malformedAddCount > 0 || ADD_SUCCESS_TEXT_RE.test(rawReply);
+
+        let reply = parsed.cleanText;
+        if (hasAddIntent) {
+            reply = stripPrematureAddSuccessText(reply);
+            if (addResults.length === 0) {
+                console.warn('[AI Add Flow] AI claimed completion but no confirmed add_to_list action completed.', {
+                    malformedAddCount,
+                    parsedActionCount: parsed.actions.length
+                });
             }
-        } catch (e) { /* 無視格式錯誤 */ }
-        reply = reply.replace(match[0], ''); // 移除指令標記
-    }
+            reply += formatAddToListStatusMessage(addResults, malformedAddCount);
+        }
 
-    // 異步執行所有地圖動作
-    actions.forEach(action => {
-        const actName = action.action || action.type;
-        const actParams = action.params || {};
-        executeMapAction(actName, actParams);
-    });
-
-        return reply;
+        return reply.trim();
     } catch (e) {
         clearTimeout(timeoutId);
         if (e.name === 'AbortError') {
@@ -2764,7 +3246,7 @@ function getSystemContext() {
 5. add_marker (搜索結果/特定位置時添加標記)：【{"action":"add_marker","params":{"lat":37.5500,"lng":126.9200,"title":"弘大","color":"#e74c3c","popup":"弘大購物區"}}】
 6. add_polygon (顯示區域範圍)：【{"action":"add_polygon","params":{"coords":[[37.56,126.98],[37.56,126.99],[37.57,126.99],[37.57,126.98]],"name":"明洞商圈","color":"#3498db"}}】
 7. clear_search_markers (清除搜索標記)：【{"action":"clear_search_markers"}】
-8. add_to_list (將提及嘅地點加入景點列表)：【{"action":"add_to_list","params":{"name":"地點名稱","lat":37.46,"lng":126.44,"category":"購物美食","description":"簡短描述"}}】
+8. add_to_list (將提及嘅地點標示在地圖並永久加入景點列表)：【{"action":"add_to_list","params":{"name":"地點名稱","lat":37.46,"lng":126.44,"address":"詳細地址","category":"購物美食","description":"簡短描述"}}】
 
 景點ID：${attractionsData.map(a=>a.id).join(', ')}
 分類：${categories}
@@ -2787,41 +3269,36 @@ function addMessage(text, sender, isRestore = false) {
 
     let displayText = text;
     let autoActions = [];
+    let botParsed = null;
 
     if (sender === 'bot') {
-        // Step 1: Extract and process 【{"action":"...","params":{...}}】 tags
+        // Step 1: Extract and process action tags or JSON-like action objects
         // We need to handle fly_to separately because marked.parse() would mangle HTML links
-        const actionPattern = /【([^】]+)】/g;
-        let match;
-        let cleanText = text;
+        botParsed = extractActionCommands(text, 'addMessage');
+        let cleanText = botParsed.cleanText;
+        const malformedAddCount = botParsed.malformedFragments.filter(fragment => /"action"\s*:\s*"add_to_list"/.test(fragment)).length;
+        const hasAddIntent = botParsed.actions.some(cmd => (cmd.action || cmd.type) === 'add_to_list') || malformedAddCount > 0;
         const flyToLinks = []; // Store fly_to link HTML, use placeholders
 
-        while ((match = actionPattern.exec(text)) !== null) {
-            try {
-                const cmd = JSON.parse(match[1]);
-                if (cmd.action === 'fly_to' && cmd.params) {
-                    // Replace fly_to tag with a placeholder, store link HTML separately
-                    const lat = cmd.params.lat;
-                    const lng = cmd.params.lng;
-                    const title = cmd.params.title || '位置';
-                    const placeholderId = `FLYTO_PLACEHOLDER_${flyToLinks.length}`;
-                    const linkHtml = `<a href="javascript:void(0)" class="fly-to-link" data-lat="${lat}" data-lng="${lng}" data-title="${title.replace(/"/g, '&quot;')}" title="點擊飛到 ${title}">${title} 🗺️</a>`;
-                    flyToLinks.push(linkHtml);
-                    cleanText = cleanText.replace(match[0], placeholderId);
-                    
-                    // Also push to autoActions so we can recreate the button during restore
-                    autoActions.push(cmd);
-                } else if (cmd.action === 'add_marker' && cmd.params) {
-                    // add_marker actions are auto-executed after render
-                    autoActions.push(cmd);
-                    cleanText = cleanText.replace(match[0], '');
-                } else if (cmd.action) {
-                    // Other action types: auto-execute and remove from text
-                    autoActions.push(cmd);
-                    cleanText = cleanText.replace(match[0], '');
-                }
-            } catch (e) { /* ignore malformed JSON */ }
+        if (hasAddIntent) {
+            cleanText = stripPrematureAddSuccessText(cleanText);
         }
+
+        botParsed.actions.forEach((cmd) => {
+            const actionName = cmd.action || cmd.type;
+            if (actionName === 'fly_to' && cmd.params) {
+                const lat = cmd.params.lat;
+                const lng = cmd.params.lng;
+                const title = cmd.params.title || '位置';
+                const placeholderId = `FLYTO_PLACEHOLDER_${flyToLinks.length}`;
+                const linkHtml = `<a href="javascript:void(0)" class="fly-to-link" data-lat="${lat}" data-lng="${lng}" data-title="${title.replace(/"/g, '&quot;')}" title="點擊飛到 ${title}">${title} 🗺️</a>`;
+                flyToLinks.push(linkHtml);
+                cleanText += cleanText ? `\n\n${placeholderId}` : placeholderId;
+                autoActions.push(cmd);
+            } else if (actionName) {
+                autoActions.push(cmd);
+            }
+        });
 
         // Step 2: Parse Markdown first
         displayText = marked.parse(cleanText);
@@ -2861,18 +3338,39 @@ function addMessage(text, sender, isRestore = false) {
             });
         });
 
-        // Auto-execute add_marker and other actions
-        autoActions.forEach(cmd => {
-            const actName = cmd.action || cmd.type;
-            const actParams = cmd.params || {};
-            if (!isRestore) {
-                // Pass current message element to executeMapAction to avoid race conditions
-                executeMapAction(actName, actParams, div);
-            } else {
+        const malformedAddCount = botParsed ? botParsed.malformedFragments.filter(fragment => /"action"\s*:\s*"add_to_list"/.test(fragment)).length : 0;
+        const hasAddIntent = botParsed ? botParsed.actions.some(cmd => (cmd.action || cmd.type) === 'add_to_list') || malformedAddCount > 0 : false;
+
+        if (!isRestore) {
+            (async () => {
+                const actionResults = [];
+                for (const cmd of autoActions) {
+                    const actName = cmd.action || cmd.type;
+                    const actParams = cmd.params || {};
+                    // Pass current message element to executeMapAction to avoid race conditions
+                    const result = await executeMapAction(actName, actParams, div);
+                    actionResults.push(result);
+                }
+
+                if (hasAddIntent) {
+                    const addResults = actionResults.filter(result => result && result.action === 'add_to_list');
+                    const statusMessage = formatAddToListStatusMessage(addResults, malformedAddCount);
+                    if (statusMessage) {
+                        const bubble = div.querySelector('.bubble');
+                        if (bubble) {
+                            bubble.insertAdjacentHTML('beforeend', marked.parse(statusMessage.trim()));
+                        }
+                    }
+                }
+            })();
+        } else {
+            autoActions.forEach(cmd => {
+                const actName = cmd.action || cmd.type;
+                const actParams = cmd.params || {};
                 // Recreate buttons during history restore, passing current message element
                 recreateMapActionButton(actName, actParams, div);
-            }
-        });
+            });
+        }
     }
 
     container.scrollTop = container.scrollHeight;
@@ -3139,9 +3637,11 @@ function renderMobilePanelList() {
                         '<span class="card-dot" style="background:' + color + '"></span>' +
                         category +
                     '</div>' +
+                    (place.address ? '<div class="card-addr"><i class="fas fa-map-marker-alt"></i> ' + place.address + '</div>' : '') +
                 '</div>' +
                 '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(place.name, place.lat, place.lng) ? 'in-wishlist' : '') + '" ' +
                     'data-name="' + place.name + '" data-lat="' + place.lat + '" data-lng="' + place.lng + '" ' +
+                    'data-address="' + (place.address || '') + '" ' +
                     'data-category="' + category + '" data-description="' + (place.description || '') + '" ' +
                     'onclick="event.stopPropagation(); toggleWishlist(this)">' +
                     '<i class="' + (WishlistManager.has(place.name, place.lat, place.lng) ? 'fas' : 'far') + ' fa-heart"></i>' +
@@ -3207,11 +3707,13 @@ function renderMobilePanelList() {
                     '<span class="card-dot" style="background:' + color + '"></span>' +
                     safeCategory + (attr.local_name ? ' · ' + attr.local_name : '') +
                 '</div>' +
+                (attr.address ? '<div class="card-addr"><i class="fas fa-map-marker-alt"></i> ' + attr.address + '</div>' : '') +
                 remarkHtml +
             '</div>' +
             removeBtnHtml +
             '<button class="wishlist-btn mobile-wishlist-btn ' + (WishlistManager.has(attr.name, attr.lat, attr.lng) ? 'in-wishlist' : '') + '" ' +
                 'data-name="' + (attr.name || '') + '" data-lat="' + (attr.lat || 0) + '" data-lng="' + (attr.lng || 0) + '" ' +
+                'data-address="' + (attr.address || '') + '" ' +
                 'data-category="' + safeCategory + '" data-price="' + safeTicket + '" ' +
                 'data-description="' + safeDescShort + '" ' +
                 'onclick="event.stopPropagation(); toggleWishlist(this)">' +
@@ -3463,14 +3965,14 @@ async function executeMapAction(action, params, targetElement) {
         params.lat = parseFloat(params.lat);
         if (isNaN(params.lat) || params.lat < -90 || params.lat > 90) {
             console.error('[Map Action] Invalid latitude:', params.lat);
-            return false;
+            return { success: false, action, name: params.name || params.title || '', error: 'invalid latitude' };
         }
     }
     if (params.lng !== undefined) {
         params.lng = parseFloat(params.lng);
         if (isNaN(params.lng) || params.lng < -180 || params.lng > 180) {
             console.error('[Map Action] Invalid longitude:', params.lng);
-            return false;
+            return { success: false, action, name: params.name || params.title || '', error: 'invalid longitude' };
         }
     }
     if (params.zoom !== undefined) {
@@ -3481,6 +3983,12 @@ async function executeMapAction(action, params, targetElement) {
     const msgElement = targetElement || lastBotMessageElement;
     
     try {
+        if (action === 'add_to_list' && !params.name) {
+            console.error('[AI Add Flow] add_to_list rejected before dispatch: missing name', params);
+            return { success: false, action, name: '', error: 'missing name before dispatch' };
+        }
+
+        console.log('[AI Add Flow] Dispatching request to /api/execute', { action, params });
         const response = await fetch(`${API_BASE_URL}/api/execute`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3489,8 +3997,9 @@ async function executeMapAction(action, params, targetElement) {
         const data = await response.json();
         if (!data.success) {
             console.error('Map action failed:', data.error);
-            return false;
+            return { success: false, action, name: params.name || params.title || '', error: data.error || 'api execute rejected' };
         }
+        console.log('[AI Add Flow] /api/execute completed', { action, params, data });
 
         // 前端執行實際地圖動作
         switch (action) {
@@ -3630,10 +4139,42 @@ async function executeMapAction(action, params, targetElement) {
                 if (params.name && params.lat !== undefined && params.lng !== undefined) {
                     const lat = parseFloat(params.lat);
                     const lng = parseFloat(params.lng);
+                    
+                    // 如果缺乏地址，嘗試透過 Google Places API 獲取
+                    let address = params.address || '';
+                    if (!address) {
+                        try {
+                            const gData = await fetchJSON(`${API_BASE_URL}/api/google-places`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ lat, lng, radius: 50 })
+                            });
+                            
+                            if (gData && gData.success && gData.data.places && gData.data.places.length > 0) {
+                                // 找尋最匹配的地點（名稱相似或最接近的一個）
+                                const bestMatch = gData.data.places[0];
+                                address = bestMatch.address;
+                            } else {
+                                // 回退到逆地理編碼
+                                const rData = await fetchJSON(`${API_BASE_URL}/api/reverse-geocode`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ lat, lng })
+                                });
+                                if (rData && rData.display_name) {
+                                    address = rData.display_name;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('[Map Action] Failed to fetch address auto-fill:', e);
+                        }
+                    }
+
                     const listPlace = {
                         name: params.name,
                         lat: lat,
                         lng: lng,
+                        address: address,
                         category: params.category || '地標觀景',
                         description: params.description || ''
                     };
@@ -3660,12 +4201,12 @@ async function executeMapAction(action, params, targetElement) {
                 break;
             default:
                 console.warn('[Map Action] Unknown action:', action);
-                return false;
+                return { success: false, action, name: params.name || params.title || '', error: 'unknown action on frontend' };
         }
-        return true;
+        return { success: true, action, name: params.name || params.title || '' };
     } catch (e) {
         console.error('executeMapAction error:', e);
-        return false;
+        return { success: false, action, name: params.name || params.title || '', error: e.message || String(e) };
     }
 }
 
@@ -3882,6 +4423,9 @@ function closeRadiusInfoPopover() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 載入使用者偏好設定
+    await loadUserPreferences();
+    
     MapManager.init();
     initMap();
     await loadData();
@@ -4436,6 +4980,7 @@ function addChatPlacesToAttractions(places) {
                 local_name: '',
                 lat: place.lat,
                 lng: place.lng,
+                address: place.address || '',
                 category: place.category || '自訂景點',
                 image: place.image || '',
                 ticket: place.price || '',
@@ -4529,6 +5074,7 @@ function persistChatPlace(place) {
             name: place.name,
             lat: place.lat,
             lng: place.lng,
+            address: place.address || '',
             category: place.category || '自訂景點',
             description: place.description || '',
             addedAt: Date.now(),
@@ -4576,6 +5122,7 @@ function createSearchResultPopupContent(place) {
             <div class="place-category" style="display: inline-block; padding: 2px 8px; background: ${color}20; color: ${color}; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 8px;">
                 ${category}
             </div>
+            ${place.address ? `<div class="place-address" style="font-size: 12px; color: #6b7280; margin-bottom: 8px;"><i class="fas fa-map-marker-alt"></i> ${place.address}</div>` : ''}
             <p style="margin: 0 0 8px 0; font-size: 13px; color: #4b5563; line-height: 1.5;">
                 ${place.description ? (place.description.length > 100 ? place.description.substring(0, 100) + '...' : place.description) : '暫無簡介'}
             </p>
@@ -4688,6 +5235,7 @@ function toggleLoadingState(isSyncing) {
  */
 const WishlistManager = {
     STORAGE_KEY: 'seoul_tour_wishlist',
+    MATCH_TOLERANCE: 0.0001,
 
     _normalizeName(name) {
         return String(name || '').normalize('NFKC').replace(/\s+/g, ' ').trim();
@@ -4698,6 +5246,94 @@ const WishlistManager = {
         const nlng = Number(lng);
         if (isNaN(nlat) || isNaN(nlng)) return null;
         return `${nlat.toFixed(4)}_${nlng.toFixed(4)}`;
+    },
+
+    _pickBestCandidate(candidates, preferNameMatch = false) {
+        if (!candidates || candidates.length === 0) return null;
+        const ranked = [...candidates].sort((a, b) => {
+            if (preferNameMatch && a.nameMatch !== b.nameMatch) {
+                return a.nameMatch ? -1 : 1;
+            }
+            if (a.dist !== b.dist) return a.dist - b.dist;
+            const atime = a.item.updatedAt || a.item.addedAt || 0;
+            const btime = b.item.updatedAt || b.item.addedAt || 0;
+            if (atime !== btime) return btime - atime;
+            return String(a.item.id || '').localeCompare(String(b.item.id || ''));
+        });
+        return ranked[0].item;
+    },
+
+    _pickCoordCandidate(candidates) {
+        if (!candidates || candidates.length === 0) return null;
+        if (candidates.length === 1) return candidates[0].item;
+        const nameMatches = candidates.filter(candidate => candidate.nameMatch);
+        if (nameMatches.length === 1) return nameMatches[0].item;
+        return null;
+    },
+
+    _resolveMatch(name, lat, lng) {
+        const targetName = this._normalizeName(name);
+        const targetLat = Number(lat);
+        const targetLng = Number(lng);
+        if (!targetName || isNaN(targetLat) || isNaN(targetLng)) {
+            return { active: null, deleted: null };
+        }
+
+        const items = this.getAll();
+        const targetId = this._generateId(name, lat, lng);
+        const targetKey = this._coordKey(targetLat, targetLng);
+        const tol = this.MATCH_TOLERANCE;
+        const exactActive = [];
+        const exactDeleted = [];
+        const fuzzyActive = [];
+        const fuzzyDeleted = [];
+        const coordActive = [];
+        const coordDeleted = [];
+
+        for (const item of items) {
+            if (!item) continue;
+            const isDeleted = !!item.deleted;
+            const normalizedName = this._normalizeName(item.name);
+            const ilat = Number(item.lat);
+            const ilng = Number(item.lng);
+            const hasCoords = !isNaN(ilat) && !isNaN(ilng);
+            const nameMatch = normalizedName === targetName;
+            const exactIdMatch = item.id === targetId;
+            let dist = Number.POSITIVE_INFINITY;
+            let fuzzyMatch = false;
+            let coordMatch = false;
+
+            if (hasCoords) {
+                const dlat = ilat - targetLat;
+                const dlng = ilng - targetLng;
+                dist = dlat * dlat + dlng * dlng;
+                fuzzyMatch = nameMatch &&
+                    Math.abs(dlat) <= tol &&
+                    Math.abs(dlng) <= tol;
+                const itemCoordKey = this._coordKey(ilat, ilng);
+                coordMatch = !!targetKey && !!itemCoordKey && itemCoordKey === targetKey;
+            }
+
+            const candidate = { item, dist, nameMatch };
+            if (exactIdMatch) {
+                (isDeleted ? exactDeleted : exactActive).push(candidate);
+            }
+            if (fuzzyMatch) {
+                (isDeleted ? fuzzyDeleted : fuzzyActive).push(candidate);
+            }
+            if (coordMatch) {
+                (isDeleted ? coordDeleted : coordActive).push(candidate);
+            }
+        }
+
+        const active = this._pickBestCandidate(exactActive) ||
+            this._pickBestCandidate(fuzzyActive) ||
+            this._pickCoordCandidate(coordActive);
+        const deleted = this._pickBestCandidate(exactDeleted) ||
+            this._pickBestCandidate(fuzzyDeleted) ||
+            this._pickCoordCandidate(coordDeleted);
+
+        return { active, deleted };
     },
 
     /** 獲取所有願望清單項目 */
@@ -4726,12 +5362,12 @@ const WishlistManager = {
     async syncToServer(items) {
         try {
             toggleLoadingState(true);
-            const response = await fetch(`${API_BASE_URL}/api/sync-locations`, {
+            const data = await fetchJSON(`${API_BASE_URL}/api/sync-locations`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(items)
             });
-            if (response.ok) {
+            if (data && data.success !== false) {
                 console.log('[Wishlist] Synced to server');
             }
         } catch (e) {
@@ -4846,6 +5482,7 @@ const WishlistManager = {
                 category: item.category || items[existingIdx].category,
                 price: item.price || items[existingIdx].price,
                 description: item.description || items[existingIdx].description,
+                address: item.address || items[existingIdx].address || '',
                 deleted: false, // 重新添加或更新時，確保標記為未刪除
                 updatedAt: Date.now()
             };
@@ -4859,6 +5496,7 @@ const WishlistManager = {
                 lng: item.lng,
                 category: item.category || '',
                 price: item.price || '',
+                address: item.address || '',
                 description: item.description || '',
                 addedAt: Date.now(),
                 updatedAt: Date.now(),
@@ -4892,56 +5530,8 @@ const WishlistManager = {
 
     /** 獲取指定地點 */
     get(name, lat, lng) {
-        const id = this._generateId(name, lat, lng);
-        const items = this.getAll();
-        const exact = items.find(i => i.id === id);
-        if (exact) return exact;
-
-        const targetName = this._normalizeName(name);
-        const targetLat = Number(lat);
-        const targetLng = Number(lng);
-        if (!targetName || isNaN(targetLat) || isNaN(targetLng)) return null;
-
-        const tol = 0.0001;
-        let best = null;
-        let bestDist = Infinity;
-        for (const i of items) {
-            if (!i || !i.name) continue;
-            if (this._normalizeName(i.name) !== targetName) continue;
-            const ilat = Number(i.lat);
-            const ilng = Number(i.lng);
-            if (isNaN(ilat) || isNaN(ilng)) continue;
-            const dlat = ilat - targetLat;
-            const dlng = ilng - targetLng;
-            if (Math.abs(dlat) <= tol && Math.abs(dlng) <= tol) {
-                const dist = dlat * dlat + dlng * dlng;
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    best = i;
-                }
-            }
-        }
-        if (best) return best;
-
-        const targetKey = this._coordKey(targetLat, targetLng);
-        if (!targetKey) return null;
-
-        const candidates = [];
-        for (const i of items) {
-            if (!i) continue;
-            const k = this._coordKey(i.lat, i.lng);
-            if (k && k === targetKey) {
-                candidates.push(i);
-            }
-        }
-
-        if (candidates.length === 1) return candidates[0];
-        if (candidates.length > 1) {
-            const nameMatches = candidates.filter(c => c && c.name && this._normalizeName(c.name) === targetName);
-            if (nameMatches.length === 1) return nameMatches[0];
-        }
-
-        return null;
+        const match = this._resolveMatch(name, lat, lng);
+        return match.active || match.deleted || null;
     },
 
     /** 切換願望清單狀態（切換 wish 屬性） */
@@ -5109,6 +5699,7 @@ function toggleWishlist(btn) {
         name: name,
         lat: lat,
         lng: lng,
+        address: btn.dataset.address || '',
         category: btn.dataset.category || '',
         price: btn.dataset.price || '',
         description: btn.dataset.description || ''
@@ -5136,18 +5727,18 @@ function toggleWishlist(btn) {
 /**
  * 從清單中徹底移除地點（邏輯刪除）
  */
-function removeFromWishlist(btn) {
+function performWishlistRemoval(btn) {
     const name = btn.dataset.name;
     const lat = parseFloat(btn.dataset.lat);
     const lng = parseFloat(btn.dataset.lng);
-    if (!name || isNaN(lat) || isNaN(lng)) return;
+    if (!name || isNaN(lat) || isNaN(lng)) return false;
 
     // 獲取項目以確認存在且獲取 ID
     const item = WishlistManager.get(name, lat, lng);
-    if (!item) return;
+    if (!item) return false;
 
     // 彈出確認對話框
-    if (!confirm(`確定要移除「${name}」嗎？\n這將會清除所有收藏狀態及備註。`)) return;
+    if (!confirm(`確定要移除「${name}」嗎？\n這將會清除所有收藏狀態及備註。`)) return false;
 
     // 執行邏輯刪除
     WishlistManager.remove(item.id);
@@ -5158,6 +5749,19 @@ function removeFromWishlist(btn) {
     toast.innerHTML = `<i class="fas fa-trash-alt"></i> 已從清單移除地點`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
+    return true;
+}
+
+function removeFromWishlist(btn) {
+    return performWishlistRemoval(btn);
+}
+
+function removeFromWishlistFromModal(btn) {
+    const removed = performWishlistRemoval(btn);
+    if (removed) {
+        closeModal();
+    }
+    return removed;
 }
 
 // ==================== 系統狀態檢查 ====================
@@ -5320,8 +5924,13 @@ if (typeof module !== 'undefined' && module.exports) {
         clearPanelSearch,
         CATEGORY_COLORS,
         CATEGORY_EMOJIS,
+        getFallbackImage,
+        getDefaultFallbackImage,
         setAttractionsDataForTest: (data) => { attractionsData = data; },       
         setMapForTest: (testMap) => { map = testMap; },
+        showAttractionDetailById,
+        removeFromWishlist,
+        removeFromWishlistFromModal,
         addMarkers,
         calculateHaversineDistance,
         radiusState,

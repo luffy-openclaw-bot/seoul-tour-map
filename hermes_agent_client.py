@@ -2,6 +2,27 @@
 """
 Hermes Agent API Client - Seoul Tour Map Integration
 Supports fallback to Ollama Cloud API when Hermes Agent is unavailable.
+
+================================================================================
+⚠️  狀態：參考實作 (Reference implementation) — 目前 server.py 唔會自動調用
+================================================================================
+呢個模組係一個獨立嘅 Hermes Agent 雲端 API 客戶端，目標 endpoint 係
+`https://api-hermes.apihubs.dev/v1` (HERMES_AGENT_API_URL)。
+
+**目前 chat pipeline 嘅流程係：**
+    瀏覽器 → server.py.handle_chat
+            → _try_hermes_agent_api   ← 用呢個模組 (只係當 HERMES_AGENT_API_KEY 有值)
+            → _delegate_to_hermes      ← 用 hermes_worker.py (DuckDuckGo + Ollama)
+            → _call_ollama_api         ← 直接打 Ollama
+            → _generate_offline_reply  ← 離線 fallback
+
+**所以** `api-hermes.apihubs.dev` 預設係 *冇用嘅* (unwired)。要啟用佢：
+  1. 喺 .env 設定 `HERMES_AGENT_API_KEY=<你嘅真實 key>`
+  2. server.py 啟動時會 log `HERMES_AGENT_API_KEY configured: True`
+  3. 任何 query 會優先經過呢個 module，失敗先 fallback 去 worker / ollama / offline
+
+如果淨係想用本地 worker (DuckDuckGo + Ollama)，可以忽略呢個檔案。
+================================================================================
 """
 
 # Load .env file before any other imports that read env vars

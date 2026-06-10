@@ -9,7 +9,7 @@ try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
-    print("python-dotenv not found, skipping .env load")
+    _safe_print("python-dotenv not found, skipping .env load")
 
 import http.server
 import socketserver
@@ -23,15 +23,56 @@ import glob
 import xml.etree.ElementTree as ET
 import threading
 
-# Ollama consecutive failure counter (circuit breaker)
-_ollama_consecutive_failures = 0
-_ollama_circuit_open_after = 3
+# Ollama consecutive failure counter (circuit breaker) — thread-safe wrapper
+class _CircuitBreaker:
+    """Thread-safe circuit breaker for Ollama failures."""
+    def __init__(self, open_after=3):
+        self._lock = threading.Lock()
+        self._failures = 0
+        self._open_after = open_after
+
+    def is_open(self):
+        with self._lock:
+            return self._failures >= self._open_after
+
+    def record_failure(self):
+        with self._lock:
+            self._failures += 1
+            return self._failures
+
+    def record_success(self):
+        with self._lock:
+            self._failures = 0
+
+    def get_failures(self):
+        with self._lock:
+            return self._failures
+
+
+_ollama_breaker = _CircuitBreaker(open_after=3)
+
+
+def _safe_print(*args, **kwargs):
+    """Print that survives Windows cp1252 console encoding (Chinese/emoji)."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Fallback: encode with backslashreplace so non-ASCII doesn't crash
+        msg = " ".join(str(a) for a in args)
+        try:
+            print(msg.encode("ascii", "backslashreplace").decode("ascii"), **kwargs)
+        except Exception:
+            pass
 
 # 使用絕對路徑
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-print(f"DEBUG: BASE_DIR={BASE_DIR}")
+_safe_print(f"DEBUG: BASE_DIR={BASE_DIR}")
 SHARED_LOCATIONS_FILE = os.path.join(BASE_DIR, 'shared_locations.json')
+USER_PROFILES_DIR = os.path.join(BASE_DIR, 'user_profiles')
 file_lock = threading.Lock()
+
+# Create user profiles directory if it doesn't exist
+os.makedirs(USER_PROFILES_DIR, exist_ok=True)
 
 # 導入搜索模組
 import importlib.util
@@ -61,11 +102,20 @@ ODSAY_API_KEY = os.getenv('ODSAY_API_KEY', 'YOUR_ODSAY_KEY_HERE')
 
 # Hermes Agent 任務隊列設定
 HERMES_ENABLED = os.getenv('HERMES_ENABLED', 'false').lower() == 'true'
-print(f"DEBUG: HERMES_ENABLED={HERMES_ENABLED}")
+_safe_print(f"DEBUG: HERMES_ENABLED={HERMES_ENABLED}")
 HERMES_TASK_DIR = os.getenv('HERMES_TASK_DIR', os.path.join(BASE_DIR, '.hermes_tasks'))
 os.makedirs(HERMES_TASK_DIR, exist_ok=True)
 HERMES_TIMEOUT = 300  # 秒 (TEMPORARY for testing worker response time)
-print(f"DEBUG: HERMES_TIMEOUT={HERMES_TIMEOUT}s")
+_safe_print(f"DEBUG: HERMES_TIMEOUT={HERMES_TIMEOUT}s")
+
+# Hermes Agent 雲端 API 設定 (api-hermes.apihubs.dev)
+# 如果 key 冇設定，server.py 會 skip 個 endpoint 直接落 worker / ollama / offline
+HERMES_AGENT_API_KEY = os.getenv('HERMES_AGENT_API_KEY', '')
+HERMES_AGENT_API_URL = os.getenv('HERMES_AGENT_API_URL', 'https://api-hermes.apihubs.dev/v1')
+HERMES_AGENT_TIMEOUT = int(os.getenv('HERMES_AGENT_TIMEOUT', '10'))
+_safe_print(f"DEBUG: HERMES_AGENT_API_KEY configured: {bool(HERMES_AGENT_API_KEY)}")
+_safe_print(f"DEBUG: HERMES_AGENT_API_URL={HERMES_AGENT_API_URL}")
+_safe_print(f"DEBUG: HERMES_AGENT_TIMEOUT={HERMES_AGENT_TIMEOUT}s")
 
 try:
     import ssl
@@ -96,6 +146,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         # 解析路徑以忽略查詢參數或完整 URI
         parsed_path = urllib.parse.urlparse(self.path).path
+        parsed_query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+
+        _safe_print(f"DEBUG: do_GET path='{self.path}' parsed_path='{parsed_path}'")
 
         # API 端點
         if parsed_path == '/api/health':
@@ -107,13 +160,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if parsed_path == '/api/stream-locations':
             self.handle_stream_locations()
             return
+        if parsed_path == '/api/user-profile':
+            self.handle_get_user_profile(parsed_query)
+            return
+
+        # 如果是 /api/ 路徑但未被處理，返回 JSON 404
+        if parsed_path.startswith('/api/'):
+            self.send_json({'success': False, 'error': f'API endpoint not found: {parsed_path}'}, status=404)
+            return
 
         # 靜態文件
         super().do_GET()
 
     def do_POST(self):
         parsed_path = urllib.parse.urlparse(self.path).path
-        print(f"DEBUG: do_POST path='{self.path}' parsed_path='{parsed_path}'")
+        _safe_print(f"DEBUG: do_POST path='{self.path}' parsed_path='{parsed_path}'")
         if parsed_path == '/api/chat':
             self.handle_chat()
             return
@@ -144,10 +205,99 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if parsed_path == '/api/google-places':
             self.handle_google_places()
             return
+        if parsed_path == '/api/user-profile':
+            self.handle_set_user_profile()
+            return
+            
+        # 如果是 /api/ 路徑但未被處理，返回 JSON 404
+        if parsed_path.startswith('/api/'):
+            self.send_json({'success': False, 'error': f'API endpoint not found: {parsed_path}'}, status=404)
+            return
+
         self.send_error(404)
 
+    def handle_get_user_profile(self, parsed_query):
+        """處理獲取用戶資料的請求"""
+        try:
+            fingerprint = parsed_query.get('fingerprint', [''])[0]
+            if not fingerprint:
+                self.send_json({'success': False, 'error': 'Missing fingerprint'}, status=400)
+                return
+
+            # 防止路徑遍歷
+            safe_fingerprint = "".join(c for c in fingerprint if c.isalnum() or c in ('-', '_'))
+            profile_path = os.path.join(USER_PROFILES_DIR, f"{safe_fingerprint}.json")
+
+            default_profile = {
+                "fingerprint": safe_fingerprint,
+                "preferences": {
+                    "accuracy": 50,
+                    "speed": 50,
+                    "personalization": 50,
+                    "use_web_search": True,
+                    "use_offline_fallback": True,
+                    "use_map_commands": True,
+                    "verbosity": "normal"
+                },
+                "trip_data": {
+                    "planned_places": [],
+                    "visited_places": [],
+                    "interests": [],
+                    "start_date": "",
+                    "end_date": ""
+                }
+            }
+
+            if os.path.exists(profile_path):
+                with file_lock:
+                    with open(profile_path, 'r', encoding='utf-8') as f:
+                        profile_data = json.load(f)
+                # Merge with default to ensure all fields exist
+                merged_profile = default_profile.copy()
+                if "preferences" in profile_data:
+                    merged_profile["preferences"].update(profile_data["preferences"])
+                if "trip_data" in profile_data:
+                    merged_profile["trip_data"].update(profile_data["trip_data"])
+                self.send_json({'success': True, 'profile': merged_profile})
+            else:
+                self.send_json({'success': True, 'profile': default_profile})
+
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    def handle_set_user_profile(self):
+        """處理儲存用戶資料的請求"""
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+            
+            fingerprint = data.get('fingerprint', '')
+            profile = data.get('profile', {})
+
+            if not fingerprint:
+                self.send_json({'success': False, 'error': 'Missing fingerprint'}, status=400)
+                return
+
+            # 防止路徑遍歷
+            safe_fingerprint = "".join(c for c in fingerprint if c.isalnum() or c in ('-', '_'))
+            profile_path = os.path.join(USER_PROFILES_DIR, f"{safe_fingerprint}.json")
+
+            # 確保儲存的資料有 fingerprint
+            profile['fingerprint'] = safe_fingerprint
+
+            with file_lock:
+                with open(profile_path, 'w', encoding='utf-8') as f:
+                    json.dump(profile, f, ensure_ascii=False, indent=2)
+
+            self.send_json({'success': True, 'message': 'Profile saved successfully'})
+
+        except json.JSONDecodeError:
+            self.send_json({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
     def handle_chat(self):
-        global _ollama_consecutive_failures
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')
@@ -156,9 +306,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             system_prompt = data.get('system', '')
             chat_history = data.get('history', [])  # 獲取對話歷史
             fingerprint = data.get('fingerprint', '') # 獲取指紋授權
+            user_prefs = data.get('preferences', {}) # 獲取用戶偏好
+            trip_data = data.get('trip_data', {}) # 獲取用戶旅行資料
 
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | User message received: {user_message[:100]}{'...' if len(user_message) > 100 else ''}")
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | system_prompt={'provided' if system_prompt else 'empty'}, history={len(chat_history)} messages, fingerprint={'provided' if fingerprint else 'none'}")
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | User message received: {user_message[:100]}{'...' if len(user_message) > 100 else ''}")
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | system_prompt={'provided' if system_prompt else 'empty'}, history={len(chat_history)} messages, fingerprint={'provided' if fingerprint else 'none'}, preferences={'provided' if user_prefs else 'none'}")
 
             # 處理系統定位報告
             if user_message == "[SYSTEM_LOCATION_REPORT]":
@@ -209,8 +361,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 【地圖控制指令】
 當用家需要睇地圖、想知道位置、或想去某個地方，你可以喺回覆尾加上一個特殊指令。
-指令格式：將以下 JSON 放喺【...】內，例如 【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
+指令格式：將以下 JSON 放喺【...】內，例如 【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】"""
 
+            # 根據偏好設定控制地圖指令
+            use_map_commands = user_prefs.get('use_map_commands', True)
+            if not use_map_commands:
+                full_system += "\n\n注意：用戶目前已停用自動地圖控制，請純文字回答，不要輸出任何地圖指令。"
+            else:
+                full_system += """
 可用動作：
 1. center：飛去指定坐標 (lat, lng, zoom)
    示例：「去明洞」→【{"action":"center","params":{"lat":37.5635,"lng":126.9895,"zoom":15}}】
@@ -251,15 +409,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 10. add_to_list：將提及嘅地點標示在地圖並永久加入景點列表
    用途：每次提及具體地點（咖啡店、酒店、景點、餐廳等）時，使用此指令可自動在地圖加上標記，同時將其加入左側景點列表，方便用戶之後搵返。
-   示例：「機場有 Starbucks」→【{"action":"add_to_list","params":{"name":"Starbucks（仁川機場）","lat":37.4602,"lng":126.4407,"category":"購物美食","description":"機場內連鎖咖啡店"}}】
-   參數：name（地點名稱）, lat, lng（坐標）, category（分類，用現有分類名：地標觀景/購物美食/自然公園/文化藝術/夜生活/住宿/交通）, description（簡短描述，可選）, color（顏色，可選）
+   示例：「機場有 Starbucks」→【{"action":"add_to_list","params":{"name":"Starbucks（仁川機場）","lat":37.4602,"lng":126.4407,"address":"仁川廣域市中區運西洞 2851","category":"購物美食","description":"機場內連鎖咖啡店"}}】
+   參數：name（地點名稱）, lat, lng（坐標）, address（詳細地址）, category（分類，用現有分類名：地標觀景/購物美食/自然公園/文化藝術/夜生活/住宿/交通）, description（簡短描述，可選）, color（顏色，可選）
 
 注意：
 - 用戶問具體景點位置（如「景福宮喺邊」），用 center + add_marker 組合
 - 用戶問區域（如「明洞有咩玩」），用 add_polygon 顯示範圍
 - 每次新查詢，先加 clear_search_markers 清除之前標記
 - 只喺需要移動地圖、顯示位置、顯示範圍時先用呢啲指令。唔好每個回覆都加指令。
-- 提及具體地點時（咖啡店、酒店、餐廳、景點等），必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker。
+- 提及具體地點時（咖啡店、酒店、餐廳、景點等），必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker。"""
+
+            full_system += """
 
 【韓國交通基本知識 (Rookie Tips)】
 - T-money 卡：最方便嘅支付方式，便利店（如 GS25, CU）有售，可用於巴士、地鐵同的士。
@@ -270,46 +430,104 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 - Slash Command：你可以叫用家輸入 `/places` 或 `/places [半徑]` 嚟搜尋地圖中心附近嘅 Google 地點資訊（預設半徑 500m）。
 - 導航建議：推薦用家下載 Naver Map 或 KakaoMap，因為 Google Maps 喺韓國嘅步行導航唔太準確。
 """
+            
+            # 加入用戶行程與偏好作為個人化上下文
+            if trip_data or user_prefs:
+                full_system += "\n【用戶個人化資料】\n"
+                
+                if user_prefs.get('verbosity') == 'concise':
+                    full_system += "- 對話風格：請非常簡潔直接地回答，不要說多餘的廢話。\n"
+                elif user_prefs.get('verbosity') == 'detailed':
+                    full_system += "- 對話風格：請詳細地回答，並提供豐富的背景資訊。\n"
+                    
+                if trip_data.get('start_date') or trip_data.get('end_date'):
+                    full_system += f"- 行程日期：{trip_data.get('start_date', '未知')} 至 {trip_data.get('end_date', '未知')}\n"
+                
+                interests = trip_data.get('interests', [])
+                if interests:
+                    full_system += f"- 旅遊興趣：{', '.join(interests)}\n"
+                    
+                planned = trip_data.get('planned_places', [])
+                if planned:
+                    full_system += f"- 已計畫前往的地點：{', '.join(planned)}\n"
+                    
+                visited = trip_data.get('visited_places', [])
+                if visited:
+                    full_system += f"- 已去過的地點：{', '.join(visited)}\n"
+                    
+                full_system += "\n請根據以上的個人化資料，提供最適合這位用戶的建議（例如避免推薦已經去過的地方，或根據興趣推薦）。\n"
 
             if system_prompt:
                 full_system += "\n" + system_prompt
 
-            # 檢查是否應該委託給 Hermes Agent 處理複雜查詢
-            should_delegate = self._should_delegate_to_hermes(user_message)
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Decision: {should_delegate}")
-            if should_delegate:
-                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Starting delegation...")
+            # ─── 第一層：Hermes Agent 雲端 API (api-hermes.apihubs.dev) ───
+            # 如果用戶啟用咗 web search + query 係複雜 + HERMES_AGENT_API_KEY 有設定，先試
+            should_delegate = False
+            if not user_prefs.get('use_web_search', True):
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Skipped (use_web_search=False)")
+            elif not HERMES_AGENT_API_KEY:
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Skipped (HERMES_AGENT_API_KEY not set, would only use file-queue worker / ollama / offline)")
+            else:
+                should_delegate = self._should_delegate_to_hermes(user_message)
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Decision: {should_delegate}")
+                if should_delegate:
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Attempting cloud Hermes Agent ({HERMES_AGENT_API_URL})...")
+                    cloud_reply = self._try_hermes_agent_api(user_message, full_system, chat_history)
+                    if cloud_reply:
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=hermes_agent_api, reply_len={len(cloud_reply)})")
+                        self.send_json({'reply': cloud_reply, 'source': 'hermes_agent_api'})
+                        return
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | No reply from cloud, falling through to file-queue worker")
+
+            # ─── 第二層：File-queue worker (hermes_worker.py: DuckDuckGo + Ollama) ───
+            if should_delegate and HERMES_ENABLED:
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Starting delegation via file queue...")
                 hermes_reply = self._delegate_to_hermes(user_message, full_system, chat_history)
                 if hermes_reply:
-                    print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=hermes, reply_len={len(hermes_reply)})")
-                    self.send_json({'reply': hermes_reply, 'source': 'hermes'})
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=hermes_worker, reply_len={len(hermes_reply)})")
+                    self.send_json({'reply': hermes_reply, 'source': 'hermes_worker'})
                     return
 
-            # 嘗試使用 Ollama Cloud API（若電路熔斷則跳過）
-            circuit_open = (_ollama_consecutive_failures >= _ollama_circuit_open_after)
+            # ─── 第三層：直接打 Ollama ───
+            circuit_open = _ollama_breaker.is_open()
             if circuit_open:
-                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Circuit open (failures={_ollama_consecutive_failures}), skipping Ollama")
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Circuit open (failures={_ollama_breaker.get_failures()}), skipping Ollama")
             try:
                 if not circuit_open:
-                    print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Calling Ollama API...")
-                    ollama_reply = self._call_ollama_api(full_system, user_message, chat_history)
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Calling Ollama API...")
+                    # 根據速度/準確度偏好調整模型參數 (speed=0-100)
+                    speed_pref = user_prefs.get('speed', 50)
+                    temp = 0.7
+                    max_tokens = 800
+                    if speed_pref > 70:
+                        temp = 0.8
+                        max_tokens = 400 # 較短回覆更快
+                    elif speed_pref < 30:
+                        temp = 0.3 # 較準確
+                        max_tokens = 1200
+
+                    ollama_reply = self._call_ollama_api(full_system, user_message, chat_history, temperature=temp, max_tokens=max_tokens)
                     if ollama_reply:
-                        _ollama_consecutive_failures = 0  # reset on success
-                        print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Response received (reply_len={len(ollama_reply)}): {ollama_reply[:100]}{'...' if len(ollama_reply) > 100 else ''}")
-                        print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=ollama)")
+                        _ollama_breaker.record_success()
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Response received (reply_len={len(ollama_reply)}): {ollama_reply[:100]}{'...' if len(ollama_reply) > 100 else ''}")
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=ollama)")
                         self.send_json({'reply': ollama_reply, 'source': 'ollama'})
                         return
             except Exception as e:
-                _ollama_consecutive_failures += 1
-                print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Error: {e} (failures={_ollama_consecutive_failures})")
-                if _ollama_consecutive_failures >= _ollama_circuit_open_after:
-                    print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Circuit OPENED — next requests skip Ollama")
+                failures = _ollama_breaker.record_failure()
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Error: {e} (failures={failures})")
+                if failures >= 3 and failures == 3:
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Circuit OPENED — next requests skip Ollama")
 
             # 回退到離線知識庫
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | offline_kb | Falling back to offline knowledge base...")
-            offline_reply = self._generate_offline_reply(user_message)
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=offline)")
-            self.send_json({'reply': offline_reply, 'source': 'offline'})
+            use_offline_fallback = user_prefs.get('use_offline_fallback', True)
+            if use_offline_fallback:
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | offline_kb | Falling back to offline knowledge base...")
+                offline_reply = self._generate_offline_reply(user_message)
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=offline)")
+                self.send_json({'reply': offline_reply, 'source': 'offline'})
+            else:
+                self.send_json({'reply': '抱歉，系統暫時未能連接 AI 伺服器，且離線回退功能已被停用。', 'error': True})
 
         except Exception as e:
             self.send_json({'reply': f'系統錯誤：{str(e)}', 'error': True})
@@ -448,6 +666,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             data = json.loads(body)
             action = data.get('action', '')
             params = data.get('params', {})
+            _safe_print(f"[EXECUTE] action={action} params={json.dumps(params, ensure_ascii=False)}")
 
             # 白名單驗證
             ALLOWED_ACTIONS = {
@@ -460,10 +679,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'add_marker': {'lat': float, 'lng': float, 'title': str, 'color': str, 'popup': str, 'pulse': bool},
                 'add_polygon': {'name': str, 'color': str, 'coords': list},
                 'clear_search_markers': {},
-                'add_to_list': {'name': str, 'lat': float, 'lng': float, 'category': str, 'description': str, 'color': str},
+                'add_to_list': {'name': str, 'lat': float, 'lng': float, 'address': str, 'category': str, 'description': str, 'color': str},
             }
 
             if action not in ALLOWED_ACTIONS:
+                _safe_print(f"[EXECUTE] rejected unknown action={action}")
                 self.send_json({'success': False, 'error': f'Unknown action: {action}'}, status=400)
                 return
 
@@ -474,21 +694,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     try:
                         params[key] = expected_type(params[key])
                     except (ValueError, TypeError):
+                        _safe_print(f"[EXECUTE] invalid param type action={action} key={key} value={params.get(key)} expected={expected_type}")
                         self.send_json({'success': False, 'error': f'Invalid type for {key}'}, status=400)
                         return
 
+            _safe_print(f"[EXECUTE] accepted action={action}")
             self.send_json({'success': True, 'action': action, 'params': params})
 
         except json.JSONDecodeError:
+            _safe_print("[EXECUTE] invalid JSON payload")
             self.send_json({'success': False, 'error': 'Invalid JSON'}, status=400)
         except Exception as e:
+            _safe_print(f"[EXECUTE] unexpected error: {e}")
             self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def _should_delegate_to_hermes(self, user_message):
         """決定是否應該將查詢委託給 Hermes Agent"""
         if not HERMES_ENABLED:
             return False
-        print(f"[CHAT LOG] should_delegate | hermes_enabled={HERMES_ENABLED}, checking: {user_message[:50]}")
+        _safe_print(f"[CHAT LOG] should_delegate | hermes_enabled={HERMES_ENABLED}, checking: {user_message[:50]}")
 
         # 複雜查詢的關鍵字，表明可能需要工具使用
         complex_indicators = [
@@ -533,8 +757,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             import uuid
             task_id = str(uuid.uuid4())
             
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Task created: task_id={task_id}")
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | user_message: {user_message[:80]}{'...' if len(user_message) > 80 else ''}")
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Task created: task_id={task_id}")
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | user_message: {user_message[:80]}{'...' if len(user_message) > 80 else ''}")
             
             # 創建任務請求文件
             task_request = {
@@ -550,7 +774,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             with open(request_file, 'w', encoding='utf-8') as f:
                 json.dump(task_request, f, ensure_ascii=False, indent=2)
             
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Waiting for response (timeout={HERMES_TIMEOUT}s)...")
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Waiting for response (timeout={HERMES_TIMEOUT}s)...")
             
             # 等待響應（帶超時）
             start_time = time.time()
@@ -562,31 +786,77 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         with open(response_file, 'r', encoding='utf-8') as f:
                             response_data = json.load(f)
                         reply = response_data.get('reply', '')
-                        print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Response received (reply_len={len(reply)})")
-                        # 清理任務文件（忽略文件不存在錯誤）
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Response received (reply_len={len(reply)})")
+                        # 清理任務文件（忽略文件不存在錯誤，避免 race with worker）
                         try:
                             if os.path.exists(request_file):
                                 os.remove(request_file)
-                            os.remove(response_file)
+                            if os.path.exists(response_file):
+                                os.remove(response_file)
                         except FileNotFoundError:
                             pass  # Worker 可能已經刪除咗
                         return reply
                     except Exception as e:
-                        print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Error reading response: {e}")
-                time.sleep(0.5)  # 每500ms檢查一次
-            
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Error reading response: {e}")
+                time.sleep(1.0)  # 每1s檢查一次 (worker poll interval 係5s, 0.5s冇實際好處)
+
             # 超時
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Timeout after {HERMES_TIMEOUT}s")
-            # 清理請求文件
-            if os.path.exists(request_file):
-                os.remove(request_file)
-            return None
-            
-        except Exception as e:
-            print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Delegation failed: {e}")
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Timeout after {HERMES_TIMEOUT}s")
+            # 清理請求文件 (idempotent: 用 exists() 避免 race)
+            try:
+                if os.path.exists(request_file):
+                    os.remove(request_file)
+            except FileNotFoundError:
+                pass
             return None
 
-    def _call_ollama_api(self, system_prompt, user_message, history=None):
+        except Exception as e:
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Delegation failed: {e}")
+            return None
+
+    def _try_hermes_agent_api(self, user_message, system_prompt, history=None):
+        """第一層：直接 call api-hermes.apihubs.dev (cloud Hermes Agent)。
+
+        Returns:
+            str: reply text 成功時，None 失敗 / 冇 key / timeout
+        """
+        if not HERMES_AGENT_API_KEY:
+            return None
+
+        try:
+            # Lazy import — 避免 import time 影響 server 啟動
+            from hermes_agent_client import HermesAgentClient
+        except Exception as e:
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Failed to import HermesAgentClient: {e}")
+            return None
+
+        # Build messages for cloud call
+        messages = []
+        if history:
+            for m in history:
+                if m.get('role') in ('user', 'assistant', 'system'):
+                    messages.append({'role': m['role'], 'content': m.get('content', '')})
+        messages.append({'role': 'user', 'content': user_message})
+
+        client = HermesAgentClient(api_key=HERMES_AGENT_API_KEY, api_url=HERMES_AGENT_API_URL)
+        try:
+            result = client.chat(system_prompt, user_message, chat_history=messages[:-1], force_mode='hermes')
+        except Exception as e:
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Exception: {e}")
+            return None
+
+        if not result or not result.get('success'):
+            err = (result or {}).get('error') or 'unknown'
+            _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Failed: {err}")
+            return None
+
+        reply = result.get('reply', '').strip()
+        if not reply:
+            return None
+        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Success (source={result.get('source')}, reply_len={len(reply)})")
+        return reply
+
+    def _call_ollama_api(self, system_prompt, user_message, history=None, temperature=0.7, max_tokens=800):
         """調用 Ollama Cloud API"""
         # 構建訊息列表，加入對話歷史
         messages = [{"role": "system", "content": system_prompt}]
@@ -603,8 +873,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "model": MODEL,
             "messages": messages,
             "stream": False,
-            "temperature": 0.7,
-            "max_tokens": 800
+            "temperature": temperature,
+            "max_tokens": max_tokens
         }
 
         req = urllib.request.Request(
@@ -618,7 +888,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         # 使用 custom opener with SSL context
         opener = create_urllib_opener()
-        with opener.open(req, timeout=120) as resp:
+        with opener.open(req, timeout=30) as resp:
             result = json.loads(resp.read().decode('utf-8'))
             return result.get('choices', [{}])[0].get('message', {}).get('content', 'AI 暫時未能回應，請稍後再試。')
 
@@ -727,9 +997,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         lat = dms_to_decimal(gps_info['GPSLatitude'], gps_info.get('GPSLatitudeRef', 'N'))
                         lng = dms_to_decimal(gps_info['GPSLongitude'], gps_info.get('GPSLongitudeRef', 'E'))
                         exif_gps = {'lat': lat, 'lng': lng}
-                        print(f"[Image] EXIF GPS found: {lat}, {lng}")
+                        _safe_print(f"[Image] EXIF GPS found: {lat}, {lng}")
             except Exception as exif_err:
-                print(f"[Image] EXIF extraction skipped: {exif_err}")
+                _safe_print(f"[Image] EXIF extraction skipped: {exif_err}")
             # =========================================================================
             
             # =========================================================================
@@ -813,11 +1083,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 opener = create_urllib_opener()
                 with opener.open(req, timeout=30) as resp:
                     raw_body = resp.read().decode('utf-8')
-                    print(f"[Image] API raw response (first 300 chars): {raw_body[:300]}")
+                    _safe_print(f"[Image] API raw response (first 300 chars): {raw_body[:300]}")
                     result = json.loads(raw_body)
                 
                 ai_reply = result.get('choices', [{}])[0].get('message', {}).get('content', '')
-                print(f"[Image] AI reply (first 200 chars): {ai_reply[:200]}")
+                _safe_print(f"[Image] AI reply (first 200 chars): {ai_reply[:200]}")
                 
                 if not ai_reply or not ai_reply.strip():
                     raise ValueError(f'AI 返回空白回覆。Raw: {raw_body[:200]}')
@@ -855,7 +1125,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     if exif_gps:
                         analysis['lat'] = exif_gps['lat']
                         analysis['lng'] = exif_gps['lng']
-                        print(f"[Image] Using EXIF GPS as fallback: {exif_gps['lat']}, {exif_gps['lng']}")
+                        _safe_print(f"[Image] Using EXIF GPS as fallback: {exif_gps['lat']}, {exif_gps['lng']}")
                     else:
                         raise ValueError('AI 回覆缺少坐標')
                 
@@ -883,7 +1153,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 })
                 
             except Exception as vision_error:
-                print(f"[Image] Vision analysis failed: {type(vision_error).__name__}: {vision_error}")
+                _safe_print(f"[Image] Vision analysis failed: {type(vision_error).__name__}: {vision_error}")
                 
                 # =====================================================================
                 # Fallback: if vision fails but we have EXIF GPS, return the GPS location
@@ -971,7 +1241,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 
         except Exception as e:
             import traceback
-            print(f"[Image] FATAL: {traceback.format_exc()}")
+            _safe_print(f"[Image] FATAL: {traceback.format_exc()}")
             self.send_json({'error': f'處理圖片時出錯：{str(e)}'}, status=500)
 
     def handle_location_search(self):
@@ -1004,7 +1274,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if query_type not in valid_types:
                 query_type = 'all'
             
-            print(f"[handle_location_search] lat={lat}, lng={lng}, type={query_type}")
+            _safe_print(f"[handle_location_search] lat={lat}, lng={lng}, type={query_type}")
             
             # 檢查搜索模組是否已加載
             if search_location is None:
@@ -1032,7 +1302,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'data': None
             }, status=400)
         except Exception as e:
-            print(f"[handle_location_search] Error: {e}")
+            _safe_print(f"[handle_location_search] Error: {e}")
             self.send_json({
                 'success': False,
                 'error': str(e),
@@ -1053,14 +1323,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')
-            print(f"Transit request body: {body}")
+            _safe_print(f"Transit request body: {body}")
             data = json.loads(body)
             
             lat = data.get('lat')
             lng = data.get('lng')
             transit_type = data.get('type', 'bus')
             
-            print(f"Transit type: {transit_type}, lat: {lat}, lng: {lng}")
+            _safe_print(f"Transit type: {transit_type}, lat: {lat}, lng: {lng}")
             
             if not lat or not lng:
                 self.send_json({'success': False, 'error': '缺少經緯度'}, status=400)
@@ -1082,7 +1352,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             
         except Exception as e:
             import traceback
-            print(f"Transit handle error: {traceback.format_exc()}")
+            _safe_print(f"Transit handle error: {traceback.format_exc()}")
             self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def handle_google_places(self):
@@ -1100,7 +1370,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             lng = data.get('lng')
             radius = data.get('radius', 500)
             
-            print(f"Google Places request: lat={lat}, lng={lng}, radius={radius}")
+            _safe_print(f"Google Places request: lat={lat}, lng={lng}, radius={radius}")
             
             if lat is None or lng is None:
                 self.send_json({'success': False, 'error': '缺少經緯度參數 (lat, lng)'}, status=400)
@@ -1124,7 +1394,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 
         except Exception as e:
             import traceback
-            print(f"Google Places handle error: {traceback.format_exc()}")
+            _safe_print(f"Google Places handle error: {traceback.format_exc()}")
             self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def _get_demo_transit_data(self, lat, lng, transit_type):
@@ -1202,7 +1472,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     'tips': self._get_transit_tips(transit_type)
                 }
         except Exception as e:
-            print(f"ODsay API Error: {e}")
+            _safe_print(f"ODsay API Error: {e}")
             return {'error': f'無法獲取交通資訊: {str(e)}', 'stations': []}
 
     def _fetch_odsay_bus_arrivals(self, station_id):
@@ -1296,7 +1566,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     
     def handle_sync_locations(self):
         """同步地點列表到伺服器"""
-        print(f"DEBUG: handle_sync_locations called")
+        _safe_print(f"DEBUG: handle_sync_locations called")
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')
@@ -1311,7 +1581,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             for loc in new_locations:
                 # 必填字段檢查
                 if not all(k in loc for k in ('id', 'name', 'lat', 'lng')):
-                    print(f"DEBUG: Skipping invalid location (missing fields): {loc.get('name', 'Unknown')}")
+                    _safe_print(f"DEBUG: Skipping invalid location (missing fields): {loc.get('name', 'Unknown')}")
                     continue
                 
                 # 類型與數值範圍檢查
@@ -1321,7 +1591,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     # 簡單範圍檢查 (首爾大致範圍: 37.4~37.7, 126.7~127.2)
                     # 放寬一點以兼容周邊地區
                     if not (30 < lat < 45 and 120 < lng < 135):
-                        print(f"DEBUG: Skipping invalid location (out of range): {loc['name']} ({lat}, {lng})")
+                        _safe_print(f"DEBUG: Skipping invalid location (out of range): {loc['name']} ({lat}, {lng})")
                         continue
                     
                     # 確保類型正確
@@ -1332,6 +1602,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         'lng': lng,
                         'category': str(loc.get('category', '地標觀景')),
                         'description': str(loc.get('description', '')),
+                        'address': str(loc.get('address', '')),
                         'price': str(loc.get('price', '')),
                         'addedAt': int(loc.get('addedAt', time.time() * 1000)),
                         'updatedAt': int(loc.get('updatedAt', time.time() * 1000)),
@@ -1344,7 +1615,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     }
                     validated_locations.append(validated_loc)
                 except (ValueError, TypeError):
-                    print(f"DEBUG: Skipping invalid location (type error): {loc.get('name', 'Unknown')}")
+                    _safe_print(f"DEBUG: Skipping invalid location (type error): {loc.get('name', 'Unknown')}")
                     continue
 
             with file_lock:
@@ -1377,12 +1648,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             if new_ts > old_ts:
                                 shared_data[idx] = loc
                                 changed = True
-                                print(f"DEBUG: Updating {loc['name']} ({loc['id']}): {old_ts} -> {new_ts}")
+                                _safe_print(f"DEBUG: Updating {loc['name']} ({loc['id']}): {old_ts} -> {new_ts}")
                         except (ValueError, TypeError):
                             # 如果舊數據損壞，直接覆蓋
                             shared_data[idx] = loc
                             changed = True
-                            print(f"DEBUG: Overwriting corrupted/old data for {loc['name']}")
+                            _safe_print(f"DEBUG: Overwriting corrupted/old data for {loc['name']}")
                 
                 if changed:
                     # 原子寫入
@@ -1390,11 +1661,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     with open(temp_file, 'w', encoding='utf-8') as f:
                         json.dump(shared_data, f, ensure_ascii=False, indent=2)
                     os.replace(temp_file, SHARED_LOCATIONS_FILE)
-                    print(f"DEBUG: Saved changes to {SHARED_LOCATIONS_FILE}")
+                    _safe_print(f"DEBUG: Saved changes to {SHARED_LOCATIONS_FILE}")
                 
             self.send_json({'success': True, 'count': len(shared_data), 'updated': changed})
         except Exception as e:
-            print(f"DEBUG: handle_sync_locations error: {e}")
+            _safe_print(f"DEBUG: handle_sync_locations error: {e}")
             self.send_json({'success': False, 'error': str(e)}, status=500)
 
     def handle_get_locations(self):
@@ -1447,7 +1718,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # Client disconnected gracefully
             pass
         except Exception as e:
-            print(f"DEBUG: handle_stream_locations error: {e}")
+            _safe_print(f"DEBUG: handle_stream_locations error: {e}")
 
     def send_json(self, data, status=200):
         """Send JSON response, gracefully handle broken pipes"""
@@ -1558,7 +1829,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         # 只打印到控制台，避免文件權限問題
-        print(format % args)
+        _safe_print(format % args)
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -1571,10 +1842,10 @@ if __name__ == '__main__':
         daemon_threads = True
 
     with ThreadingHTTPServer(("", PORT), Handler) as httpd:
-        print(f"🗺️  首爾旅遊地圖平台已啟動：http://localhost:{PORT}")
-        print(f"   按 Ctrl+C 停止伺服器")
+        _safe_print(f"🗺️  首爾旅遊地圖平台已啟動：http://localhost:{PORT}")
+        _safe_print(f"   按 Ctrl+C 停止伺服器")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("\n伺服器已停止")
+            _safe_print("\n伺服器已停止")
             sys.exit(0)

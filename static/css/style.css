@@ -213,6 +213,23 @@ body {
     margin-bottom: 4px;
 }
 
+.attraction-item .addr {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attraction-item .addr i {
+    color: #e74c3c;
+    font-size: 12px;
+}
+
 .attraction-item .desc {
     font-size: 12px;
     color: #777;
@@ -1604,18 +1621,30 @@ body {
 
 .modal-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 16px;
 }
 
 .modal-actions button {
-    flex: 1;
+    flex: 1 1 calc(50% - 10px);
+    min-width: 160px;
     padding: 10px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     font-size: 13px;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.modal-actions button:focus-visible {
+    outline: 3px solid rgba(102, 126, 234, 0.22);
+    outline-offset: 2px;
 }
 
 /* 釘選輸入框樣式 */
@@ -1664,10 +1693,38 @@ body {
     background: #3367D6;
 }
 
+.btn-note-modal {
+    background: #f39c12;
+    color: white;
+    flex-basis: 100%;
+}
+
+.btn-note-modal:hover {
+    background: #d68910;
+}
+
+.btn-delete-modal {
+    background: #fff5f5;
+    color: #e74c3c;
+    border: 2px solid #e74c3c;
+}
+
+.btn-delete-modal:hover {
+    background: #e74c3c;
+    color: white;
+}
+
 .btn-nearby {
     background: #f0f4ff;
     color: #667eea;
     border: 1px solid #667eea;
+}
+
+@media (max-width: 768px) {
+    .modal-actions button {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
 }
 
 /* ==================== 響應式設計 ==================== */
@@ -2298,6 +2355,24 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.mobile-attraction-card .card-addr {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.mobile-attraction-card .card-addr i {
+    color: #e74c3c;
+    font-size: 12px;
 }
 
 .mobile-attraction-card .card-arrow {
@@ -2857,6 +2932,93 @@ body {
     background: #f8f9fc;
     border-radius: 6px;
     border-left: 3px solid #667eea;
+}
+
+/* Range Slider Styles */
+.settings-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #e0e0e0;
+    outline: none;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.settings-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.settings-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.slider-value {
+    float: right;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* Toggle Switch Styles */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 24px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider.round {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider.round {
+  background-color: var(--primary-color);
+}
+
+input:focus + .slider.round {
+  box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked + .slider.round:before {
+  -webkit-transform: translateX(22px);
+  -ms-transform: translateX(22px);
+  transform: translateX(22px);
 }
 
 .settings-actions {
