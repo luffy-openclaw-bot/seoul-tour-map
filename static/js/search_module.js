@@ -552,7 +552,7 @@ function initLocationSearch() {
         map.off('contextmenu');
 
         if (isMobile) {
-            // 手機版：使用 contextmenu (對應長按) 觸發
+            // 手機版：只使用 contextmenu (長按) 觸發
             map.on('contextmenu', window.onMapClick);
             console.log('[Search Module] Mobile mode: use long press for search menu');
         } else {
@@ -566,10 +566,17 @@ function initLocationSearch() {
     console.log('[Search Module] Location search initialized');
 }
 
-// 在 DOM 加載完成後初始化
+// 等待 map 對象初始化
+function waitForMapAndInit() {
+    if (typeof map !== 'undefined') {
+        initLocationSearch();
+    } else {
+        setTimeout(waitForMapAndInit, 100);
+    }
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initLocationSearch);
+    document.addEventListener('DOMContentLoaded', waitForMapAndInit);
 } else {
-    // DOM 已加載，延遲初始化等待 map 對象存在
-    setTimeout(initLocationSearch, 1000);
+    waitForMapAndInit();
 }
