@@ -1594,7 +1594,12 @@ function getFilteredAttractions(category) {
         }
         
         // 預設: 最近新增 (recent)
-        const getTimestamp = (item) => item.updatedAt || item.addedAt || 0;
+        const getTimestamp = (item) => {
+            const ts = item.updatedAt || item.addedAt;
+            if (ts === undefined || ts === null) return -Infinity;
+            const numTs = Number(ts);
+            return isNaN(numTs) ? -Infinity : numTs;
+        };
         return getTimestamp(b) - getTimestamp(a); // descending order
     });
 
@@ -5470,8 +5475,14 @@ const WishlistManager = {
                 return a.nameMatch ? -1 : 1;
             }
             if (a.dist !== b.dist) return a.dist - b.dist;
-            const atime = a.item.updatedAt || a.item.addedAt || 0;
-            const btime = b.item.updatedAt || b.item.addedAt || 0;
+            const getTimestamp = (item) => {
+                const ts = item.updatedAt || item.addedAt;
+                if (ts === undefined || ts === null) return -Infinity;
+                const numTs = Number(ts);
+                return isNaN(numTs) ? -Infinity : numTs;
+            };
+            const atime = getTimestamp(a.item);
+            const btime = getTimestamp(b.item);
             if (atime !== btime) return btime - atime;
             return String(a.item.id || '').localeCompare(String(b.item.id || ''));
         });
@@ -5637,8 +5648,14 @@ const WishlistManager = {
                 changed = true;
             } else {
                 const localItem = localMap.get(remoteItem.id);
-                const remoteTime = remoteItem.updatedAt || remoteItem.addedAt || 0;
-                const localTime = localItem.updatedAt || localItem.addedAt || 0;
+                const getTimestamp = (item) => {
+                    const ts = item.updatedAt || item.addedAt;
+                    if (ts === undefined || ts === null) return -Infinity;
+                    const numTs = Number(ts);
+                    return isNaN(numTs) ? -Infinity : numTs;
+                };
+                const remoteTime = getTimestamp(remoteItem);
+                const localTime = getTimestamp(localItem);
 
                 if (remoteTime > localTime) {
                     merged.push(remoteItem);
