@@ -8,10 +8,6 @@ Location Search Module - 經緯度實時周邊搜索模組
 3. AI 結果分析 (Ollama Cloud)
 """
 
-# Load .env file before any other imports that read env vars
-from dotenv import load_dotenv
-load_dotenv()
-
 import json
 import urllib.request
 import urllib.parse
@@ -23,6 +19,23 @@ import uuid
 import subprocess
 import math
 from typing import Dict, List, Optional, Tuple
+from dotenv import load_dotenv
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _load_project_env():
+    """Load repo .env first, then .env.local overrides for local debugging."""
+    env_path = os.path.join(BASE_DIR, '.env')
+    env_local_path = os.path.join(BASE_DIR, '.env.local')
+    if os.path.exists(env_path):
+        load_dotenv(env_path)
+    if os.path.exists(env_local_path):
+        load_dotenv(env_local_path, override=True)
+
+
+_load_project_env()
 from dataclasses import dataclass, asdict
 
 # SSL context 不驗證 cert

@@ -4,10 +4,6 @@ Hermes worker for Seoul Tour Map.
 Processes tasks from the task queue with web search capability.
 """
 
-# Load .env file before any other imports that read env vars
-from dotenv import load_dotenv
-load_dotenv()
-
 import os
 import json
 import time
@@ -17,9 +13,25 @@ import urllib.parse
 import ssl
 import re
 from datetime import datetime
+from dotenv import load_dotenv
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _load_project_env():
+    """Load repo .env first, then .env.local overrides for local debugging."""
+    env_path = os.path.join(BASE_DIR, '.env')
+    env_local_path = os.path.join(BASE_DIR, '.env.local')
+    if os.path.exists(env_path):
+        load_dotenv(env_path)
+    if os.path.exists(env_local_path):
+        load_dotenv(env_local_path, override=True)
+
+
+_load_project_env()
 
 # Configuration
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HERMES_TASK_DIR = os.getenv('HERMES_TASK_DIR', os.path.join(BASE_DIR, '.hermes_tasks'))
 OLLAMA_API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')

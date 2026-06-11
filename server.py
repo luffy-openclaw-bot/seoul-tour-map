@@ -4,13 +4,6 @@
 提供靜態文件服務 + AI 聊天 API
 """
 
-# Load .env file before any other imports that read env vars
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    _safe_print("python-dotenv not found, skipping .env load")
-
 import http.server
 import socketserver
 import json
@@ -22,6 +15,7 @@ import time
 import glob
 import xml.etree.ElementTree as ET
 import threading
+from dotenv import load_dotenv
 
 # Ollama consecutive failure counter (circuit breaker) — thread-safe wrapper
 class _CircuitBreaker:
@@ -87,6 +81,24 @@ def _safe_print(*args, **kwargs):
 # 使用絕對路徑
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _safe_print(f"DEBUG: BASE_DIR={BASE_DIR}")
+
+
+def _load_project_env():
+    """Load repo .env first, then .env.local overrides for local debugging."""
+    loaded = []
+    env_path = os.path.join(BASE_DIR, '.env')
+    env_local_path = os.path.join(BASE_DIR, '.env.local')
+    if os.path.exists(env_path):
+        load_dotenv(env_path)
+        loaded.append('.env')
+    if os.path.exists(env_local_path):
+        load_dotenv(env_local_path, override=True)
+        loaded.append('.env.local')
+    return loaded
+
+
+LOADED_ENV_FILES = _load_project_env()
+_safe_print(f"DEBUG: dotenv loaded files={LOADED_ENV_FILES}")
 SHARED_LOCATIONS_FILE = os.path.join(BASE_DIR, 'shared_locations.json')
 USER_PROFILES_DIR = os.path.join(BASE_DIR, 'user_profiles')
 file_lock = threading.Lock()
@@ -132,9 +144,15 @@ _safe_print(f"DEBUG: HERMES_TIMEOUT={HERMES_TIMEOUT}s")
 # 如果 key 冇設定，server.py 會 skip 個 endpoint 直接落 worker / ollama / offline
 HERMES_AGENT_API_KEY = os.getenv('HERMES_AGENT_API_KEY', '')
 HERMES_AGENT_API_URL = os.getenv('HERMES_AGENT_API_URL', 'https://api-hermes.apihubs.dev/v1')
+HERMES_AGENT_MODEL = os.getenv('HERMES_AGENT_MODEL', 'glm-5.1')
+HERMES_AGENT_AUTH_MODE = os.getenv('HERMES_AGENT_AUTH_MODE', 'bearer')
+HERMES_AGENT_AUTH_HEADER = os.getenv('HERMES_AGENT_AUTH_HEADER', '')
 HERMES_AGENT_TIMEOUT = int(os.getenv('HERMES_AGENT_TIMEOUT', '10'))
 _safe_print(f"DEBUG: HERMES_AGENT_API_KEY configured: {bool(HERMES_AGENT_API_KEY)}")
 _safe_print(f"DEBUG: HERMES_AGENT_API_URL={HERMES_AGENT_API_URL}")
+_safe_print(f"DEBUG: HERMES_AGENT_MODEL={HERMES_AGENT_MODEL}")
+_safe_print(f"DEBUG: HERMES_AGENT_AUTH_MODE={HERMES_AGENT_AUTH_MODE}")
+_safe_print(f"DEBUG: HERMES_AGENT_AUTH_HEADER={HERMES_AGENT_AUTH_HEADER or 'default'}")
 _safe_print(f"DEBUG: HERMES_AGENT_TIMEOUT={HERMES_AGENT_TIMEOUT}s")
 
 try:
@@ -493,11 +511,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # Try cloud API if should_delegate and key is set
             if should_delegate and HERMES_AGENT_API_KEY:
                 _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | Trying Hermes Cloud API...")
-                cloud_reply = self._try_hermes_agent_api(user_message, full_system, chat_history)
-                if cloud_reply:
-                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ✅ Using Hermes Cloud API")
-                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=hermes_agent_api, reply_len={len(cloud_reply)})")
-                    self.send_json({'reply': cloud_reply, 'source': 'hermes_agent_api'})
+                cloud_result = self._try_hermes_agent_api(user_message, full_system, chat_history)
+                if cloud_result and cloud_result.get('reply'):
+                    result_source = cloud_result.get('source', 'hermes_agent_api')
+                    if result_source == 'hermes_agent':
+                        api_source = 'hermes_agent_api'
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ✅ Using Hermes Cloud API")
+                    elif result_source == 'ollama_fallback':
+                        api_source = 'ollama_fallback'
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ⚠️ Hermes Cloud failed auth/transport; using Ollama fallback from Hermes client")
+                    else:
+                        api_source = result_source
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ⚠️ Hermes path returned unexpected source={result_source}")
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source={api_source}, reply_len={len(cloud_result['reply'])})")
+                    self.send_json({'reply': cloud_result['reply'], 'source': api_source})
                     return
                 _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ❌ Hermes Cloud failed, falling through to worker")
 
@@ -739,6 +766,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return False
         _safe_print(f"[CHAT LOG] should_delegate | hermes_enabled={HERMES_ENABLED}, checking: {user_message[:50]}")
 
+        message_lower = user_message.lower()
+        # Allow explicit "Hermes" mentions to force the Hermes path during manual testing.
+        if 'hermes' in message_lower:
+            return True
+
         # 複雜查詢的關鍵字，表明可能需要工具使用
         complex_indicators = [
             # 需要實時資訊
@@ -772,7 +804,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             'all the places', 'everything', 'everywhere'
         ]
 
-        message_lower = user_message.lower()
         return any(indicator in message_lower for indicator in complex_indicators)
 
     def _delegate_to_hermes(self, user_message, system_prompt, history=None):
@@ -843,7 +874,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """第一層：直接 call api-hermes.apihubs.dev (cloud Hermes Agent)。
 
         Returns:
-            str: reply text 成功時，None 失敗 / 冇 key / timeout
+            dict: {reply, source, error} on success, None on failure / no key / timeout
         """
         if not HERMES_AGENT_API_KEY:
             return None
@@ -882,8 +913,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if 'Error code:' in reply and 'error' in reply.lower():
             _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Error in reply body, discarding: {reply[:200]}")
             return None
-        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Success (source={result.get('source')}, reply_len={len(reply)})")
-        return reply
+        source = result.get('source', 'unknown')
+        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Success (source={source}, reply_len={len(reply)})")
+        return {
+            'reply': reply,
+            'source': source,
+            'error': result.get('error')
+        }
 
     def _call_ollama_api(self, system_prompt, user_message, history=None, temperature=0.7, max_tokens=800):
         """調用 Ollama Cloud API"""

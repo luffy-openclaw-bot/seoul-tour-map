@@ -25,20 +25,40 @@ Supports fallback to Ollama Cloud API when Hermes Agent is unavailable.
 ================================================================================
 """
 
-# Load .env file before any other imports that read env vars
-from dotenv import load_dotenv
-load_dotenv()
-
 import os
 import json
 import urllib.request
 import urllib.error
 import ssl
 from datetime import datetime
+from dotenv import load_dotenv
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _load_project_env():
+    """Load repo .env first, then .env.local overrides for local debugging."""
+    loaded = []
+    env_path = os.path.join(BASE_DIR, '.env')
+    env_local_path = os.path.join(BASE_DIR, '.env.local')
+    if os.path.exists(env_path):
+        load_dotenv(env_path)
+        loaded.append('.env')
+    if os.path.exists(env_local_path):
+        load_dotenv(env_local_path, override=True)
+        loaded.append('.env.local')
+    return loaded
+
+
+LOADED_ENV_FILES = _load_project_env()
 
 # Configuration
 HERMES_AGENT_API_KEY = os.getenv('HERMES_AGENT_API_KEY', '')
 HERMES_AGENT_API_URL = os.getenv('HERMES_AGENT_API_URL', 'https://api-hermes.apihubs.dev/v1')
+HERMES_AGENT_MODEL = os.getenv('HERMES_AGENT_MODEL', 'glm-5.1')
+HERMES_AGENT_AUTH_MODE = os.getenv('HERMES_AGENT_AUTH_MODE', 'bearer').strip().lower()
+HERMES_AGENT_AUTH_HEADER = os.getenv('HERMES_AGENT_AUTH_HEADER', '').strip()
 OLLAMA_API_BASE = os.getenv('OLLAMA_API_BASE', 'https://ollama.com/v1')
 OLLAMA_API_KEY = os.getenv('OLLAMA_API_KEY', '')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'gemma4:31b-cloud')
@@ -51,9 +71,12 @@ ssl_context.verify_mode = ssl.CERT_NONE
 class HermesAgentClient:
     """Client for interacting with Hermes Agent API with fallback support."""
     
-    def __init__(self, api_key=None, api_url=None):
+    def __init__(self, api_key=None, api_url=None, model=None, auth_mode=None, auth_header=None):
         self.api_key = api_key or HERMES_AGENT_API_KEY
         self.api_url = api_url or HERMES_AGENT_API_URL
+        self.model = model or HERMES_AGENT_MODEL
+        self.auth_mode = (auth_mode or HERMES_AGENT_AUTH_MODE or 'bearer').strip().lower()
+        self.auth_header = (auth_header or HERMES_AGENT_AUTH_HEADER or '').strip()
         self.use_hermes = bool(self.api_key)
         self.last_error = None
         
@@ -83,6 +106,37 @@ class HermesAgentClient:
         
         # Use Hermes if API key exists AND query is complex
         return self.use_hermes and is_complex
+
+    def _resolve_auth_header_name(self):
+        if self.auth_header:
+            return self.auth_header
+        if self.auth_mode == 'x-api-key':
+            return 'X-API-Key'
+        return 'Authorization'
+
+    def _resolve_auth_header_value(self):
+        if self.auth_mode == 'raw':
+            return self.api_key
+        if self.auth_mode == 'x-api-key':
+            return self.api_key
+        return f'Bearer {self.api_key}'
+
+    def _build_hermes_headers(self):
+        headers = {
+            'Content-Type': 'application/json',
+            'User-Agent': 'HermesWorker/1.0',
+            'Accept': 'application/json'
+        }
+        if self.api_key:
+            headers[self._resolve_auth_header_name()] = self._resolve_auth_header_value()
+        return headers
+
+    def _masked_key_hint(self):
+        if not self.api_key:
+            return 'missing'
+        if len(self.api_key) <= 8:
+            return 'present(len<=8)'
+        return f"{self.api_key[:4]}...{self.api_key[-4:]} (len={len(self.api_key)})"
     
     def call_hermes_agent(self, system_prompt, messages, tools=None):
         """
@@ -93,9 +147,9 @@ class HermesAgentClient:
             return False, "No API key configured", "error"
         
         endpoint = f"{self.api_url}/chat/completions"
-        
+
         payload = {
-            "model": "hermes-agent",
+            "model": self.model,
             "messages": messages,
             "stream": False
         }
@@ -103,15 +157,18 @@ class HermesAgentClient:
         if tools:
             payload["tools"] = tools
         
+        headers = self._build_hermes_headers()
+        print(
+            f"[{datetime.now()}] Hermes request auth config: "
+            f"url={endpoint}, loaded_env={','.join(LOADED_ENV_FILES) or 'none'}, "
+            f"header={self._resolve_auth_header_name()}, mode={self.auth_mode}, "
+            f"model={self.model}, key={self._masked_key_hint()}"
+        )
+
         req = urllib.request.Request(
             endpoint,
             data=json.dumps(payload).encode('utf-8'),
-            headers={
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.api_key}',
-                'User-Agent': 'HermesWorker/1.0',
-                'Accept': 'application/json'
-            }
+            headers=headers
         )
         
         try:
@@ -246,6 +303,8 @@ if __name__ == '__main__':
     print("Testing Hermes Agent Client...")
     print(f"Hermes API URL: {HERMES_AGENT_API_URL}")
     print(f"Hermes API Key configured: {'Yes' if HERMES_AGENT_API_KEY else 'No'}")
+    print(f"Hermes env files loaded: {LOADED_ENV_FILES}")
+    print(f"Hermes auth mode/header: {HERMES_AGENT_AUTH_MODE}/{HERMES_AGENT_AUTH_HEADER or 'default'}")
     print("-" * 50)
     
     # Quick connectivity test

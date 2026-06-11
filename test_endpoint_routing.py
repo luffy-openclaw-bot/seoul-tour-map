@@ -117,25 +117,21 @@ class TestTryHermesAgentApi(unittest.TestCase):
             h = Handler.__new__(Handler)
             self.assertIsNone(h._try_hermes_agent_api("hi", "system", []))
 
-    def test_routes_to_hermes_first_when_key_set(self):
-        """With key set, _try_hermes_agent_api should be the first call; if it
-        succeeds, _delegate_to_hermes/_call_ollama_api/_generate_offline_reply
-        must NOT be invoked."""
+    def test_returns_structured_hermes_success(self):
         from server import Handler
         h = Handler.__new__(Handler)
 
         with mock.patch("server.HERMES_AGENT_API_KEY", "fake-key-for-test"), \
-             mock.patch.object(Handler, "_try_hermes_agent_api",
-                               return_value="cloud reply") as m_hermes, \
-             mock.patch.object(Handler, "_delegate_to_hermes") as m_worker, \
-             mock.patch.object(Handler, "_call_ollama_api") as m_ollama, \
-             mock.patch.object(Handler, "_generate_offline_reply") as m_offline:
+             mock.patch("hermes_agent_client.HermesAgentClient.chat",
+                        return_value={
+                            "reply": "cloud reply",
+                            "source": "hermes_agent",
+                            "success": True,
+                            "error": None,
+                        }):
             result = h._try_hermes_agent_api("hi", "system", [])
-            self.assertEqual(result, "cloud reply")
-            m_hermes.assert_called_once()
-            m_worker.assert_not_called()
-            m_ollama.assert_not_called()
-            m_offline.assert_not_called()
+            self.assertEqual(result["reply"], "cloud reply")
+            self.assertEqual(result["source"], "hermes_agent")
 
     def test_falls_through_when_hermes_returns_none(self):
         """When the cloud call returns None, the layer-1 result is None; the
@@ -143,8 +139,24 @@ class TestTryHermesAgentApi(unittest.TestCase):
         from server import Handler
         h = Handler.__new__(Handler)
         with mock.patch("server.HERMES_AGENT_API_KEY", "fake-key"), \
-             mock.patch.object(Handler, "_try_hermes_agent_api", return_value=None):
+             mock.patch("hermes_agent_client.HermesAgentClient.chat",
+                        return_value={"success": False, "error": "401"}):
             self.assertIsNone(h._try_hermes_agent_api("hi", "system", []))
+
+    def test_preserves_ollama_fallback_source(self):
+        from server import Handler
+        h = Handler.__new__(Handler)
+        with mock.patch("server.HERMES_AGENT_API_KEY", "fake-key"), \
+             mock.patch("hermes_agent_client.HermesAgentClient.chat",
+                        return_value={
+                            "reply": "fallback reply",
+                            "source": "ollama_fallback",
+                            "success": True,
+                            "error": None,
+                        }):
+            result = h._try_hermes_agent_api("hi", "system", [])
+            self.assertEqual(result["reply"], "fallback reply")
+            self.assertEqual(result["source"], "ollama_fallback")
 
 
 class TestHermesAgentClientImport(unittest.TestCase):
@@ -158,6 +170,31 @@ class TestHermesAgentClientImport(unittest.TestCase):
     def test_hermes_agent_client_default_url(self):
         from hermes_agent_client import HERMES_AGENT_API_URL
         self.assertEqual(HERMES_AGENT_API_URL, "https://api-hermes.apihubs.dev/v1")
+
+
+class TestHermesAgentClientAuthHeaders(unittest.TestCase):
+    def test_default_bearer_auth_header(self):
+        from hermes_agent_client import HermesAgentClient
+        client = HermesAgentClient(api_key="secret-token", auth_mode="bearer")
+        headers = client._build_hermes_headers()
+        self.assertEqual(headers["Authorization"], "Bearer secret-token")
+
+    def test_x_api_key_auth_header(self):
+        from hermes_agent_client import HermesAgentClient
+        client = HermesAgentClient(api_key="secret-token", auth_mode="x-api-key")
+        headers = client._build_hermes_headers()
+        self.assertEqual(headers["X-API-Key"], "secret-token")
+        self.assertNotIn("Authorization", headers)
+
+    def test_raw_auth_with_custom_header(self):
+        from hermes_agent_client import HermesAgentClient
+        client = HermesAgentClient(
+            api_key="secret-token",
+            auth_mode="raw",
+            auth_header="Authentication",
+        )
+        headers = client._build_hermes_headers()
+        self.assertEqual(headers["Authentication"], "secret-token")
 
 
 if __name__ == "__main__":
