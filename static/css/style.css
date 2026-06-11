@@ -2850,6 +2850,9 @@ body {
 /* 景點列表搜尋框 */
 .panel-search-container, .mobile-panel-search-container {
     margin-bottom: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
 .search-input-wrapper {
@@ -2857,6 +2860,7 @@ body {
     width: 100%;
     display: flex;
     align-items: center;
+    flex: 1;
 }
 
 .search-input-wrapper input {

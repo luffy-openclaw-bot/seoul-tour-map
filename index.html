@@ -115,14 +115,8 @@
 
                 <!-- 景點列表 -->
                 <div class="panel">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="margin-bottom: 12px;">
                         <h3 style="margin-bottom: 0;"><i class="fas fa-list"></i> 景點列表</h3>
-                        <select id="desktop-sort-select" class="sort-select" aria-label="排序景點" style="padding: 4px; border-radius: 4px; border: 1px solid #ddd; background: white; font-size: 0.9em; outline: none;">
-                            <option value="recent">最近新增</option>
-                            <option value="name_asc">名稱 (A-Z)</option>
-                            <option value="name_desc">名稱 (Z-A)</option>
-                            <option value="distance">距離最近</option>
-                        </select>
                     </div>
                     <div class="panel-search-container">
                         <div class="search-input-wrapper">
@@ -131,6 +125,12 @@
                             <span id="desktop-search-loading" class="search-loading hidden"><i class="fas fa-spinner fa-spin"></i></span>
                             <button id="desktop-search-clear" class="search-clear hidden" title="清除搜尋"><i class="fas fa-times-circle"></i></button>
                         </div>
+                        <select id="desktop-sort-select" class="sort-select" aria-label="排序景點" style="padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; background: #f9f9f9; font-size: 14px; outline: none; cursor: pointer; flex-shrink: 0;">
+                            <option value="recent">最近新增</option>
+                            <option value="name_asc">名稱 (A-Z)</option>
+                            <option value="name_desc">名稱 (Z-A)</option>
+                            <option value="distance">距離最近</option>
+                        </select>
                     </div>
                     <div id="attraction-list" class="attraction-list">
                         <!-- 動態生成 -->
@@ -304,12 +304,6 @@
                     <span class="mobile-panel-title">📍 景點列表</span>
                     <span class="mobile-panel-count" id="mobile-panel-count"></span>
                 </div>
-                <select id="mobile-sort-select" class="sort-select" aria-label="排序景點" style="padding: 4px; border-radius: 4px; border: 1px solid #ddd; background: white; font-size: 0.9em; outline: none; margin-left: auto;">
-                    <option value="recent">最近新增</option>
-                    <option value="name_asc">名稱 (A-Z)</option>
-                    <option value="name_desc">名稱 (Z-A)</option>
-                    <option value="distance">距離最近</option>
-                </select>
             </div>
         </div>
         <div class="mobile-panel-tabs" id="mobile-panel-tabs">
@@ -332,6 +326,12 @@
                 <span id="mobile-search-loading" class="search-loading hidden"><i class="fas fa-spinner fa-spin"></i></span>
                 <button id="mobile-search-clear" class="search-clear hidden" title="清除搜尋"><i class="fas fa-times-circle"></i></button>
             </div>
+            <select id="mobile-sort-select" class="sort-select" aria-label="排序景點" style="padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; background: #f9f9f9; font-size: 14px; outline: none; cursor: pointer; flex-shrink: 0;">
+                <option value="recent">最近新增</option>
+                <option value="name_asc">名稱 (A-Z)</option>
+                <option value="name_desc">名稱 (Z-A)</option>
+                <option value="distance">距離最近</option>
+            </select>
         </div>
         <div class="mobile-panel-list" id="mobile-panel-list">
             <!-- 動態生成 -->
