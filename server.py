@@ -132,6 +132,12 @@ VISIT_KOREA_API_KEY = os.getenv('VISIT_KOREA_API_KEY', 'YOUR_VISIT_KOREA_KEY_HER
 SEOUL_DATA_API_KEY = os.getenv('SEOUL_DATA_API_KEY', 'YOUR_SEOUL_DATA_KEY_HERE')
 ODSAY_API_KEY = os.getenv('ODSAY_API_KEY', 'YOUR_ODSAY_KEY_HERE')
 
+# Radius Filter Defaults
+RADIUS_DEFAULT_VAL = os.getenv('RADIUS_DEFAULT_VAL', '5')
+RADIUS_DEFAULT_UNIT = os.getenv('RADIUS_DEFAULT_UNIT', 'km')
+RADIUS_DEFAULT_CENTER_LAT = os.getenv('RADIUS_DEFAULT_CENTER_LAT', '37.5665')
+RADIUS_DEFAULT_CENTER_LNG = os.getenv('RADIUS_DEFAULT_CENTER_LNG', '126.9780')
+
 # Hermes Agent 任務隊列設定
 HERMES_ENABLED = os.getenv('HERMES_ENABLED', 'false').lower() == 'true'
 _safe_print(f"DEBUG: HERMES_ENABLED={HERMES_ENABLED}")
@@ -189,6 +195,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         _safe_print(f"DEBUG: do_GET path='{self.path}' parsed_path='{parsed_path}'")
 
         # API 端點
+        if parsed_path == '/api/config':
+            self.handle_get_config()
+            return
         if parsed_path == '/api/health':
             self.handle_health_check()
             return
@@ -1801,6 +1810,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+
+    def handle_get_config(self):
+        """Return frontend configuration (radius defaults, etc.)"""
+        config = {
+            'radius': {
+                'default_val': RADIUS_DEFAULT_VAL,
+                'default_unit': RADIUS_DEFAULT_UNIT,
+                'default_center_lat': RADIUS_DEFAULT_CENTER_LAT,
+                'default_center_lng': RADIUS_DEFAULT_CENTER_LNG
+            }
+        }
+        self.send_json(config)
 
     def handle_health_check(self):
         """啟動時狀態檢查：檢查 AI backend 同 Hermes Worker 可達性"""
