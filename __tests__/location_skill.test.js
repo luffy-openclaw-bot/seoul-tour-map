@@ -104,7 +104,7 @@ describe('Location Skill Frontend Tests', () => {
 
         // Trigger action
         const result = await executeMapAction('locate_user_and_report', {});
-        expect(result).toBe(true);
+        expect(result.success).toBe(true);
         expect(mockGeolocation.getCurrentPosition).toHaveBeenCalled();
         
         // Let promises resolve

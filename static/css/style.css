@@ -947,10 +947,23 @@ body {
     display: flex !important;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease;
+}
+.leaflet-control-osrm a:hover,
+.leaflet-control-osrm a:focus {
+    background-color: #f4f4f4;
+    color: #000;
+    outline: 2px solid #667eea;
+    outline-offset: -2px;
 }
 .leaflet-control-osrm a.active {
     background-color: #e74c3c;
     color: #fff;
+}
+.leaflet-control-osrm a.active:hover,
+.leaflet-control-osrm a.active:focus {
+    background-color: #c0392b;
+    outline-color: #fff;
 }
 
 /* 範圍篩選面板 */

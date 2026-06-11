@@ -709,7 +709,9 @@ function initMap() {
             const a = L.DomUtil.create('a', '', container);
             a.href = '#';
             a.title = '步行路線規劃';
-            a.innerHTML = '<i class="fas fa-walking"></i>';
+            a.setAttribute('aria-label', '步行路線規劃');
+            a.setAttribute('role', 'button');
+            a.innerHTML = '<i class="fas fa-walking" aria-hidden="true"></i>';
             L.DomEvent.disableClickPropagation(container);
             L.DomEvent.on(a, 'click', function(e) {
                 L.DomEvent.preventDefault(e);
@@ -3021,6 +3023,7 @@ function handleHelpCommand() {
 - \`/transit\` - 獲取地圖中心附近的實時巴士與地鐵到站資訊 🚌🚇
 - \`/radius [緯度] [經度] [距離]\` - 在地圖開啟圓形範圍搜索（例如：\`/radius 37.56 126.97 5km\`）📍
 - \`/places [半徑]\` - 獲取附近的 Google Places 推薦地點（預設 500m，最大 5000m）🏨
+- \`/walk\` 或 \`/osrm\` - 開啟步行路線規劃面板 🚶
 
 #### 2️⃣ **智能對話功能 (AI Chat)**
 你可以直接使用廣東話與我交流，例如：
