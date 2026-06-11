@@ -1,5 +1,5 @@
 @echo off
-set PORT=8080
+set PORT=8092
 
 :: Read PORT from .env if it exists
 if exist .env (

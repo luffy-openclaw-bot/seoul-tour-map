@@ -483,27 +483,30 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # ─── 第一層：Hermes Agent 雲端 API (api-hermes.apihubs.dev) ───
             # 如果用戶啟用咗 web search + query 係複雜 + HERMES_AGENT_API_KEY 有設定，先試
             should_delegate = False
-            if not user_prefs.get('use_web_search', True):
-                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Skipped (use_web_search=False)")
-            elif not HERMES_AGENT_API_KEY:
-                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Skipped (HERMES_AGENT_API_KEY not set, would only use file-queue worker / ollama / offline)")
-            else:
+            # First calculate should_delegate regardless of cloud API key
+            if user_prefs.get('use_web_search', True):
                 should_delegate = self._should_delegate_to_hermes(user_message)
-                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | should_delegate | Decision: {should_delegate}")
-                if should_delegate:
-                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | Attempting cloud Hermes Agent ({HERMES_AGENT_API_URL})...")
-                    cloud_reply = self._try_hermes_agent_api(user_message, full_system, chat_history)
-                    if cloud_reply:
-                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=hermes_agent_api, reply_len={len(cloud_reply)})")
-                        self.send_json({'reply': cloud_reply, 'source': 'hermes_agent_api'})
-                        return
-                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | try_hermes_agent_api | No reply from cloud, falling through to file-queue worker")
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | Should delegate to Hermes? {should_delegate}")
+            else:
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | Skipped Hermes (use_web_search=False)")
+            
+            # Try cloud API if should_delegate and key is set
+            if should_delegate and HERMES_AGENT_API_KEY:
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | Trying Hermes Cloud API...")
+                cloud_reply = self._try_hermes_agent_api(user_message, full_system, chat_history)
+                if cloud_reply:
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ✅ Using Hermes Cloud API")
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=hermes_agent_api, reply_len={len(cloud_reply)})")
+                    self.send_json({'reply': cloud_reply, 'source': 'hermes_agent_api'})
+                    return
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ❌ Hermes Cloud failed, falling through to worker")
 
             # ─── 第二層：File-queue worker (hermes_worker.py: DuckDuckGo + Ollama) ───
             if should_delegate and HERMES_ENABLED:
-                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | delegate_to_hermes | Starting delegation via file queue...")
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | Trying Hermes Worker (with DuckDuckGo)...")
                 hermes_reply = self._delegate_to_hermes(user_message, full_system, chat_history)
                 if hermes_reply:
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ✅ Using Hermes Worker (may have used DuckDuckGo)")
                     _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=hermes_worker, reply_len={len(hermes_reply)})")
                     self.send_json({'reply': hermes_reply, 'source': 'hermes_worker'})
                     return
@@ -511,10 +514,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # ─── 第三層：直接打 Ollama ───
             circuit_open = _ollama_breaker.is_open()
             if circuit_open:
-                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Circuit open (failures={_ollama_breaker.get_failures()}), skipping Ollama")
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | Ollama circuit open, skipping")
             try:
                 if not circuit_open:
-                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Calling Ollama API...")
+                    _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | Trying Ollama direct API...")
                     # 根據速度/準確度偏好調整模型參數 (speed=0-100)
                     speed_pref = user_prefs.get('speed', 50)
                     temp = 0.7
@@ -529,6 +532,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     ollama_reply = self._call_ollama_api(full_system, user_message, chat_history, temperature=temp, max_tokens=max_tokens)
                     if ollama_reply:
                         _ollama_breaker.record_success()
+                        _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ✅ Using Ollama direct API (no web search)")
                         _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | ollama_api | Response received (reply_len={len(ollama_reply)}): {ollama_reply[:100]}{'...' if len(ollama_reply) > 100 else ''}")
                         _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=ollama)")
                         self.send_json({'reply': ollama_reply, 'source': 'ollama'})
@@ -542,6 +546,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # 回退到離線知識庫
             use_offline_fallback = user_prefs.get('use_offline_fallback', True)
             if use_offline_fallback:
+                _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | backend_selection | ❌ All backends failed, using offline fallback")
                 _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | offline_kb | Falling back to offline knowledge base...")
                 offline_reply = self._generate_offline_reply(user_message)
                 _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | Response sent to client (source=offline)")
