@@ -2050,7 +2050,12 @@ function showAttractionDetail(attr) {
     body.classList.add('no-hero');
     body.innerHTML = `
         <div class="modal-info">
-            <div class="modal-title">${attr.name}</div>
+            <div class="modal-title">
+                ${attr.name}
+                <button class="btn-ask-hermes" onclick="askHermes('${attr.name.replace(/'/g, "\\'")}')" title="Ask Hermes" aria-label="Ask Hermes">
+                    <i class="fas fa-robot"></i> 介紹
+                </button>
+            </div>
             <div class="modal-ko">${attr.local_name}</div>
             <span class="modal-cat" style="background:${color}">${attr.category}</span>
 
@@ -2136,11 +2141,21 @@ function showAttractionDetail(attr) {
     `;
 
     modal.classList.remove('hidden');
+    window.currentModalAttraction = attr;
 }
 
 function closeModal() {
     document.getElementById('modal').classList.add('hidden');
+    window.currentModalAttraction = null;
 }
+
+window.askHermes = function(title) {
+    const input = document.getElementById('chat-input');
+    if (input) {
+        input.value = `叫Hermes介紹 ${title} 並更新介紹頁`;
+        sendMessage();
+    }
+};
 
 // ==================== 設置彈窗 ====================
 function showSettingsNotification(message, type = 'success') {
@@ -3406,6 +3421,7 @@ function getSystemContext() {
 6. add_polygon (顯示區域範圍)：【{"action":"add_polygon","params":{"coords":[[37.56,126.98],[37.56,126.99],[37.57,126.99],[37.57,126.98]],"name":"明洞商圈","color":"#3498db"}}】
 7. clear_search_markers (清除搜索標記)：【{"action":"clear_search_markers"}】
 8. add_to_list (將提及嘅地點標示在地圖並永久加入景點列表)：【{"action":"add_to_list","params":{"name":"地點名稱","lat":37.46,"lng":126.44,"address":"詳細地址","category":"購物美食","description":"簡短描述"}}】
+9. update_attraction_detail (更新景點詳細資訊)：【{"action":"update_attraction_detail","params":{"id":"景點ID","description":"更新後的簡介","highlights":["亮點1","亮點2"],"local_cuisine":["美食推薦"],"best_seasons":["最佳旅遊季節"],"stay_duration":"建議逗留時間","visitor_insights":"旅客真實評價","transport":{"subway":"交通","time_from_station":"步程"},"ticket":"門票","hours":"開放時間","tips":"小貼士"}}】
 
 景點ID：${attractionsData.map(a=>a.id).join(', ')}
 分類：${categories}
@@ -3418,6 +3434,7 @@ ${attractionsSummary}
 - 搜索結果在內文回答後，適宜用 add_marker 喺地圖標示位置
 - 提及區域或商圈時，可用 add_polygon 顯示範圍
 - 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker
+- 當用家要求「叫Hermes介紹...並更新介紹頁」時，請使用 update_attraction_detail 指令提供詳細資訊
 - 普通對答唔需要地圖指令`;
 }
 
@@ -4193,6 +4210,33 @@ async function executeMapAction(action, params, targetElement) {
                             attraction: attrByName
                         }, msgElement);
                     }
+                }
+                break;
+            case 'update_attraction_detail':
+                const targetId = params.id;
+                let targetAttr = attractionsData.find(a => a.id === targetId);
+                if (!targetAttr && params.name) {
+                    targetAttr = attractionsData.find(a => a.name === params.name);
+                }
+                
+                if (targetAttr) {
+                    const fieldsToUpdate = ['description', 'highlights', 'local_cuisine', 'best_seasons', 'stay_duration', 'visitor_insights', 'transport', 'ticket', 'hours', 'tips'];
+                    fieldsToUpdate.forEach(field => {
+                        if (params[field] !== undefined) {
+                            if (field === 'local_cuisine' && Array.isArray(params[field])) {
+                                targetAttr[field] = params[field].join('、');
+                            } else if (field === 'best_seasons' && Array.isArray(params[field])) {
+                                targetAttr[field] = params[field].join('、');
+                            } else {
+                                targetAttr[field] = params[field];
+                            }
+                        }
+                    });
+                    
+                    if (window.currentModalAttraction && window.currentModalAttraction.id === targetAttr.id) {
+                        showAttractionDetail(targetAttr);
+                    }
+                    console.log(`[Map Action] Updated attraction detail for ${targetAttr.name}`);
                 }
                 break;
             case 'highlight_category':
