@@ -52,6 +52,20 @@ let subwayLayerGroup;
 let routeLayerGroup;
 let pinnedLayerGroup;  // 用戶釘選標記圖層
 let searchMarkersLayerGroup;  // Chatbot 搜索標記圖層
+
+// ==================== OSRM 狀態 ====================
+let osrmState = {
+    active: false,
+    step: 'from', // 'from' or 'to'
+    fromLat: null,
+    fromLng: null,
+    toLat: null,
+    toLng: null,
+    fromMarker: null,
+    toMarker: null,
+    routeLayer: null
+};
+
 let attractionsData = [];
 let currentSearchResults = []; // 存儲當前搜索結果，以便在不同面板同步
 let subwayData = {};
@@ -688,6 +702,24 @@ function initMap() {
     // 建立右下角 (或者左下角) 的小縮放按鈕
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
+    // OSRM Pedestrian Routing Control
+    L.Control.OSRM = L.Control.extend({
+        onAdd: function(map) {
+            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-osrm');
+            const a = L.DomUtil.create('a', '', container);
+            a.href = '#';
+            a.title = '步行路線規劃';
+            a.innerHTML = '<i class="fas fa-walking"></i>';
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.on(a, 'click', function(e) {
+                L.DomEvent.preventDefault(e);
+                toggleOsrmPanel();
+            });
+            return container;
+        }
+    });
+    new L.Control.OSRM({ position: 'topleft' }).addTo(map);
+
     // 建立兩種地圖圖層
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
@@ -715,12 +747,20 @@ function initMap() {
     searchMarkersLayerGroup = L.layerGroup().addTo(map); // 初始化搜索標記圖層
 
     map.on("click", onMapClick);
+    map.on("contextmenu", onMapClick);
     setupMobileDoubleTapDragZoom(map);
 }
 
 // ==================== 地圖點擊搜尋 ====================
 function onMapClick(e) {
+    if (osrmState.active) {
+        e.originalEvent?.preventDefault();
+        handleOsrmMapClick(e.latlng.lat, e.latlng.lng);
+        return;
+    }
+
     if (radiusState.pickingMap) {
+        e.originalEvent?.preventDefault();
         document.getElementById('radius-lat').value = e.latlng.lat.toFixed(6);
         document.getElementById('radius-lng').value = e.latlng.lng.toFixed(6);
         radiusState.pickingMap = false;
@@ -1010,7 +1050,9 @@ function renderPinnedMarkers() {
                 
             marker.on('click', (e) => {
                 if (!handleMarkerClickForRadiusFilter(e, marker.getLatLng())) {
-                    L.DomEvent.stop(e);
+                    if (e.originalEvent) {
+                        L.DomEvent.stop(e.originalEvent);
+                    }
                 }
             });
         }
@@ -1101,6 +1143,209 @@ function clearPanelSearch() {
     renderAttractionList();
     renderMobilePanelList();
     addMarkers();
+}
+
+// ==================== OSRM Pedestrian Routing Logic ====================
+function toggleOsrmPanel() {
+    const panel = document.getElementById('osrm-panel');
+    const osrmControlBtn = document.querySelector('.leaflet-control-osrm a');
+    const chatWidget = document.getElementById('ai-chat');
+    
+    if (panel) {
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
+            osrmState.active = true;
+            if (osrmControlBtn) osrmControlBtn.classList.add('active');
+            
+            // Collapse other panels
+            const routePanel = document.getElementById('route-panel');
+            if (routePanel) routePanel.classList.add('hidden');
+            const radiusPanel = document.getElementById('radius-panel');
+            if (radiusPanel && !radiusPanel.classList.contains('hidden')) {
+                toggleRadiusPanel();
+            }
+            
+            // Collapse chatbot widget
+            if (chatWidget && !chatWidget.classList.contains('collapsed')) {
+                chatWidget.classList.add('collapsed');
+                const statusBar = document.getElementById('system-status-bar');
+                if (statusBar) statusBar.classList.add('hidden');
+            }
+            
+            updateOsrmStatus();
+        } else {
+            osrmState.active = false;
+            if (osrmControlBtn) osrmControlBtn.classList.remove('active');
+            resetOsrmState();
+        }
+    }
+}
+
+function resetOsrmState() {
+    osrmState.step = 'from';
+    osrmState.fromLat = null;
+    osrmState.fromLng = null;
+    osrmState.toLat = null;
+    osrmState.toLng = null;
+    
+    if (osrmState.fromMarker) {
+        map.removeLayer(osrmState.fromMarker);
+        osrmState.fromMarker = null;
+    }
+    if (osrmState.toMarker) {
+        map.removeLayer(osrmState.toMarker);
+        osrmState.toMarker = null;
+    }
+    if (osrmState.routeLayer) {
+        map.removeLayer(osrmState.routeLayer);
+        osrmState.routeLayer = null;
+    }
+    
+    const fromInput = document.getElementById('osrm-from');
+    const toInput = document.getElementById('osrm-to');
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
+    
+    updateOsrmStatus();
+}
+
+function updateOsrmStatus() {
+    const statusDiv = document.getElementById('osrm-status');
+    if (!statusDiv) return;
+    
+    if (osrmState.step === 'from') {
+        statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇起點';
+        statusDiv.className = 'osrm-status text-muted';
+    } else if (osrmState.step === 'to') {
+        statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇終點';
+        statusDiv.className = 'osrm-status text-muted';
+    } else if (osrmState.step === 'calculating') {
+        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃路線...';
+        statusDiv.className = 'osrm-status text-muted';
+    } else if (osrmState.step === 'done') {
+        statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> 路線規劃完成';
+        statusDiv.className = 'osrm-status text-green';
+    } else if (osrmState.step === 'error') {
+        statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 無法規劃路線';
+        statusDiv.className = 'osrm-status text-red';
+    }
+}
+
+// OSRM Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('osrm-panel-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', toggleOsrmPanel);
+    }
+    
+    const resetBtn = document.getElementById('btn-osrm-reset');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            resetOsrmState();
+        });
+    }
+});
+
+function handleOsrmMapClick(lat, lng) {
+    if (osrmState.step === 'from') {
+        osrmState.fromLat = lat;
+        osrmState.fromLng = lng;
+        
+        // Add from marker
+        const icon = L.divIcon({
+            html: '<i class="fas fa-map-marker-alt fa-2x text-green" style="color: #27ae60;"></i>',
+            className: 'osrm-marker-icon',
+            iconAnchor: [12, 24]
+        });
+        osrmState.fromMarker = L.marker([lat, lng], { icon }).addTo(map);
+        
+        document.getElementById('osrm-from').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        osrmState.step = 'to';
+        updateOsrmStatus();
+    } else if (osrmState.step === 'to') {
+        osrmState.toLat = lat;
+        osrmState.toLng = lng;
+        
+        // Add to marker
+        const icon = L.divIcon({
+            html: '<i class="fas fa-flag-checkered fa-2x text-red" style="color: #c0392b;"></i>',
+            className: 'osrm-marker-icon',
+            iconAnchor: [12, 24]
+        });
+        osrmState.toMarker = L.marker([lat, lng], { icon }).addTo(map);
+        
+        document.getElementById('osrm-to').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        osrmState.step = 'calculating';
+        updateOsrmStatus();
+        
+        calculateOsrmRoute(osrmState.fromLat, osrmState.fromLng, osrmState.toLat, osrmState.toLng);
+    } else {
+        // Third click, reset and start over
+        resetOsrmState();
+        handleOsrmMapClick(lat, lng);
+    }
+}
+
+async function calculateOsrmRoute(lat1, lng1, lat2, lng2) {
+    try {
+        const url = `https://router.project-osrm.org/route/v1/foot/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`OSRM API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+            throw new Error('No route found');
+        }
+        
+        const route = data.routes[0];
+        const geojson = route.geometry;
+        
+        // Remove previous route if exists
+        if (osrmState.routeLayer) {
+            map.removeLayer(osrmState.routeLayer);
+        }
+        
+        // Add new route
+        osrmState.routeLayer = L.geoJSON(geojson, {
+            style: {
+                color: '#e74c3c',
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 10'
+            }
+        }).addTo(map);
+        
+        // Fit bounds
+        map.fitBounds(osrmState.routeLayer.getBounds(), { padding: [50, 50] });
+        
+        osrmState.step = 'done';
+        updateOsrmStatus();
+        
+        // Show distance and duration
+        const distance = (route.distance / 1000).toFixed(2); // km
+        // OSRM demo server's foot profile sometimes returns car speeds for duration.
+        // We manually calculate walking duration assuming an average speed of 5 km/h (about 83 m/min).
+        const duration = Math.round((route.distance / 1000) / 5 * 60); // minutes
+        
+        const statusDiv = document.getElementById('osrm-status');
+        if (statusDiv) {
+            statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> 路線規劃完成：約 ${distance} 公里, 步行 ${duration} 分鐘`;
+            statusDiv.className = 'osrm-status text-green';
+        }
+        
+    } catch (error) {
+        console.error('Error fetching OSRM route:', error);
+        osrmState.step = 'error';
+        updateOsrmStatus();
+        
+        const statusDiv = document.getElementById('osrm-status');
+        if (statusDiv) {
+            statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> 無法規劃路線: ${error.message === 'No route found' ? '找不到合適路線' : '網絡錯誤'}`;
+        }
+    }
 }
 
 // ==================== Radius Filter Logic ====================
@@ -1544,9 +1789,18 @@ function renderAttractionList() {
 
 // ==================== Helper for marker clicks in radius picking mode ====================
 function handleMarkerClickForRadiusFilter(e, latlng) {
+    if (osrmState.active) {
+        if (e.originalEvent) {
+            L.DomEvent.stopPropagation(e.originalEvent);
+        }
+        handleOsrmMapClick(latlng.lat, latlng.lng);
+        return false; // indicate we handled it
+    }
+
     if (radiusState.pickingMap) {
-        e.originalEvent?.stopPropagation();
-        e.stopPropagation();
+        if (e.originalEvent) {
+            L.DomEvent.stopPropagation(e.originalEvent);
+        }
         document.getElementById('radius-lat').value = latlng.lat.toFixed(6);
         document.getElementById('radius-lng').value = latlng.lng.toFixed(6);
         radiusState.pickingMap = false;
@@ -1607,7 +1861,9 @@ function addMarkers() {
                 
             marker.on('click', (e) => {
                 if (!handleMarkerClickForRadiusFilter(e, marker.getLatLng())) {
-                    L.DomEvent.stop(e);
+                    if (e.originalEvent) {
+                        L.DomEvent.stop(e.originalEvent);
+                    }
                 }
             });
 
@@ -1642,7 +1898,9 @@ function addMarkers() {
                 
             marker.on('click', (e) => {
                 if (!handleMarkerClickForRadiusFilter(e, marker.getLatLng())) {
-                    L.DomEvent.stop(e);
+                    if (e.originalEvent) {
+                        L.DomEvent.stop(e.originalEvent);
+                    }
                 }
             });
 
@@ -2421,29 +2679,7 @@ function bindEvents() {
         });
     }
 
-    // Add both click & contextmenu listeners for map picking
-    if (map) {
-        const handleMapPick = (e) => {
-            if (radiusState.pickingMap) {
-                e.originalEvent?.preventDefault();
-                document.getElementById('radius-lat').value = e.latlng.lat.toFixed(6);
-                document.getElementById('radius-lng').value = e.latlng.lng.toFixed(6);
-                radiusState.pickingMap = false;
-                document.getElementById('map').style.cursor = '';
-                const pickBtn = document.getElementById('btn-radius-pick-map');
-                if (pickBtn) {
-                    pickBtn.style.backgroundColor = '';
-                    pickBtn.style.color = '';
-                }
-                if (document.getElementById('radius-val').value) {
-                    applyRadiusFilter();
-                }
-            }
-        };
-        map.on('click', handleMapPick);
-        map.on('contextmenu', handleMapPick);
-    }
-
+    // 範圍篩選 debounce
     let radiusDebounceTimer;
     ['radius-lat', 'radius-lng', 'radius-val', 'radius-unit'].forEach(id => {
         const el = document.getElementById(id);
@@ -2628,6 +2864,9 @@ async function sendMessage() {
         } else if (command === '/radius') {
             parseRadiusSlashCommand(parts.slice(1).join(' '));
             return;
+        } else if (command === '/walk' || command === '/osrm') {
+            handleWalkCommand();
+            return;
         }
     }
 
@@ -2656,6 +2895,14 @@ async function sendMessage() {
 /**
  * 處理 /transit 指令
  */
+function handleWalkCommand() {
+    addMessage("正在為您開啟步行路線規劃面板...", 'bot');
+    const panel = document.getElementById('osrm-panel');
+    if (panel && panel.classList.contains('hidden')) {
+        toggleOsrmPanel();
+    }
+}
+
 async function handleTransitCommand() {
     showTyping();
     
@@ -4451,7 +4698,9 @@ function addSearchMarker(lat, lng, title, color, popupContent, pulse = true) {
         
     marker.on('click', (e) => {
         if (!handleMarkerClickForRadiusFilter(e, marker.getLatLng())) {
-            L.DomEvent.stop(e);
+            if (e.originalEvent) {
+                L.DomEvent.stop(e.originalEvent);
+            }
         }
     });
     

@@ -536,6 +536,14 @@ function initLocationSearch() {
             return;
         }
 
+        // 如果正在使用 OSRM 步行路線規劃功能，交由原始處理函數處理
+        if (typeof window.osrmState !== 'undefined' && window.osrmState.active) {
+            if (typeof window.originalOnMapClick === 'function') {
+                window.originalOnMapClick(e);
+            }
+            return;
+        }
+
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
 

@@ -223,6 +223,30 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- OSRM Pedestrian Routing Panel -->
+                <div id="osrm-panel" class="osrm-panel hidden">
+                    <button id="osrm-panel-close" class="panel-close-btn" title="關閉"><i class="fas fa-times"></i></button>
+                    <h3>
+                        <i class="fas fa-walking"></i> 步行路線規劃
+                    </h3>
+                    <div class="osrm-inputs">
+                        <div class="osrm-field">
+                            <label><i class="fas fa-map-marker-alt text-green"></i> 起點 (From)</label>
+                            <input type="text" id="osrm-from" placeholder="請在地圖上點擊選擇起點" readonly>
+                        </div>
+                        <div class="osrm-field">
+                            <label><i class="fas fa-flag-checkered text-red"></i> 終點 (To)</label>
+                            <input type="text" id="osrm-to" placeholder="請在地圖上點擊選擇終點" readonly>
+                        </div>
+                        <div id="osrm-status" class="osrm-status text-muted">
+                            <i class="fas fa-info-circle"></i> 請點擊地圖選擇起點
+                        </div>
+                        <div class="osrm-actions" style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button id="btn-osrm-reset" class="btn-secondary" style="flex: 1; background: #95a5a6; color: white;"><i class="fas fa-undo"></i> 重置</button>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
 
