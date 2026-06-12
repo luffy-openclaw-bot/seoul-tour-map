@@ -3524,7 +3524,7 @@ function getSystemContext() {
 6. add_polygon (顯示區域範圍)：【{"action":"add_polygon","params":{"coords":[[37.56,126.98],[37.56,126.99],[37.57,126.99],[37.57,126.98]],"name":"明洞商圈","color":"#3498db"}}】
 7. clear_search_markers (清除搜索標記)：【{"action":"clear_search_markers"}】
 8. add_to_list (將提及嘅地點標示在地圖並永久加入景點列表)：【{"action":"add_to_list","params":{"name":"地點名稱","lat":37.46,"lng":126.44,"address":"詳細地址","category":"購物美食","description":"簡短描述"}}】
-9. update_attraction_detail (更新景點詳細資訊)：【{"action":"update_attraction_detail","params":{"id":"景點ID","description":"更新後的簡介","highlights":["亮點1","亮點2"],"local_cuisine":["美食推薦"],"best_seasons":["最佳旅遊季節"],"stay_duration":"建議逗留時間","visitor_insights":"旅客真實評價","transport":{"subway":"交通","time_from_station":"步程"},"ticket":"門票","hours":"開放時間","tips":"小貼士"}}】
+9. update_attraction_detail (更新景點詳細資訊)：【{"action":"update_attraction_detail","params":{"id":"景點ID","name":"景點名稱","description":"更新後的簡介","highlights":["亮點1","亮點2"],"local_cuisine":["美食推薦"],"best_seasons":["最佳旅遊季節"],"stay_duration":"建議逗留時間","visitor_insights":"旅客真實評價","transport":{"subway":"交通","time_from_station":"步程"},"ticket":"門票","hours":"開放時間","tips":"小貼士"}}】
 
 景點ID：${attractionsData.map(a=>a.id).join(', ')}
 分類：${categories}
@@ -4210,10 +4210,10 @@ function addLocationButtonToLastBotMessage(locationData, targetElement) {
     
     // Determine button text based on location data
     let locationName = '再次前往';
-    if (locationData.type === 'attraction' && locationData.attraction) {
-        locationName = locationData.attraction.name;
-    } else if (locationData.title) {
+    if (locationData.title) {
         locationName = locationData.title;
+    } else if (locationData.type === 'attraction' && locationData.attraction) {
+        locationName = locationData.attraction.name;
     }
     
     button.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${locationName}`;
@@ -4329,6 +4329,10 @@ async function executeMapAction(action, params, targetElement) {
                 if (!targetAttr && params.name) {
                     targetAttr = attractionsData.find(a => a.name === params.name);
                 }
+                if (!targetAttr && targetId) {
+                    // Fuzzy match by name if targetId was used as name by mistake
+                    targetAttr = attractionsData.find(a => a.name === targetId || a.name.includes(targetId) || targetId.includes(a.name));
+                }
                 
                 if (targetAttr) {
                     const fieldsToUpdate = ['description', 'highlights', 'local_cuisine', 'best_seasons', 'stay_duration', 'visitor_insights', 'transport', 'ticket', 'hours', 'tips'];
@@ -4347,8 +4351,43 @@ async function executeMapAction(action, params, targetElement) {
                     if (window.currentModalAttraction && window.currentModalAttraction.id === targetAttr.id) {
                         showAttractionDetail(targetAttr);
                     }
-                    console.log(`[Map Action] Updated attraction detail for ${targetAttr.name}`);
-                }
+                    
+                    // 如果是聊天添加的自訂地點，將更新保存到 localStorage
+                    if (targetAttr.id && targetAttr.id.startsWith('chat_')) {
+                        try {
+                            const CHAT_PLACES_KEY = 'seoul_tour_chat_places';
+                            const places = JSON.parse(localStorage.getItem(CHAT_PLACES_KEY) || '[]');
+                            const placeIndex = places.findIndex(p => p.id === targetAttr.id);
+                            if (placeIndex !== -1) {
+                                // 更新保存的屬性
+                                const fieldsToUpdate = ['description', 'highlights', 'local_cuisine', 'best_seasons', 'stay_duration', 'visitor_insights', 'transport', 'ticket', 'hours', 'tips'];
+                                fieldsToUpdate.forEach(field => {
+                                    if (targetAttr[field] !== undefined) {
+                                        places[placeIndex][field] = targetAttr[field];
+                                    }
+                                });
+                                localStorage.setItem(CHAT_PLACES_KEY, JSON.stringify(places));
+                                // 同步到服務器
+                                if (typeof WishlistManager !== 'undefined' && WishlistManager.syncToServer) {
+                                     WishlistManager.syncToServer(places);
+                                 }
+                             }
+                         } catch (e) {
+                             console.error('[Map Action] Error persisting updated detail:', e);
+                         }
+                     }
+                     
+                     // 顯示一個按鈕，讓用戶可以再次打開景點詳情頁
+                     if (typeof addLocationButtonToLastBotMessage === 'function' && msgElement) {
+                         addLocationButtonToLastBotMessage({
+                             type: 'attraction',
+                             attraction: targetAttr,
+                             title: '查看更新後的介紹'
+                         }, msgElement);
+                     }
+ 
+                     console.log(`[Map Action] Updated attraction detail for ${targetAttr.name}`);
+                 }
                 break;
             case 'highlight_category':
                 activeCategory = params.category;
