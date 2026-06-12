@@ -1218,20 +1218,24 @@ function updateOsrmStatus() {
     
     const fromField = document.getElementById('osrm-from')?.parentElement;
     const toField = document.getElementById('osrm-to')?.parentElement;
+    const mapElement = document.getElementById('map');
     
     if (osrmState.step === 'from') {
         statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇起點';
         statusDiv.className = 'osrm-status text-muted';
         if (fromField) fromField.classList.add('picking');
         if (toField) toField.classList.remove('picking');
+        if (mapElement) mapElement.style.cursor = 'crosshair';
     } else if (osrmState.step === 'to') {
         statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇終點';
         statusDiv.className = 'osrm-status text-muted';
         if (fromField) fromField.classList.remove('picking');
         if (toField) toField.classList.add('picking');
+        if (mapElement) mapElement.style.cursor = 'crosshair';
     } else {
         if (fromField) fromField.classList.remove('picking');
         if (toField) toField.classList.remove('picking');
+        if (mapElement) mapElement.style.cursor = '';
         
         if (osrmState.step === 'calculating') {
             statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃路線...';
