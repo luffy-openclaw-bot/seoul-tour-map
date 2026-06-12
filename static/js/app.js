@@ -4078,6 +4078,14 @@ function toggleMobilePanel(expanded) {
     if (expanded) {
         panel.classList.add('expanded');
         panel.classList.remove('hidden-panel');
+
+        // 開啟手機版景點列表面板時，自動收合 chatbot 釋出畫面空間
+        const chatWidget = document.getElementById('ai-chat');
+        if (chatWidget && !chatWidget.classList.contains('collapsed')) {
+            chatWidget.classList.add('collapsed');
+            const statusBar = document.getElementById('system-status-bar');
+            if (statusBar) statusBar.classList.add('hidden');
+        }
     } else {
         panel.classList.remove('expanded');
     }
