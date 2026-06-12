@@ -151,7 +151,8 @@ class HermesAgentClient:
         payload = {
             "model": self.model,
             "messages": messages,
-            "stream": False
+            "stream": False,
+            "max_tokens": 4096
         }
         
         if tools:

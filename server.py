@@ -719,13 +719,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     # 根據速度/準確度偏好調整模型參數 (speed=0-100)
                     speed_pref = user_prefs.get('speed', 50)
                     temp = 0.7
-                    max_tokens = 800
+                    max_tokens = 1500
                     if speed_pref > 70:
                         temp = 0.8
-                        max_tokens = 400 # 較短回覆更快
+                        max_tokens = 800 # 較短回覆更快
                     elif speed_pref < 30:
                         temp = 0.3 # 較準確
-                        max_tokens = 1200
+                        max_tokens = 2000
 
                     ollama_reply = self._call_ollama_api(full_system, user_message, chat_history, temperature=temp, max_tokens=max_tokens)
                     if ollama_reply:
@@ -903,6 +903,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'add_polygon': {'name': str, 'color': str, 'coords': list},
                 'clear_search_markers': {},
                 'add_to_list': {'name': str, 'lat': float, 'lng': float, 'address': str, 'category': str, 'description': str, 'color': str},
+                'update_attraction_detail': {'id': str, 'name': str, 'description': str, 'highlights': list, 'local_cuisine': list, 'best_seasons': list, 'stay_duration': str, 'visitor_insights': str, 'transport': dict, 'ticket': str, 'hours': str, 'tips': str},
             }
 
             if action not in ALLOWED_ACTIONS:
