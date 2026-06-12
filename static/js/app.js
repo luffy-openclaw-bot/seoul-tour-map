@@ -2908,6 +2908,16 @@ function toggleChat() {
         // 收合時重置拖曳造成的 translateY 偏移，讓 collapsed widget 回到預設位置
         chat.style.transition = '';
         chat.style.transform = '';
+    } else {
+        // 展開時，如果目前是 expanded-tall 模式，重新計算高度
+        if (chat.classList.contains('expanded-tall')) {
+            const topBar = document.querySelector('.top-bar');
+            const topBarHeight = topBar ? topBar.offsetHeight : 50;
+            const computedStyle = window.getComputedStyle(chat);
+            const bottomOffset = parseFloat(computedStyle.bottom) || 20;
+            const targetHeight = window.innerHeight - topBarHeight - 5 - bottomOffset;
+            chat.style.setProperty('--expanded-height', `${targetHeight}px`);
+        }
     }
     
     // 展開時的處理邏輯
@@ -2944,6 +2954,20 @@ function toggleChatHeight(event) {
     }
     const chat = document.getElementById('ai-chat');
     chat.classList.toggle('expanded-tall');
+    
+    // 重置拖曳位移，確保對齊
+    chat.style.transform = '';
+    
+    if (chat.classList.contains('expanded-tall')) {
+        const topBar = document.querySelector('.top-bar');
+        const topBarHeight = topBar ? topBar.offsetHeight : 50;
+        const computedStyle = window.getComputedStyle(chat);
+        const bottomOffset = parseFloat(computedStyle.bottom) || 20;
+        const targetHeight = window.innerHeight - topBarHeight - 5 - bottomOffset;
+        chat.style.setProperty('--expanded-height', `${targetHeight}px`);
+    } else {
+        chat.style.removeProperty('--expanded-height');
+    }
     
     const resizeIcon = document.getElementById('resize-chat-icon');
     if (resizeIcon) {
@@ -6288,6 +6312,19 @@ document.addEventListener('DOMContentLoaded', () => {
             checkSystemStatus();
         });
     }
+    
+    // Add window resize listener to recalculate expanded-height for chatbot big mode
+    window.addEventListener('resize', () => {
+        const chat = document.getElementById('ai-chat');
+        if (chat && chat.classList.contains('expanded-tall') && !chat.classList.contains('collapsed')) {
+            const topBar = document.querySelector('.top-bar');
+            const topBarHeight = topBar ? topBar.offsetHeight : 50;
+            const computedStyle = window.getComputedStyle(chat);
+            const bottomOffset = parseFloat(computedStyle.bottom) || 20;
+            const targetHeight = window.innerHeight - topBarHeight - 5 - bottomOffset;
+            chat.style.setProperty('--expanded-height', `${targetHeight}px`);
+        }
+    });
 });
 
 // For testing purposes

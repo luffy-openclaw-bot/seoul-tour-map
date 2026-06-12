@@ -1221,7 +1221,8 @@ body {
 }
 
 .ai-chat.expanded-tall:not(.collapsed) {
-    max-height: 80vh !important;
+    max-height: var(--expanded-height, 80vh) !important;
+    height: var(--expanded-height, 80vh) !important;
 }
 
 .toggle-icon {
