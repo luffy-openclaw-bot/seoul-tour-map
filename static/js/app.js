@@ -2142,7 +2142,7 @@ function showAttractionDetail(attr) {
         <div class="modal-info">
             <div class="modal-title">
                 ${attr.name}
-                <button class="btn-ask-hermes" onclick="askHermes('${attr.name.replace(/'/g, "\\'")}')" title="Ask Hermes" aria-label="Ask Hermes">
+                <button class="btn-ask-hermes" onclick="askHermes('${attr.name.replace(/'/g, "\\'")}', '${attr.id}')" title="Ask Hermes" aria-label="Ask Hermes">
                     <i class="fas fa-robot"></i> 介紹
                 </button>
             </div>
@@ -2239,7 +2239,7 @@ function closeModal() {
     window.currentModalAttraction = null;
 }
 
-window.askHermes = function(title) {
+window.askHermes = function(title, id) {
     closeModal();
 
     const chat = document.getElementById('ai-chat');
@@ -2251,7 +2251,7 @@ window.askHermes = function(title) {
 
     const input = document.getElementById('chat-input');
     if (input) {
-        input.value = `叫Hermes介紹 ${title} 並更新介紹頁`;
+        input.value = `叫Hermes介紹 ${title} 並更新介紹頁 (ID: ${id})`;
         sendMessage();
     }
 };
@@ -3561,7 +3561,7 @@ ${attractionsSummary}
 - 搜索結果在內文回答後，適宜用 add_marker 喺地圖標示位置
 - 提及區域或商圈時，可用 add_polygon 顯示範圍
 - 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker
-- 當用家要求「叫Hermes介紹...並更新介紹頁」時，請使用 update_attraction_detail 指令提供詳細資訊
+- 當用家要求「叫Hermes介紹...並更新介紹頁」時，請使用 update_attraction_detail 指令提供詳細資訊。必須確保 \`id\` 欄位精確填入用家提供嘅 ID。
 - 普通對答唔需要地圖指令`;
 }
 
@@ -4248,7 +4248,9 @@ function addLocationButtonToLastBotMessage(locationData, targetElement) {
     // Add click handler
     button.addEventListener('click', () => {
         const data = JSON.parse(button.dataset.locationData);
-        if (data.type === 'attraction' && data.attraction) {
+        if (data.action === 'show_detail' && data.attraction) {
+            showAttractionDetail(data.attraction);
+        } else if (data.type === 'attraction' && data.attraction) {
             focusAttraction(data.attraction);
         } else if (data.lat && data.lng) {
             flyToSearchResult(data.lat, data.lng, data.title || '位置');
@@ -4351,7 +4353,7 @@ async function executeMapAction(action, params, targetElement) {
                 const targetId = params.id;
                 let targetAttr = attractionsData.find(a => a.id === targetId);
                 if (!targetAttr && params.name) {
-                    targetAttr = attractionsData.find(a => a.name === params.name);
+                    targetAttr = attractionsData.find(a => a.name === params.name || a.name.includes(params.name) || params.name.includes(a.name));
                 }
                 if (!targetAttr && targetId) {
                     // Fuzzy match by name if targetId was used as name by mistake
@@ -4402,13 +4404,14 @@ async function executeMapAction(action, params, targetElement) {
                      }
                      
                      // 顯示一個按鈕，讓用戶可以再次打開景點詳情頁
-                     if (typeof addLocationButtonToLastBotMessage === 'function' && msgElement) {
-                         addLocationButtonToLastBotMessage({
-                             type: 'attraction',
-                             attraction: targetAttr,
-                             title: '查看更新後的介紹'
-                         }, msgElement);
-                     }
+                    if (typeof addLocationButtonToLastBotMessage === 'function' && msgElement) {
+                        addLocationButtonToLastBotMessage({
+                            type: 'attraction',
+                            attraction: targetAttr,
+                            title: '查看更新後的介紹',
+                            action: 'show_detail'
+                        }, msgElement);
+                    }
  
                      console.log(`[Map Action] Updated attraction detail for ${targetAttr.name}`);
                  }
