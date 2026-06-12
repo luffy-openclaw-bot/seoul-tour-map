@@ -2900,11 +2900,14 @@ function toggleChat() {
     if (isDraggingChat) return;
     const chat = document.getElementById('ai-chat');
     chat.classList.toggle('collapsed');
-    
+
     // 如果收合，一併關閉 system-status-bar
     if (chat.classList.contains('collapsed')) {
         const statusBar = document.getElementById('system-status-bar');
         if (statusBar) statusBar.classList.add('hidden');
+        // 收合時重置拖曳造成的 translateY 偏移，讓 collapsed widget 回到預設位置
+        chat.style.transition = '';
+        chat.style.transform = '';
     }
     
     // 展開時的處理邏輯
