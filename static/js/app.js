@@ -755,7 +755,7 @@ function initMap() {
 
 // ==================== 地圖點擊搜尋 ====================
 function onMapClick(e) {
-    if (osrmState.active) {
+    if (osrmState.active && (osrmState.step === 'from' || osrmState.step === 'to')) {
         e.originalEvent?.preventDefault();
         handleOsrmMapClick(e.latlng.lat, e.latlng.lng);
         return;
@@ -1174,6 +1174,7 @@ function toggleOsrmPanel() {
                 if (statusBar) statusBar.classList.add('hidden');
             }
             
+            osrmState.step = 'from';
             updateOsrmStatus();
         } else {
             osrmState.active = false;
@@ -1184,7 +1185,7 @@ function toggleOsrmPanel() {
 }
 
 function resetOsrmState() {
-    osrmState.step = 'from';
+    osrmState.step = 'idle';
     osrmState.fromLat = null;
     osrmState.fromLng = null;
     osrmState.toLat = null;
@@ -1215,21 +1216,46 @@ function updateOsrmStatus() {
     const statusDiv = document.getElementById('osrm-status');
     if (!statusDiv) return;
     
+    const fromField = document.getElementById('osrm-from')?.parentElement;
+    const toField = document.getElementById('osrm-to')?.parentElement;
+    
     if (osrmState.step === 'from') {
         statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇起點';
         statusDiv.className = 'osrm-status text-muted';
+        if (fromField) fromField.classList.add('picking');
+        if (toField) toField.classList.remove('picking');
     } else if (osrmState.step === 'to') {
         statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇終點';
         statusDiv.className = 'osrm-status text-muted';
-    } else if (osrmState.step === 'calculating') {
-        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃路線...';
-        statusDiv.className = 'osrm-status text-muted';
-    } else if (osrmState.step === 'done') {
-        statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> 路線規劃完成';
-        statusDiv.className = 'osrm-status text-green';
-    } else if (osrmState.step === 'error') {
-        statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 無法規劃路線';
-        statusDiv.className = 'osrm-status text-red';
+        if (fromField) fromField.classList.remove('picking');
+        if (toField) toField.classList.add('picking');
+    } else {
+        if (fromField) fromField.classList.remove('picking');
+        if (toField) toField.classList.remove('picking');
+        
+        if (osrmState.step === 'calculating') {
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃路線...';
+            statusDiv.className = 'osrm-status text-muted';
+        } else if (osrmState.step === 'done') {
+            // done message is handled in calculateOsrmRoute, but we keep this as fallback
+            if (!statusDiv.innerHTML.includes('路線規劃完成')) {
+                statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> 路線規劃完成';
+            }
+            statusDiv.className = 'osrm-status text-green';
+        } else if (osrmState.step === 'error') {
+            if (!statusDiv.innerHTML.includes('無法規劃路線')) {
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 無法規劃路線';
+            }
+            statusDiv.className = 'osrm-status text-red';
+        } else if (osrmState.step === 'idle') {
+            if (osrmState.fromLat && osrmState.toLat) {
+                statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 準備規劃路線...';
+                statusDiv.className = 'osrm-status text-muted';
+            } else {
+                statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請選擇起點或終點';
+                statusDiv.className = 'osrm-status text-muted';
+            }
+        }
     }
 }
 
@@ -1246,12 +1272,50 @@ document.addEventListener('DOMContentLoaded', () => {
             resetOsrmState();
         });
     }
+    
+    const fromInput = document.getElementById('osrm-from');
+    if (fromInput) {
+        fromInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            osrmState.step = 'from';
+            updateOsrmStatus();
+        });
+    }
+    
+    const toInput = document.getElementById('osrm-to');
+    if (toInput) {
+        toInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            osrmState.step = 'to';
+            updateOsrmStatus();
+        });
+    }
+});
+
+// Document click to cancel picking mode
+document.addEventListener('click', (e) => {
+    if (!osrmState.active) return;
+    if (osrmState.step !== 'from' && osrmState.step !== 'to') return;
+    
+    const isMap = e.target.closest('#map');
+    const isOsrmInput = e.target.closest('#osrm-from, #osrm-to');
+    const isOsrmPanelCtrl = e.target.closest('#osrm-panel-close, #btn-osrm-reset');
+    
+    if (!isMap && !isOsrmInput && !isOsrmPanelCtrl) {
+        osrmState.step = 'idle';
+        updateOsrmStatus();
+    }
 });
 
 function handleOsrmMapClick(lat, lng) {
     if (osrmState.step === 'from') {
         osrmState.fromLat = lat;
         osrmState.fromLng = lng;
+        
+        // Remove old from marker
+        if (osrmState.fromMarker) {
+            map.removeLayer(osrmState.fromMarker);
+        }
         
         // Add from marker
         const icon = L.divIcon({
@@ -1262,11 +1326,20 @@ function handleOsrmMapClick(lat, lng) {
         osrmState.fromMarker = L.marker([lat, lng], { icon }).addTo(map);
         
         document.getElementById('osrm-from').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        osrmState.step = 'to';
+        
+        // Exit picking mode
+        osrmState.step = 'idle';
         updateOsrmStatus();
+        
+        checkAndCalculateOsrmRoute();
     } else if (osrmState.step === 'to') {
         osrmState.toLat = lat;
         osrmState.toLng = lng;
+        
+        // Remove old to marker
+        if (osrmState.toMarker) {
+            map.removeLayer(osrmState.toMarker);
+        }
         
         // Add to marker
         const icon = L.divIcon({
@@ -1277,14 +1350,20 @@ function handleOsrmMapClick(lat, lng) {
         osrmState.toMarker = L.marker([lat, lng], { icon }).addTo(map);
         
         document.getElementById('osrm-to').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        osrmState.step = 'calculating';
+        
+        // Exit picking mode
+        osrmState.step = 'idle';
         updateOsrmStatus();
         
+        checkAndCalculateOsrmRoute();
+    }
+}
+
+function checkAndCalculateOsrmRoute() {
+    if (osrmState.fromLat && osrmState.toLat) {
+        osrmState.step = 'calculating';
+        updateOsrmStatus();
         calculateOsrmRoute(osrmState.fromLat, osrmState.fromLng, osrmState.toLat, osrmState.toLng);
-    } else {
-        // Third click, reset and start over
-        resetOsrmState();
-        handleOsrmMapClick(lat, lng);
     }
 }
 
@@ -1796,7 +1875,7 @@ function renderAttractionList() {
 
 // ==================== Helper for marker clicks in radius picking mode ====================
 function handleMarkerClickForRadiusFilter(e, latlng) {
-    if (osrmState.active) {
+    if (osrmState.active && (osrmState.step === 'from' || osrmState.step === 'to')) {
         if (e.originalEvent) {
             L.DomEvent.stopPropagation(e.originalEvent);
         }
