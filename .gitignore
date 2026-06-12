@@ -181,6 +181,8 @@ package-lock.json
 
 # Project Specific
 .hermes_tasks/
+.memory/
+.memory_key
 
 # EOF
 
