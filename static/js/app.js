@@ -2240,6 +2240,15 @@ function closeModal() {
 }
 
 window.askHermes = function(title) {
+    closeModal();
+
+    const chat = document.getElementById('ai-chat');
+    if (chat && chat.classList.contains('collapsed')) {
+        chat.classList.remove('collapsed');
+        const statusBar = document.getElementById('system-status-bar');
+        if (statusBar) statusBar.classList.remove('hidden');
+    }
+
     const input = document.getElementById('chat-input');
     if (input) {
         input.value = `叫Hermes介紹 ${title} 並更新介紹頁`;

@@ -778,5 +778,23 @@
     "visited": false,
     "myRemark": "",
     "deleted": false
+  },
+  {
+    "id": "chat_通仁市場（통인시장）_37.5707_126.9692",
+    "name": "通仁市場（통인시장）",
+    "lat": 37.5707,
+    "lng": 126.9692,
+    "category": "購物美食",
+    "description": "傳統市場，以便當盒午餐體驗聞名，可換領老式硬幣買多款韓式小菜",
+    "address": "首爾特別市鐘路區通仁路 15",
+    "price": "",
+    "addedAt": 1781251372194,
+    "updatedAt": 1781251373547,
+    "ownerFingerprint": "TW96aWxsYS81LjAgKExpbnV4OyBBbmRy",
+    "wish": false,
+    "pinned": false,
+    "visited": false,
+    "myRemark": "",
+    "deleted": false
   }
 ]
