@@ -16,6 +16,7 @@ import glob
 import xml.etree.ElementTree as ET
 import threading
 from dotenv import load_dotenv
+from memory_manager import memory_manager
 
 # Ollama consecutive failure counter (circuit breaker) — thread-safe wrapper
 class _CircuitBreaker:
@@ -176,6 +177,17 @@ except ImportError:
     def create_urllib_opener():
         return urllib.request.build_opener()
 
+def rbac_required(role_required="user"):
+    def decorator(func):
+        def wrapper(self, *args, **kwargs):
+            role = self.headers.get('X-Role', 'user')
+            if role_required == "admin" and role != "admin":
+                self.send_json({'error': 'Forbidden: Admin access required'}, status=403)
+                return
+            return func(self, *args, **kwargs)
+        return wrapper
+    return decorator
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         # 設置工作目錄為當前目錄 (seoul-tour-map)
@@ -209,6 +221,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if parsed_path == '/api/user-profile':
             self.handle_get_user_profile(parsed_query)
+            return
+        if parsed_path == '/api/memory':
+            self.handle_get_memory(parsed_query)
             return
 
         # 如果是 /api/ 路徑但未被處理，返回 JSON 404
@@ -255,7 +270,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if parsed_path == '/api/user-profile':
             self.handle_set_user_profile()
             return
+        if parsed_path == '/api/memory':
+            self.handle_set_memory()
+            return
             
+        # 如果是 /api/ 路徑但未被處理，返回 JSON 404
+        if parsed_path.startswith('/api/'):
+            self.send_json({'success': False, 'error': f'API endpoint not found: {parsed_path}'}, status=404)
+            return
+
+        self.send_error(404)
+
+    def do_DELETE(self):
+        parsed_path = urllib.parse.urlparse(self.path).path
+        parsed_query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        _safe_print(f"DEBUG: do_DELETE path='{self.path}' parsed_path='{parsed_path}'")
+        if parsed_path == '/api/memory':
+            self.handle_delete_memory(parsed_query)
+            return
+
         # 如果是 /api/ 路徑但未被處理，返回 JSON 404
         if parsed_path.startswith('/api/'):
             self.send_json({'success': False, 'error': f'API endpoint not found: {parsed_path}'}, status=404)
@@ -344,6 +377,74 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)}, status=500)
 
+    @rbac_required("user")
+    def handle_get_memory(self, parsed_query):
+        try:
+            user_id = parsed_query.get('user_id', [''])[0]
+            if not user_id:
+                self.send_json({'success': False, 'error': 'Missing user_id'}, status=400)
+                return
+            
+            # Admins can access any user's memory, users can only access their own.
+            # In a real app we'd verify the token matches the user_id. Here we just trust the header if it's admin.
+            role = self.headers.get('X-Role', 'user')
+            token_user = self.headers.get('X-User-Id', user_id) # Simplify for now
+            if role != "admin" and token_user != user_id:
+                self.send_json({'success': False, 'error': 'Forbidden'}, status=403)
+                return
+
+            memory = memory_manager.read_memory(user_id)
+            self.send_json({'success': True, 'memory': memory})
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    @rbac_required("user")
+    def handle_set_memory(self):
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+            
+            user_id = data.get('user_id', '')
+            memory_data = data.get('memory', {})
+
+            if not user_id:
+                self.send_json({'success': False, 'error': 'Missing user_id'}, status=400)
+                return
+
+            role = self.headers.get('X-Role', 'user')
+            token_user = self.headers.get('X-User-Id', user_id)
+            if role != "admin" and token_user != user_id:
+                self.send_json({'success': False, 'error': 'Forbidden'}, status=403)
+                return
+
+            memory_manager.write_memory(user_id, memory_data)
+            self.send_json({'success': True, 'message': 'Memory saved successfully'})
+
+        except json.JSONDecodeError:
+            self.send_json({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
+    @rbac_required("user")
+    def handle_delete_memory(self, parsed_query):
+        try:
+            user_id = parsed_query.get('user_id', [''])[0]
+            if not user_id:
+                self.send_json({'success': False, 'error': 'Missing user_id parameter'}, status=400)
+                return
+
+            role = self.headers.get('X-Role', 'user')
+            token_user = self.headers.get('X-User-Id', user_id)
+            if role != "admin" and token_user != user_id:
+                self.send_json({'success': False, 'error': 'Forbidden'}, status=403)
+                return
+
+            memory_manager.delete_memory(user_id)
+            self.send_json({'success': True, 'message': 'Memory deleted successfully'})
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, status=500)
+
     def handle_chat(self):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
@@ -355,6 +456,36 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             fingerprint = data.get('fingerprint', '') # 獲取指紋授權
             user_prefs = data.get('preferences', {}) # 獲取用戶偏好
             trip_data = data.get('trip_data', {}) # 獲取用戶旅行資料
+
+            # Start background thread to extract memory attributes
+            if fingerprint and user_message and not user_message.startswith("[SYSTEM"):
+                def extract_and_update_memory():
+                    extracted_res = memory_manager.extract_attributes(user_message, API_BASE, API_KEY, MODEL)
+                    attributes = extracted_res.get("attributes", {})
+                    if attributes:
+                        memory = memory_manager.read_memory(fingerprint)
+                        if 'extracted_attributes' not in memory:
+                            memory['extracted_attributes'] = {}
+                        if 'flagged_for_confirmation' not in memory:
+                            memory['flagged_for_confirmation'] = {}
+                            
+                        for k, v in attributes.items():
+                            conf = v.get("confidence", 0.0) if isinstance(v, dict) else 1.0
+                            if conf >= 0.8:
+                                memory['extracted_attributes'][k] = v
+                            else:
+                                memory['flagged_for_confirmation'][k] = v
+                        
+                        if 'raw_notes' not in memory:
+                            memory['raw_notes'] = []
+                        # Keep recent notes
+                        memory['raw_notes'].append(user_message)
+                        memory['raw_notes'] = memory['raw_notes'][-50:]
+                        
+                        memory_manager.write_memory(fingerprint, memory)
+                        _safe_print(f"[CHAT LOG] Memory updated with new extracted attributes for user {fingerprint}")
+                
+                threading.Thread(target=extract_and_update_memory, daemon=True).start()
 
             _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | User message received: {user_message[:100]}{'...' if len(user_message) > 100 else ''}")
             _safe_print(f"[CHAT LOG] {time.strftime('%Y-%m-%d %H:%M:%S')} | handle_chat | system_prompt={'provided' if system_prompt else 'empty'}, history={len(chat_history)} messages, fingerprint={'provided' if fingerprint else 'none'}, preferences={'provided' if user_prefs else 'none'}")
@@ -506,6 +637,37 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
             if system_prompt:
                 full_system += "\n" + system_prompt
+
+            if fingerprint:
+                try:
+                    memory = memory_manager.read_memory(fingerprint)
+                    
+                    explicit_prefs = memory.get('preferences', {})
+                    if explicit_prefs:
+                        full_system += "\n【用戶明確設定的偏好】\n"
+                        for k, v in explicit_prefs.items():
+                            full_system += f"- {k}: {v}\n"
+                            
+                    travel_plans = memory.get('travel_plans', {})
+                    if travel_plans:
+                        full_system += "\n【用戶旅遊計畫】\n"
+                        for k, v in travel_plans.items():
+                            full_system += f"- {k}: {v}\n"
+                            
+                    bg_context = memory.get('background_context', {})
+                    if bg_context:
+                        full_system += "\n【用戶背景資訊】\n"
+                        for k, v in bg_context.items():
+                            full_system += f"- {k}: {v}\n"
+                            
+                    extracted_attrs = memory.get('extracted_attributes', {})
+                    if extracted_attrs:
+                        full_system += "\n【用戶自動提取的偏好】\n"
+                        for k, v in extracted_attrs.items():
+                            val = v.get("value") if isinstance(v, dict) else v
+                            full_system += f"- {k}: {val}\n"
+                except Exception as e:
+                    _safe_print(f"[CHAT LOG] Error reading memory for system prompt: {e}")
 
             # ─── 第一層：Hermes Agent 雲端 API (api-hermes.apihubs.dev) ───
             # 如果用戶啟用咗 web search + query 係複雜 + HERMES_AGENT_API_KEY 有設定，先試

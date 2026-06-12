@@ -1360,6 +1360,7 @@ body {
 
 .message.bot {
     align-self: flex-start;
+    max-width: 100%;
 }
 
 .message.user {
