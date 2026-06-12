@@ -1465,6 +1465,33 @@ body {
     background: linear-gradient(135deg, #16a085, #128c7e);
 }
 
+/* ==================== 拖曳把手 ==================== */
+.chat-drag-handle {
+    width: 100%;
+    height: 16px;
+    background: #fafafa;
+    border-top: 1px solid #eee;
+    cursor: ns-resize;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.chat-drag-handle:active {
+    cursor: grabbing;
+}
+
+.chat-drag-handle .drag-indicator {
+    width: 30px;
+    height: 4px;
+    background: #ccc;
+    border-radius: 2px;
+}
+
+.ai-chat.collapsed .chat-drag-handle {
+    display: none;
+}
+
 /* 圖片預覽 */
 .image-preview {
     padding: 8px 16px;

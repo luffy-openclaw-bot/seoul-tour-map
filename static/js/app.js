@@ -6330,6 +6330,77 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// AI Chat Drag Functionality
+function initChatDrag() {
+    const chat = document.getElementById('ai-chat');
+    const handle = document.getElementById('chat-drag-handle');
+    if (!chat || !handle) return;
+
+    let startY = 0;
+    let startBottom = 0;
+    let isDragging = false;
+
+    handle.addEventListener('mousedown', dragStart);
+    handle.addEventListener('touchstart', dragStart, { passive: true });
+
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('touchmove', dragMove, { passive: false });
+
+    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('touchend', dragEnd);
+
+    function dragStart(e) {
+        if (chat.classList.contains('collapsed')) return;
+        isDragging = true;
+        startY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+        
+        const computedStyle = window.getComputedStyle(chat);
+        startBottom = parseFloat(computedStyle.bottom) || 20;
+        
+        chat.style.transition = 'none'; // disable transition while dragging
+    }
+
+    function dragMove(e) {
+        if (!isDragging) return;
+        
+        // Prevent default to avoid scrolling on touch devices
+        if (e.cancelable && e.type === 'touchmove') {
+            e.preventDefault();
+        }
+        
+        const currentY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        
+        let newBottom = startBottom - deltaY;
+        
+        // Apply constraints
+        const isMobile = window.innerWidth <= 768;
+        const minBottom = isMobile ? 56 : 0;
+        const maxBottom = window.innerHeight - 100; // Leave at least 100px visible
+        
+        if (newBottom < minBottom) newBottom = minBottom;
+        if (newBottom > maxBottom) newBottom = maxBottom;
+        
+        chat.style.setProperty('bottom', `${newBottom}px`, 'important');
+        
+        // Recalculate expanded height dynamically so top edge doesn't overflow
+        if (chat.classList.contains('expanded-tall')) {
+            const topBar = document.querySelector('.top-bar');
+            const topBarHeight = topBar ? topBar.offsetHeight : 50;
+            const targetHeight = window.innerHeight - topBarHeight - 5 - newBottom;
+            chat.style.setProperty('--expanded-height', `${targetHeight}px`);
+        }
+    }
+
+    function dragEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        chat.style.transition = ''; // restore transition
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initChatDrag);
+
 // For testing purposes
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
