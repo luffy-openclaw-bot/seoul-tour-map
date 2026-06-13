@@ -170,7 +170,7 @@ def call_ollama_api(system_prompt, user_message, search_context=None, history=No
         "messages": messages,
         "stream": False,
         "temperature": 0.7,
-        "max_tokens": 1000
+        "max_tokens": 4096
     }
     
     req = urllib.request.Request(

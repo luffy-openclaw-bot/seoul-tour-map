@@ -755,7 +755,7 @@ function initMap() {
 
 // ==================== 地圖點擊搜尋 ====================
 function onMapClick(e) {
-    if (osrmState.active) {
+    if (osrmState.active && (osrmState.step === 'from' || osrmState.step === 'to')) {
         e.originalEvent?.preventDefault();
         handleOsrmMapClick(e.latlng.lat, e.latlng.lng);
         return;
@@ -1174,6 +1174,7 @@ function toggleOsrmPanel() {
                 if (statusBar) statusBar.classList.add('hidden');
             }
             
+            osrmState.step = 'from';
             updateOsrmStatus();
         } else {
             osrmState.active = false;
@@ -1184,7 +1185,7 @@ function toggleOsrmPanel() {
 }
 
 function resetOsrmState() {
-    osrmState.step = 'from';
+    osrmState.step = 'idle';
     osrmState.fromLat = null;
     osrmState.fromLng = null;
     osrmState.toLat = null;
@@ -1215,21 +1216,50 @@ function updateOsrmStatus() {
     const statusDiv = document.getElementById('osrm-status');
     if (!statusDiv) return;
     
+    const fromField = document.getElementById('osrm-from')?.parentElement;
+    const toField = document.getElementById('osrm-to')?.parentElement;
+    const mapElement = document.getElementById('map');
+    
     if (osrmState.step === 'from') {
         statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇起點';
         statusDiv.className = 'osrm-status text-muted';
+        if (fromField) fromField.classList.add('picking');
+        if (toField) toField.classList.remove('picking');
+        if (mapElement) mapElement.style.cursor = 'crosshair';
     } else if (osrmState.step === 'to') {
         statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇終點';
         statusDiv.className = 'osrm-status text-muted';
-    } else if (osrmState.step === 'calculating') {
-        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃路線...';
-        statusDiv.className = 'osrm-status text-muted';
-    } else if (osrmState.step === 'done') {
-        statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> 路線規劃完成';
-        statusDiv.className = 'osrm-status text-green';
-    } else if (osrmState.step === 'error') {
-        statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 無法規劃路線';
-        statusDiv.className = 'osrm-status text-red';
+        if (fromField) fromField.classList.remove('picking');
+        if (toField) toField.classList.add('picking');
+        if (mapElement) mapElement.style.cursor = 'crosshair';
+    } else {
+        if (fromField) fromField.classList.remove('picking');
+        if (toField) toField.classList.remove('picking');
+        if (mapElement) mapElement.style.cursor = '';
+        
+        if (osrmState.step === 'calculating') {
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃路線...';
+            statusDiv.className = 'osrm-status text-muted';
+        } else if (osrmState.step === 'done') {
+            // done message is handled in calculateOsrmRoute, but we keep this as fallback
+            if (!statusDiv.innerHTML.includes('路線規劃完成')) {
+                statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> 路線規劃完成';
+            }
+            statusDiv.className = 'osrm-status text-green';
+        } else if (osrmState.step === 'error') {
+            if (!statusDiv.innerHTML.includes('無法規劃路線')) {
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 無法規劃路線';
+            }
+            statusDiv.className = 'osrm-status text-red';
+        } else if (osrmState.step === 'idle') {
+            if (osrmState.fromLat && osrmState.toLat) {
+                statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 準備規劃路線...';
+                statusDiv.className = 'osrm-status text-muted';
+            } else {
+                statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請選擇起點或終點';
+                statusDiv.className = 'osrm-status text-muted';
+            }
+        }
     }
 }
 
@@ -1246,12 +1276,50 @@ document.addEventListener('DOMContentLoaded', () => {
             resetOsrmState();
         });
     }
+    
+    const fromInput = document.getElementById('osrm-from');
+    if (fromInput) {
+        fromInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            osrmState.step = 'from';
+            updateOsrmStatus();
+        });
+    }
+    
+    const toInput = document.getElementById('osrm-to');
+    if (toInput) {
+        toInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            osrmState.step = 'to';
+            updateOsrmStatus();
+        });
+    }
+});
+
+// Document click to cancel picking mode
+document.addEventListener('click', (e) => {
+    if (!osrmState.active) return;
+    if (osrmState.step !== 'from' && osrmState.step !== 'to') return;
+    
+    const isMap = e.target.closest('#map');
+    const isOsrmInput = e.target.closest('#osrm-from, #osrm-to');
+    const isOsrmPanelCtrl = e.target.closest('#osrm-panel-close, #btn-osrm-reset');
+    
+    if (!isMap && !isOsrmInput && !isOsrmPanelCtrl) {
+        osrmState.step = 'idle';
+        updateOsrmStatus();
+    }
 });
 
 function handleOsrmMapClick(lat, lng) {
     if (osrmState.step === 'from') {
         osrmState.fromLat = lat;
         osrmState.fromLng = lng;
+        
+        // Remove old from marker
+        if (osrmState.fromMarker) {
+            map.removeLayer(osrmState.fromMarker);
+        }
         
         // Add from marker
         const icon = L.divIcon({
@@ -1262,11 +1330,20 @@ function handleOsrmMapClick(lat, lng) {
         osrmState.fromMarker = L.marker([lat, lng], { icon }).addTo(map);
         
         document.getElementById('osrm-from').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        osrmState.step = 'to';
+        
+        // Exit picking mode
+        osrmState.step = 'idle';
         updateOsrmStatus();
+        
+        checkAndCalculateOsrmRoute();
     } else if (osrmState.step === 'to') {
         osrmState.toLat = lat;
         osrmState.toLng = lng;
+        
+        // Remove old to marker
+        if (osrmState.toMarker) {
+            map.removeLayer(osrmState.toMarker);
+        }
         
         // Add to marker
         const icon = L.divIcon({
@@ -1277,14 +1354,20 @@ function handleOsrmMapClick(lat, lng) {
         osrmState.toMarker = L.marker([lat, lng], { icon }).addTo(map);
         
         document.getElementById('osrm-to').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        osrmState.step = 'calculating';
+        
+        // Exit picking mode
+        osrmState.step = 'idle';
         updateOsrmStatus();
         
+        checkAndCalculateOsrmRoute();
+    }
+}
+
+function checkAndCalculateOsrmRoute() {
+    if (osrmState.fromLat && osrmState.toLat) {
+        osrmState.step = 'calculating';
+        updateOsrmStatus();
         calculateOsrmRoute(osrmState.fromLat, osrmState.fromLng, osrmState.toLat, osrmState.toLng);
-    } else {
-        // Third click, reset and start over
-        resetOsrmState();
-        handleOsrmMapClick(lat, lng);
     }
 }
 
@@ -1796,7 +1879,7 @@ function renderAttractionList() {
 
 // ==================== Helper for marker clicks in radius picking mode ====================
 function handleMarkerClickForRadiusFilter(e, latlng) {
-    if (osrmState.active) {
+    if (osrmState.active && (osrmState.step === 'from' || osrmState.step === 'to')) {
         if (e.originalEvent) {
             L.DomEvent.stopPropagation(e.originalEvent);
         }
@@ -2059,7 +2142,7 @@ function showAttractionDetail(attr) {
         <div class="modal-info">
             <div class="modal-title">
                 ${attr.name}
-                <button class="btn-ask-hermes" onclick="askHermes('${attr.name.replace(/'/g, "\\'")}')" title="Ask Hermes" aria-label="Ask Hermes">
+                <button class="btn-ask-hermes" onclick="askHermes('${attr.name.replace(/'/g, "\\'")}', '${attr.id}')" title="Ask Hermes" aria-label="Ask Hermes">
                     <i class="fas fa-robot"></i> 介紹
                 </button>
             </div>
@@ -2156,10 +2239,19 @@ function closeModal() {
     window.currentModalAttraction = null;
 }
 
-window.askHermes = function(title) {
+window.askHermes = function(title, id) {
+    closeModal();
+
+    const chat = document.getElementById('ai-chat');
+    if (chat && chat.classList.contains('collapsed')) {
+        chat.classList.remove('collapsed');
+        const statusBar = document.getElementById('system-status-bar');
+        if (statusBar) statusBar.classList.remove('hidden');
+    }
+
     const input = document.getElementById('chat-input');
     if (input) {
-        input.value = `叫Hermes介紹 ${title} 並更新介紹頁`;
+        input.value = `叫Hermes介紹 ${title} 並更新介紹頁 (ID: ${id})`;
         sendMessage();
     }
 };
@@ -2808,11 +2900,24 @@ function toggleChat() {
     if (isDraggingChat) return;
     const chat = document.getElementById('ai-chat');
     chat.classList.toggle('collapsed');
-    
+
     // 如果收合，一併關閉 system-status-bar
     if (chat.classList.contains('collapsed')) {
         const statusBar = document.getElementById('system-status-bar');
         if (statusBar) statusBar.classList.add('hidden');
+        // 收合時重置拖曳造成的 translateY 偏移，讓 collapsed widget 回到預設位置
+        chat.style.transition = '';
+        chat.style.transform = '';
+    } else {
+        // 展開時，如果目前是 expanded-tall 模式，重新計算高度
+        if (chat.classList.contains('expanded-tall')) {
+            const topBar = document.querySelector('.top-bar');
+            const topBarHeight = topBar ? topBar.offsetHeight : 50;
+            const computedStyle = window.getComputedStyle(chat);
+            const bottomOffset = parseFloat(computedStyle.bottom) || 20;
+            const targetHeight = window.innerHeight - topBarHeight - 5 - bottomOffset;
+            chat.style.setProperty('--expanded-height', `${targetHeight}px`);
+        }
     }
     
     // 展開時的處理邏輯
@@ -2849,6 +2954,20 @@ function toggleChatHeight(event) {
     }
     const chat = document.getElementById('ai-chat');
     chat.classList.toggle('expanded-tall');
+    
+    // 重置拖曳位移，確保對齊
+    chat.style.transform = '';
+    
+    if (chat.classList.contains('expanded-tall')) {
+        const topBar = document.querySelector('.top-bar');
+        const topBarHeight = topBar ? topBar.offsetHeight : 50;
+        const computedStyle = window.getComputedStyle(chat);
+        const bottomOffset = parseFloat(computedStyle.bottom) || 20;
+        const targetHeight = window.innerHeight - topBarHeight - 5 - bottomOffset;
+        chat.style.setProperty('--expanded-height', `${targetHeight}px`);
+    } else {
+        chat.style.removeProperty('--expanded-height');
+    }
     
     const resizeIcon = document.getElementById('resize-chat-icon');
     if (resizeIcon) {
@@ -3429,7 +3548,7 @@ function getSystemContext() {
 6. add_polygon (顯示區域範圍)：【{"action":"add_polygon","params":{"coords":[[37.56,126.98],[37.56,126.99],[37.57,126.99],[37.57,126.98]],"name":"明洞商圈","color":"#3498db"}}】
 7. clear_search_markers (清除搜索標記)：【{"action":"clear_search_markers"}】
 8. add_to_list (將提及嘅地點標示在地圖並永久加入景點列表)：【{"action":"add_to_list","params":{"name":"地點名稱","lat":37.46,"lng":126.44,"address":"詳細地址","category":"購物美食","description":"簡短描述"}}】
-9. update_attraction_detail (更新景點詳細資訊)：【{"action":"update_attraction_detail","params":{"id":"景點ID","description":"更新後的簡介","highlights":["亮點1","亮點2"],"local_cuisine":["美食推薦"],"best_seasons":["最佳旅遊季節"],"stay_duration":"建議逗留時間","visitor_insights":"旅客真實評價","transport":{"subway":"交通","time_from_station":"步程"},"ticket":"門票","hours":"開放時間","tips":"小貼士"}}】
+9. update_attraction_detail (更新景點詳細資訊)：【{"action":"update_attraction_detail","params":{"id":"景點ID","name":"景點名稱","description":"更新後的簡介","highlights":["亮點1","亮點2"],"local_cuisine":["美食推薦"],"best_seasons":["最佳旅遊季節"],"stay_duration":"建議逗留時間","visitor_insights":"旅客真實評價","transport":{"subway":"交通","time_from_station":"步程"},"ticket":"門票","hours":"開放時間","tips":"小貼士"}}】
 
 景點ID：${attractionsData.map(a=>a.id).join(', ')}
 分類：${categories}
@@ -3442,7 +3561,7 @@ ${attractionsSummary}
 - 搜索結果在內文回答後，適宜用 add_marker 喺地圖標示位置
 - 提及區域或商圈時，可用 add_polygon 顯示範圍
 - 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker
-- 當用家要求「叫Hermes介紹...並更新介紹頁」時，請使用 update_attraction_detail 指令提供詳細資訊
+- 當用家要求「叫Hermes介紹...並更新介紹頁」時，請使用 update_attraction_detail 指令提供詳細資訊。必須確保 \`id\` 欄位精確填入用家提供嘅 ID。
 - 普通對答唔需要地圖指令`;
 }
 
@@ -3995,6 +4114,14 @@ function toggleMobilePanel(expanded) {
     if (expanded) {
         panel.classList.add('expanded');
         panel.classList.remove('hidden-panel');
+
+        // 開啟手機版景點列表面板時，自動收合 chatbot 釋出畫面空間
+        const chatWidget = document.getElementById('ai-chat');
+        if (chatWidget && !chatWidget.classList.contains('collapsed')) {
+            chatWidget.classList.add('collapsed');
+            const statusBar = document.getElementById('system-status-bar');
+            if (statusBar) statusBar.classList.add('hidden');
+        }
     } else {
         panel.classList.remove('expanded');
     }
@@ -4107,10 +4234,10 @@ function addLocationButtonToLastBotMessage(locationData, targetElement) {
     
     // Determine button text based on location data
     let locationName = '再次前往';
-    if (locationData.type === 'attraction' && locationData.attraction) {
-        locationName = locationData.attraction.name;
-    } else if (locationData.title) {
+    if (locationData.title) {
         locationName = locationData.title;
+    } else if (locationData.type === 'attraction' && locationData.attraction) {
+        locationName = locationData.attraction.name;
     }
     
     button.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${locationName}`;
@@ -4121,7 +4248,9 @@ function addLocationButtonToLastBotMessage(locationData, targetElement) {
     // Add click handler
     button.addEventListener('click', () => {
         const data = JSON.parse(button.dataset.locationData);
-        if (data.type === 'attraction' && data.attraction) {
+        if (data.action === 'show_detail' && data.attraction) {
+            showAttractionDetail(data.attraction);
+        } else if (data.type === 'attraction' && data.attraction) {
             focusAttraction(data.attraction);
         } else if (data.lat && data.lng) {
             flyToSearchResult(data.lat, data.lng, data.title || '位置');
@@ -4224,7 +4353,11 @@ async function executeMapAction(action, params, targetElement) {
                 const targetId = params.id;
                 let targetAttr = attractionsData.find(a => a.id === targetId);
                 if (!targetAttr && params.name) {
-                    targetAttr = attractionsData.find(a => a.name === params.name);
+                    targetAttr = attractionsData.find(a => a.name === params.name || a.name.includes(params.name) || params.name.includes(a.name));
+                }
+                if (!targetAttr && targetId) {
+                    // Fuzzy match by name if targetId was used as name by mistake
+                    targetAttr = attractionsData.find(a => a.name === targetId || a.name.includes(targetId) || targetId.includes(a.name));
                 }
                 
                 if (targetAttr) {
@@ -4244,8 +4377,44 @@ async function executeMapAction(action, params, targetElement) {
                     if (window.currentModalAttraction && window.currentModalAttraction.id === targetAttr.id) {
                         showAttractionDetail(targetAttr);
                     }
-                    console.log(`[Map Action] Updated attraction detail for ${targetAttr.name}`);
-                }
+                    
+                    // 如果是聊天添加的自訂地點，將更新保存到 localStorage
+                    if (targetAttr.id && targetAttr.id.startsWith('chat_')) {
+                        try {
+                            const CHAT_PLACES_KEY = 'seoul_tour_chat_places';
+                            const places = JSON.parse(localStorage.getItem(CHAT_PLACES_KEY) || '[]');
+                            const placeIndex = places.findIndex(p => p.id === targetAttr.id);
+                            if (placeIndex !== -1) {
+                                // 更新保存的屬性
+                                const fieldsToUpdate = ['description', 'highlights', 'local_cuisine', 'best_seasons', 'stay_duration', 'visitor_insights', 'transport', 'ticket', 'hours', 'tips'];
+                                fieldsToUpdate.forEach(field => {
+                                    if (targetAttr[field] !== undefined) {
+                                        places[placeIndex][field] = targetAttr[field];
+                                    }
+                                });
+                                localStorage.setItem(CHAT_PLACES_KEY, JSON.stringify(places));
+                                // 同步到服務器
+                                if (typeof WishlistManager !== 'undefined' && WishlistManager.syncToServer) {
+                                     WishlistManager.syncToServer(places);
+                                 }
+                             }
+                         } catch (e) {
+                             console.error('[Map Action] Error persisting updated detail:', e);
+                         }
+                     }
+                     
+                     // 顯示一個按鈕，讓用戶可以再次打開景點詳情頁
+                    if (typeof addLocationButtonToLastBotMessage === 'function' && msgElement) {
+                        addLocationButtonToLastBotMessage({
+                            type: 'attraction',
+                            attraction: targetAttr,
+                            title: '查看更新後的介紹',
+                            action: 'show_detail'
+                        }, msgElement);
+                    }
+ 
+                     console.log(`[Map Action] Updated attraction detail for ${targetAttr.name}`);
+                 }
                 break;
             case 'highlight_category':
                 activeCategory = params.category;
@@ -6314,7 +6483,91 @@ document.addEventListener('DOMContentLoaded', () => {
             checkSystemStatus();
         });
     }
+    
+    // Add window resize listener to recalculate expanded-height for chatbot big mode
+    window.addEventListener('resize', () => {
+        const chat = document.getElementById('ai-chat');
+        if (chat && chat.classList.contains('expanded-tall') && !chat.classList.contains('collapsed')) {
+            const topBar = document.querySelector('.top-bar');
+            const topBarHeight = topBar ? topBar.offsetHeight : 50;
+            const computedStyle = window.getComputedStyle(chat);
+            const bottomOffset = parseFloat(computedStyle.bottom) || 20;
+            const targetHeight = window.innerHeight - topBarHeight - 5 - bottomOffset;
+            chat.style.setProperty('--expanded-height', `${targetHeight}px`);
+        }
+    });
 });
+
+// AI Chat Drag Functionality
+function initChatDrag() {
+    const chat = document.getElementById('ai-chat');
+    const handle = document.getElementById('chat-drag-handle');
+    if (!chat || !handle) return;
+
+    let startY = 0;
+    let startBottom = 0;
+    let isDragging = false;
+
+    handle.addEventListener('mousedown', dragStart);
+    handle.addEventListener('touchstart', dragStart, { passive: true });
+
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('touchmove', dragMove, { passive: false });
+
+    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('touchend', dragEnd);
+
+    function dragStart(e) {
+        if (chat.classList.contains('collapsed')) return;
+        isDragging = true;
+        startY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+        
+        const computedStyle = window.getComputedStyle(chat);
+        startBottom = parseFloat(computedStyle.bottom) || 20;
+        
+        chat.style.transition = 'none'; // disable transition while dragging
+    }
+
+    function dragMove(e) {
+        if (!isDragging) return;
+        
+        // Prevent default to avoid scrolling on touch devices
+        if (e.cancelable && e.type === 'touchmove') {
+            e.preventDefault();
+        }
+        
+        const currentY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        
+        let newBottom = startBottom - deltaY;
+        
+        // Apply constraints
+        const isMobile = window.innerWidth <= 768;
+        const minBottom = isMobile ? 56 : 0;
+        const maxBottom = window.innerHeight - 100; // Leave at least 100px visible
+        
+        if (newBottom < minBottom) newBottom = minBottom;
+        if (newBottom > maxBottom) newBottom = maxBottom;
+        
+        chat.style.setProperty('bottom', `${newBottom}px`, 'important');
+        
+        // Recalculate expanded height dynamically so top edge doesn't overflow
+        if (chat.classList.contains('expanded-tall')) {
+            const topBar = document.querySelector('.top-bar');
+            const topBarHeight = topBar ? topBar.offsetHeight : 50;
+            const targetHeight = window.innerHeight - topBarHeight - 5 - newBottom;
+            chat.style.setProperty('--expanded-height', `${targetHeight}px`);
+        }
+    }
+
+    function dragEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        chat.style.transition = ''; // restore transition
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initChatDrag);
 
 // For testing purposes
 if (typeof module !== 'undefined' && module.exports) {
