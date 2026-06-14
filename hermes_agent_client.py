@@ -216,7 +216,7 @@ class HermesAgentClient:
             "messages": full_messages,
             "stream": False,
             "temperature": 0.7,
-            "max_tokens": 1000
+            "max_tokens": 4096
         }
         
         req = urllib.request.Request(

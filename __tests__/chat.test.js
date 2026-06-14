@@ -71,6 +71,8 @@ global.activeCategory = 'all';
 const app = require('../static/js/app.js');
 const {
     addMessage,
+    buildUpdateDetailFallbackAction,
+    extractActionCommands,
     saveChatHistory,
     loadChatHistory,
     getChatHistory,
@@ -275,5 +277,125 @@ describe('Chat-added location detail modal', () => {
         expect(document.getElementById('modal').classList.contains('hidden')).toBe(true);
 
         confirmSpy.mockRestore();
+    });
+});
+
+describe('AI attraction detail updates', () => {
+    beforeEach(() => {
+        localStorage.clear();
+        jest.clearAllMocks();
+        global.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({ success: true })
+        });
+    });
+
+    test('extractActionCommands parses update_attraction_detail from a markdown reply', () => {
+        const reply = `### 通仁市場介紹
+
+而家幫你更新介紹頁：
+
+【{"action":"update_attraction_detail","params":{"id":"chat_tongin_market","name":"通仁市場","description":"傳統市場介紹","highlights":["銅錢飯盒體驗"],"local_cuisine":["糖餅"],"best_seasons":["春季"],"stay_duration":"1-1.5 小時","visitor_insights":"夠 local","transport":{"subway":"景福宮站 2 號出口","time_from_station":"步行約 5 分鐘"},"ticket":"免費","hours":"07:00-21:00","tips":"避開中午高峰"}}】`;
+
+        const parsed = extractActionCommands(reply, 'test');
+
+        expect(parsed.actions).toHaveLength(1);
+        expect(parsed.actions[0].action).toBe('update_attraction_detail');
+        expect(parsed.actions[0].params.id).toBe('chat_tongin_market');
+    });
+
+    test('buildUpdateDetailFallbackAction synthesizes update action from structured markdown reply', () => {
+        const userText = '叫Hermes介紹 通仁市場 並更新介紹頁 (ID: chat_tongin_market)';
+        const reply = `### 🏮 通仁市場（통인시장）介紹
+
+### 📍 基本資料
+| 項目 | 資料 |
+|------|------|
+| 市場名稱 | 通仁市場 |
+| 地址 | 首爾鐘路區紫霞門路 15 街 18 號 |
+| 交通 | 地鐵 3 號線 景福宮站 2 號出口，步行約 5 分鐘 |
+| 營業時間 | 07:00-21:00 |
+| 入場費 | 免費 |
+| 建議逗留 | 1-1.5 小時 |
+
+### ✨ 市場亮點
+| 亮點 | 說明 |
+|------|------|
+| 銅錢飯盒體驗 | 特色體驗 |
+| 80 年歷史 | 老市場 |
+
+### 🍜 必食推薦
+| 小食 | 價格 |
+|------|------|
+| 糖餅 | ₩1,000-1,500 |
+| 紫菜飯卷 | ₩2,500-3,500 |
+
+### 💡 探訪小貼士
+1. 平日早上去會舒服啲
+2. 避開午市高峰`;
+
+        const fallbackAction = buildUpdateDetailFallbackAction(userText, reply);
+
+        expect(fallbackAction).not.toBeNull();
+        expect(fallbackAction.action).toBe('update_attraction_detail');
+        expect(fallbackAction.params.id).toBe('chat_tongin_market');
+        expect(fallbackAction.params.name).toBe('通仁市場');
+        expect(fallbackAction.params.highlights).toContain('銅錢飯盒體驗');
+        expect(fallbackAction.params.local_cuisine).toContain('糖餅');
+        expect(fallbackAction.params.transport).toEqual({
+            subway: '地鐵 3 號線 景福宮站 2 號出口',
+            time_from_station: '步行約 5 分鐘'
+        });
+        expect(fallbackAction.params.hours).toBe('07:00-21:00');
+        expect(fallbackAction.params.ticket).toBe('免費');
+    });
+
+    test('executeMapAction updates chat-added attraction detail by exact id', async () => {
+        setAttractionsDataForTest([
+            {
+                id: 'chat_tongin_market',
+                name: '通仁市場',
+                lat: 37.5780,
+                lng: 126.9720,
+                category: '地標觀景',
+                description: '特色銅錢市場，多種傳統小食'
+            }
+        ]);
+
+        const result = await app.executeMapAction('update_attraction_detail', {
+            id: 'chat_tongin_market',
+            name: '通仁市場',
+            description: '有銅錢飯盒體驗嘅傳統市場。',
+            highlights: ['銅錢飯盒體驗', '80 年歷史'],
+            local_cuisine: ['糖餅', '紫菜飯卷'],
+            stay_duration: '1-1.5 小時',
+            transport: {
+                subway: '景福宮站 2 號出口',
+                time_from_station: '步行約 5 分鐘'
+            },
+            ticket: '免費',
+            hours: '07:00-21:00',
+            tips: '避開中午高峰'
+        });
+
+        expect(result.success).toBe(true);
+        showAttractionDetailById('chat_tongin_market');
+        const modalText = document.getElementById('modal-body').textContent;
+        expect(modalText).toContain('有銅錢飯盒體驗嘅傳統市場');
+        expect(modalText).toContain('糖餅、紫菜飯卷');
+        expect(modalText).toContain('步行約 5 分鐘');
+    });
+
+    test('executeMapAction returns failure when update target cannot be resolved', async () => {
+        setAttractionsDataForTest([]);
+
+        const result = await app.executeMapAction('update_attraction_detail', {
+            id: 'chat_missing_market',
+            name: '不存在景點',
+            description: 'test'
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('target attraction not found');
     });
 });

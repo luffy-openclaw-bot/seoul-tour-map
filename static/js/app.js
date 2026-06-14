@@ -2251,7 +2251,9 @@ window.askHermes = function(title, id) {
 
     const input = document.getElementById('chat-input');
     if (input) {
-        input.value = `叫Hermes介紹 ${title} 並更新介紹頁 (ID: ${id})`;
+        const hermesPrompt = `叫Hermes介紹 ${title} 並更新介紹頁 (ID: ${id})`;
+        console.log('[Hermes Detail Update] Prompt prepared:', { title, id, prompt: hermesPrompt });
+        input.value = hermesPrompt;
         sendMessage();
     }
 };
@@ -3415,6 +3417,14 @@ function extractActionCommands(text, sourceLabel = 'unknown') {
     });
 
     console.log(`[AI Action Parser] ${sourceLabel}: extracted ${actions.length} action(s), malformed=${malformedFragments.length}`);
+    if (actions.length === 0) {
+        console.log(`[AI Action Parser] ${sourceLabel}: zero-action diagnostics`, {
+            hasUpdateKeyword: /update_attraction_detail/.test(cleanText),
+            hasJsonLikeAction: /"(?:action|type)"\s*:/.test(cleanText),
+            jsonFragmentCount: scanJsonActionObjects(cleanText).length,
+            textTail: cleanText.slice(-400)
+        });
+    }
 
     return {
         cleanText: cleanText.trim(),
@@ -3459,18 +3469,203 @@ function formatAddToListStatusMessage(addResults, malformedAddCount = 0) {
     return parts.length > 0 ? `\n\n${parts.join('\n')}` : '';
 }
 
+function isUpdateDetailIntent(userText) {
+    const normalized = String(userText || '').toLowerCase();
+    return normalized.includes('hermes') && normalized.includes('更新介紹頁');
+}
+
+function extractAttractionIdFromPrompt(userText) {
+    const match = String(userText || '').match(/\(ID:\s*([^)]+)\)/i);
+    return match ? match[1].trim() : '';
+}
+
+function extractAttractionNameFromPrompt(userText) {
+    const match = String(userText || '').match(/叫Hermes介紹\s+(.+?)\s+並更新介紹頁/i);
+    return match ? match[1].trim() : '';
+}
+
+function cleanMarkdownValue(value) {
+    return String(value || '')
+        .replace(/\*\*/g, '')
+        .replace(/`/g, '')
+        .replace(/^[\s\-*•()]+/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function parseMarkdownTable(sectionText) {
+    const rows = [];
+    String(sectionText || '')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.startsWith('|') && line.endsWith('|'))
+        .forEach((line) => {
+            const cells = line.slice(1, -1).split('|').map(cell => cleanMarkdownValue(cell));
+            if (cells.length < 2) return;
+            if (cells.every(cell => /^-+$/.test(cell.replace(/\s+/g, '')))) return;
+            if (/^(項目|亮點|小食|品項|比較)$/i.test(cells[0]) || /^(資料|說明|價格|推薦指數|建議)$/i.test(cells[1])) return;
+            rows.push(cells);
+        });
+    return rows;
+}
+
+function parseMarkdownList(sectionText) {
+    return String(sectionText || '')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => /^[-*•]\s+/.test(line) || /^\d+\.\s+/.test(line))
+        .map(line => cleanMarkdownValue(line.replace(/^[-*•]\s+/, '').replace(/^\d+\.\s+/, '').trim()))
+        .filter(Boolean);
+}
+
+function extractMarkdownSection(text, headingKeywords) {
+    const lines = String(text || '').split('\n');
+    const normalizedKeywords = headingKeywords.map(keyword => keyword.toLowerCase());
+    let startIndex = -1;
+
+    for (let i = 0; i < lines.length; i += 1) {
+        const normalizedLine = lines[i].toLowerCase();
+        if (normalizedKeywords.some(keyword => normalizedLine.includes(keyword))) {
+            startIndex = i;
+            break;
+        }
+    }
+
+    if (startIndex === -1) return '';
+
+    let endIndex = lines.length;
+    for (let i = startIndex + 1; i < lines.length; i += 1) {
+        const line = lines[i].trim();
+        if (line.startsWith('### ')) {
+            endIndex = i;
+            break;
+        }
+    }
+
+    return lines.slice(startIndex + 1, endIndex).join('\n').trim();
+}
+
+function buildKeyValueMapFromTable(sectionText) {
+    const result = {};
+    parseMarkdownTable(sectionText).forEach((cells) => {
+        if (cells.length >= 2) {
+            result[cells[0]] = cells[1];
+        }
+    });
+    return result;
+}
+
+function buildListFromFirstTableColumn(sectionText) {
+    return parseMarkdownTable(sectionText)
+        .map(cells => cells[0])
+        .filter(Boolean);
+}
+
+function parseTransportInfo(transportText) {
+    const normalized = cleanMarkdownValue(transportText);
+    if (!normalized) return undefined;
+
+    const walkMatch = normalized.match(/(步行約?\s*\d+\s*(?:分鐘|分鍾)|約?\s*\d+\s*(?:分鐘|分鍾)\s*步行)/);
+    const timeFromStation = walkMatch ? walkMatch[1].trim() : '';
+    let subway = normalized;
+
+    if (timeFromStation) {
+        subway = subway
+            .replace(new RegExp(`[,，]?\\s*${timeFromStation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), '')
+            .trim();
+    }
+
+    subway = subway.replace(/[，,]\s*$/, '').trim();
+    return {
+        subway: subway || normalized,
+        time_from_station: timeFromStation || ''
+    };
+}
+
+function buildFallbackDescription(name, basicInfo, highlights) {
+    const summaryBits = [];
+    if (basicInfo['地址']) summaryBits.push(`位於${basicInfo['地址']}`);
+    if (highlights[0]) summaryBits.push(highlights[0]);
+    if (highlights[1]) summaryBits.push(highlights[1]);
+    if (basicInfo['交通']) summaryBits.push(`交通方便，${basicInfo['交通']}`);
+    if (summaryBits.length === 0 && name) {
+        return `${name}係一個值得安排入行程嘅景點。`;
+    }
+    return `${name || '呢個景點'}，${summaryBits.join('，')}。`;
+}
+
+function buildUpdateDetailFallbackAction(userText, rawReply) {
+    if (!isUpdateDetailIntent(userText)) return null;
+
+    const targetId = extractAttractionIdFromPrompt(userText);
+    const promptName = extractAttractionNameFromPrompt(userText);
+    const basicInfo = buildKeyValueMapFromTable(extractMarkdownSection(rawReply, ['基本資料']));
+    const highlights = buildListFromFirstTableColumn(extractMarkdownSection(rawReply, ['市場亮點', '咖啡店亮點', '亮點']));
+    const localCuisine = buildListFromFirstTableColumn(extractMarkdownSection(rawReply, ['必食推薦', '推薦菜單', '當地美食推薦']));
+    const tipsSection = extractMarkdownSection(rawReply, ['探訪小貼士', '攻略貼士', '探店小貼士', '小貼士']);
+    const tipsTable = parseMarkdownTable(tipsSection);
+    const tips = tipsTable.length > 0
+        ? tipsTable.map(cells => `${cells[0]}：${cells[1]}`).join('；')
+        : parseMarkdownList(tipsSection).join('；');
+    const transport = parseTransportInfo(basicInfo['交通'] || basicInfo['交通資訊'] || '');
+    const hours = basicInfo['營業時間'] || basicInfo['開放時間'] || '';
+    const ticket = basicInfo['入場費'] || basicInfo['門票'] || '';
+    const stayDuration = basicInfo['建議逗留'] || basicInfo['建議逗留時間'] || '';
+    const bestSeasonsRaw = basicInfo['最佳旅遊季節'] || basicInfo['最佳季節'] || '';
+    const bestSeasons = bestSeasonsRaw
+        ? bestSeasonsRaw.split(/[、,，/]/).map(item => cleanMarkdownValue(item)).filter(Boolean)
+        : [];
+    const name = basicInfo['市場名稱'] || basicInfo['店名'] || basicInfo['景點名稱'] || promptName;
+    const description = buildFallbackDescription(name, basicInfo, highlights);
+
+    const hasMeaningfulContent = Boolean(
+        name ||
+        targetId ||
+        description ||
+        highlights.length > 0 ||
+        localCuisine.length > 0 ||
+        stayDuration ||
+        hours ||
+        ticket ||
+        tips
+    );
+
+    if (!hasMeaningfulContent) {
+        return null;
+    }
+
+    return {
+        action: 'update_attraction_detail',
+        params: {
+            id: targetId || name,
+            name,
+            description,
+            highlights,
+            local_cuisine: localCuisine,
+            best_seasons: bestSeasons,
+            stay_duration: stayDuration,
+            visitor_insights: highlights.slice(0, 2).join('、'),
+            transport,
+            ticket,
+            hours,
+            tips
+        }
+    };
+}
+
 async function fetchAIReply(userText) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s — covers Hermes(15s) + Ollama(30s) + overhead
 
     try {
+        const systemContext = getSystemContext();
         const data = await fetchJSON(`${API_BASE_URL}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: controller.signal,
             body: JSON.stringify({
                 message: userText,
-                system: getSystemContext(),
+                system: systemContext,
                 history: chatHistory.slice(0, -1),  // 唔包剛加入嘅 user message
                 fingerprint: FingerprintManager.getFingerprint(),
                 preferences: userPreferences,
@@ -3484,13 +3679,37 @@ async function fetchAIReply(userText) {
         }
 
         const rawReply = data.reply || generateAIReply(userText);
+        console.log('[AI Add Flow] Chat response metadata:', {
+            source: data.source || 'unknown',
+            userText,
+            rawReplyLength: rawReply.length,
+            promptTail: systemContext.slice(-300)
+        });
         console.log('[AI Add Flow] Raw reply received:', rawReply);
+        console.log('[AI Add Flow] Raw reply tail:', rawReply.slice(-500));
 
         const parsed = extractActionCommands(rawReply, 'fetchAIReply');
+        let effectiveActions = [...parsed.actions];
+        let usedFallbackUpdateAction = false;
+
+        if (effectiveActions.length === 0 && isUpdateDetailIntent(userText)) {
+            const fallbackUpdateAction = buildUpdateDetailFallbackAction(userText, rawReply);
+            if (fallbackUpdateAction) {
+                effectiveActions.push(fallbackUpdateAction);
+                usedFallbackUpdateAction = true;
+                console.warn('[AI Detail Update] No explicit update action found; synthesized fallback action from structured reply.', fallbackUpdateAction);
+            } else {
+                console.warn('[AI Detail Update] No explicit update action found and fallback synthesis failed.', {
+                    userText,
+                    rawReplyTail: rawReply.slice(-500)
+                });
+            }
+        }
+
         const actionResults = [];
 
         // Execute in order so multi-location additions complete deterministically.
-        for (const actionCommand of parsed.actions) {
+        for (const actionCommand of effectiveActions) {
             const actName = actionCommand.action || actionCommand.type;
             const actParams = actionCommand.params || {};
             const result = await executeMapAction(actName, actParams);
@@ -3512,6 +3731,15 @@ async function fetchAIReply(userText) {
                 });
             }
             reply += formatAddToListStatusMessage(addResults, malformedAddCount);
+        }
+
+        if (usedFallbackUpdateAction) {
+            const updateResult = actionResults.find(result => result && result.action === 'update_attraction_detail');
+            if (updateResult && updateResult.success) {
+                reply += '\n\n✅ App 已根據回覆內容自動整理並更新介紹頁。';
+            } else {
+                reply += '\n\n⚠️ App 偵測到需要更新介紹頁，但未能自動套用資料，請查看 console logs。';
+            }
         }
 
         return reply.trim();
@@ -3561,7 +3789,7 @@ ${attractionsSummary}
 - 搜索結果在內文回答後，適宜用 add_marker 喺地圖標示位置
 - 提及區域或商圈時，可用 add_polygon 顯示範圍
 - 提及具體地點（咖啡店、酒店、餐廳、景點等）時，必須使用 add_to_list，系統會自動處理地圖標記與列表添加，不需要再輸出 add_marker
-- 當用家要求「叫Hermes介紹...並更新介紹頁」時，請使用 update_attraction_detail 指令提供詳細資訊。必須確保 \`id\` 欄位精確填入用家提供嘅 ID。
+- 當用家要求「叫Hermes介紹...並更新介紹頁」時，請務必在回答結尾輸出 \`update_attraction_detail\` 的 JSON 指令。即使你認為資料已經很完整，也必須強制輸出該 JSON 指令以觸發系統更新。必須確保 \`id\` 欄位精確填入用家提供嘅 ID。
 - 普通對答唔需要地圖指令`;
 }
 
@@ -3585,6 +3813,13 @@ function addMessage(text, sender, isRestore = false) {
 
         if (hasAddIntent) {
             cleanText = stripPrematureAddSuccessText(cleanText);
+        }
+
+        if (botParsed.actions.length === 0 && /更新介紹頁|update_attraction_detail/.test(text)) {
+            console.log('[AI Detail Update] addMessage received bot text with update intent but no executable action.', {
+                malformedCount: botParsed.malformedFragments.length,
+                textTail: String(text).slice(-400)
+            });
         }
 
         botParsed.actions.forEach((cmd) => {
@@ -4351,6 +4586,10 @@ async function executeMapAction(action, params, targetElement) {
                 break;
             case 'update_attraction_detail':
                 const targetId = params.id;
+                if (!targetId && !params.name) {
+                    console.error('[Map Action] update_attraction_detail missing both id and name.', params);
+                    return { success: false, action, name: '', error: 'missing id and name for detail update' };
+                }
                 let targetAttr = attractionsData.find(a => a.id === targetId);
                 if (!targetAttr && params.name) {
                     targetAttr = attractionsData.find(a => a.name === params.name || a.name.includes(params.name) || params.name.includes(a.name));
@@ -4360,8 +4599,19 @@ async function executeMapAction(action, params, targetElement) {
                     targetAttr = attractionsData.find(a => a.name === targetId || a.name.includes(targetId) || targetId.includes(a.name));
                 }
                 
+                if (!targetAttr) {
+                    console.error('[Map Action] update_attraction_detail target not found.', {
+                        targetId,
+                        name: params.name,
+                        availableIds: attractionsData.slice(0, 20).map(a => a.id),
+                        availableNames: attractionsData.slice(0, 20).map(a => a.name)
+                    });
+                    return { success: false, action, name: params.name || targetId || '', error: 'target attraction not found' };
+                }
+
                 if (targetAttr) {
                     const fieldsToUpdate = ['description', 'highlights', 'local_cuisine', 'best_seasons', 'stay_duration', 'visitor_insights', 'transport', 'ticket', 'hours', 'tips'];
+                    const updatedFields = [];
                     fieldsToUpdate.forEach(field => {
                         if (params[field] !== undefined) {
                             if (field === 'local_cuisine' && Array.isArray(params[field])) {
@@ -4371,8 +4621,14 @@ async function executeMapAction(action, params, targetElement) {
                             } else {
                                 targetAttr[field] = params[field];
                             }
+                            updatedFields.push(field);
                         }
                     });
+
+                    if (updatedFields.length === 0) {
+                        console.error('[Map Action] update_attraction_detail found target but no updatable fields were provided.', params);
+                        return { success: false, action, name: targetAttr.name, error: 'no updatable fields provided' };
+                    }
                     
                     if (window.currentModalAttraction && window.currentModalAttraction.id === targetAttr.id) {
                         showAttractionDetail(targetAttr);
@@ -4413,7 +4669,7 @@ async function executeMapAction(action, params, targetElement) {
                         }, msgElement);
                     }
  
-                     console.log(`[Map Action] Updated attraction detail for ${targetAttr.name}`);
+                     console.log(`[Map Action] Updated attraction detail for ${targetAttr.name}`, { updatedFields });
                  }
                 break;
             case 'highlight_category':
@@ -6330,74 +6586,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// AI Chat Drag Functionality
-function initChatDrag() {
-    const chat = document.getElementById('ai-chat');
-    const handle = document.getElementById('chat-drag-handle');
-    if (!chat || !handle) return;
-
-    let startY = 0;
-    let startBottom = 0;
-    let isDragging = false;
-
-    handle.addEventListener('mousedown', dragStart);
-    handle.addEventListener('touchstart', dragStart, { passive: true });
-
-    document.addEventListener('mousemove', dragMove);
-    document.addEventListener('touchmove', dragMove, { passive: false });
-
-    document.addEventListener('mouseup', dragEnd);
-    document.addEventListener('touchend', dragEnd);
-
-    function dragStart(e) {
-        if (chat.classList.contains('collapsed')) return;
-        isDragging = true;
-        startY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
-        
-        const computedStyle = window.getComputedStyle(chat);
-        startBottom = parseFloat(computedStyle.bottom) || 20;
-        
-        chat.style.transition = 'none'; // disable transition while dragging
-    }
-
-    function dragMove(e) {
-        if (!isDragging) return;
-        
-        // Prevent default to avoid scrolling on touch devices
-        if (e.cancelable && e.type === 'touchmove') {
-            e.preventDefault();
-        }
-        
-        const currentY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
-        const deltaY = currentY - startY;
-        
-        let newBottom = startBottom - deltaY;
-        
-        // Apply constraints
-        const isMobile = window.innerWidth <= 768;
-        const minBottom = isMobile ? 56 : 0;
-        const maxBottom = window.innerHeight - 100; // Leave at least 100px visible
-        
-        if (newBottom < minBottom) newBottom = minBottom;
-        if (newBottom > maxBottom) newBottom = maxBottom;
-        
-        chat.style.setProperty('bottom', `${newBottom}px`, 'important');
-        
-        // Recalculate expanded height dynamically so top edge doesn't overflow
-        if (chat.classList.contains('expanded-tall')) {
-            const topBar = document.querySelector('.top-bar');
-            const topBarHeight = topBar ? topBar.offsetHeight : 50;
-            const targetHeight = window.innerHeight - topBarHeight - 5 - newBottom;
-            chat.style.setProperty('--expanded-height', `${targetHeight}px`);
-        }
-    }
-
-    function dragEnd() {
-        if (!isDragging) return;
-        isDragging = false;
-        chat.style.transition = ''; // restore transition
-    }
-}
 
 document.addEventListener('DOMContentLoaded', initChatDrag);
 
@@ -6410,6 +6598,8 @@ if (typeof module !== 'undefined' && module.exports) {
         updatePinnedCount,
         toggleLoadingState,
         addMessage,
+        extractActionCommands,
+        buildUpdateDetailFallbackAction,
         saveChatHistory,
         loadChatHistory,
         executeMapAction,
