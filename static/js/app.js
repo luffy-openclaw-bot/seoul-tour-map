@@ -4846,31 +4846,168 @@ async function executeMapAction(action, params, targetElement) {
     }
 }
 
+// ==================== 方向性用戶定位標記（Device Orientation + 方向錐形） ====================
+
+/** 全局：最新裝置方向（度數，0=北，順時針）。null = 未有方向數據 */
+window.userHeading = null;
+
+/** 全局：geolocation watch ID（持續追蹤用） */
+window.locationWatchId = null;
+
+/** 全局：deviceorientation 是否已初始化監聽 */
+window._orientationInitialized = false;
+
+/**
+ * 建立方向性用戶 icon（藍點 + 錐形箭咀）
+ * @param {number|null} headingDeg - 方向度數（0=北），null 則不顯示錐形
+ * @returns {L.DivIcon}
+ */
+function createDirectionalUserIcon(headingDeg) {
+    const coneHtml = (headingDeg !== null && headingDeg !== undefined)
+        ? `<div class="user-location-cone-wrapper" style="transform: rotate(${headingDeg}deg)"><div class="user-location-cone"></div></div>`
+        : '';
+    return L.divIcon({
+        html: `<div class="user-location-marker">${coneHtml}<div class="user-location-dot"></div></div>`,
+        className: 'user-location-icon-wrapper',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+    });
+}
+
+/**
+ * 更新地圖上用戶標記嘅方向錐形旋轉角度
+ * @param {number} headingDeg - 方向度數
+ */
+function updateUserMarkerRotation(headingDeg) {
+    if (!window.userMarker) return;
+    const wrapperEl = window.userMarker.getElement();
+    if (!wrapperEl) return;
+    const coneWrapper = wrapperEl.querySelector('.user-location-cone-wrapper');
+    if (coneWrapper) {
+        coneWrapper.style.transform = `rotate(${headingDeg}deg)`;
+    }
+}
+
+/**
+ * 處理 DeviceOrientation 事件
+ * - iOS: webkitCompassHeading（已經係順時針，0=北）
+ * - Android: alpha（逆時針，0=北），需要 360 - alpha 轉做順時針
+ */
+function handleDeviceOrientation(event) {
+    let heading = null;
+    if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+        // iOS — 已經係順時針角度
+        heading = event.webkitCompassHeading;
+    } else if (event.alpha !== null && event.alpha !== undefined) {
+        if (event.absolute || event.absolute === undefined) {
+            // Android absolute mode — alpha 係逆時針
+            heading = (360 - event.alpha) % 360;
+        } else {
+            // 相對模式，不太可靠但仍嘗試
+            heading = (360 - event.alpha) % 360;
+        }
+    }
+    if (heading !== null) {
+        window.userHeading = heading;
+        updateUserMarkerRotation(heading);
+    }
+}
+
+/**
+ * 請求 iOS 13+ DeviceOrientation 權限（必須由用戶手勢觸發）
+ * @returns {Promise<boolean>} true = 已授權或不需要請求
+ */
+async function requestOrientationPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+            const response = await DeviceOrientationEvent.requestPermission();
+            return response === 'granted';
+        } catch (e) {
+            console.warn('DeviceOrientation permission request failed:', e);
+            return false;
+        }
+    }
+    return true; // 非 iOS 或舊版 iOS，不需要請求
+}
+
+/**
+ * 初始化 DeviceOrientation 監聽（只執行一次）
+ */
+function initDeviceOrientation() {
+    if (window._orientationInitialized) return;
+    window._orientationInitialized = true;
+
+    // 非 iOS 裝置直接監聽
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission !== 'function') {
+        window.addEventListener('deviceorientation', handleDeviceOrientation);
+    }
+    // iOS 裝置需在 requestOrientationPermission() 成功後才加監聽
+    // （會在 locateUser() 內處理）
+}
+
+/**
+ * 如果用戶標記存在，重新設定 icon（用於更新方向）
+ * @param {number|null} headingDeg
+ */
+function refreshUserMarkerIcon(headingDeg) {
+    if (!window.userMarker) return;
+    const latlng = window.userMarker.getLatLng();
+    const newIcon = createDirectionalUserIcon(headingDeg);
+    window.userMarker.setIcon(newIcon);
+}
+
 // ==================== 定位我的位置 ====================
-async function locateUser() {
+async function locateUser(silent = false) {
     if (!navigator.geolocation) {
-        alert('您的瀏覽器不支持地理位置定位');
+        if (!silent) alert('您的瀏覽器不支持地理位置定位');
         return;
+    }
+
+    // 請求 iOS DeviceOrientation 權限（必須在用戶手勢內）
+    // 自動定位時跳過 orientation 權限請求（需要用戶手勢），成功後再初始化
+    if (!silent) {
+        const orientationGranted = await requestOrientationPermission();
+        if (orientationGranted && !window._orientationInitialized) {
+            initDeviceOrientation();
+            // iOS 需要在 permission granted 後才加入監聽
+            if (typeof DeviceOrientationEvent !== 'undefined' &&
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                window.addEventListener('deviceorientation', handleDeviceOrientation);
+            }
+        }
     }
 
     // 顯示加載狀態
     const locateBtn = document.getElementById('locate-user');
-    const originalHtml = locateBtn.innerHTML;
-    locateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 定位中...';
-    locateBtn.disabled = true;
+    const originalHtml = locateBtn ? locateBtn.innerHTML : null;
+    if (locateBtn) {
+        locateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 定位中...';
+        locateBtn.disabled = true;
+    }
 
+    // 清除舊的 watch（如果有）
+    if (window.locationWatchId !== null) {
+        navigator.geolocation.clearWatch(window.locationWatchId);
+        window.locationWatchId = null;
+    }
+
+    // 先用 getCurrentPosition 取得首次位置（較快回應），
+    // 然後用 watchPosition 持續追蹤（包括 heading 更新）
     navigator.geolocation.getCurrentPosition(
         async (position) => {
-            const { latitude, longitude } = position.coords;
-            const accuracy = position.coords.accuracy;
+            const { latitude, longitude, accuracy, heading } = position.coords;
 
-            // 添加用戶位置標記
-            const userIcon = L.divIcon({
-                html: '<div class="user-marker"><i class="fas fa-user"></i></div>',
-                className: '',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            });
+            // GPS heading 後備：如果有 deviceorientation 就優先用，否則用 GPS heading
+            let currentHeading = window.userHeading;
+            if (currentHeading === null && heading !== null && heading !== undefined && !isNaN(heading)) {
+                window.userHeading = heading;
+                currentHeading = heading;
+            }
+
+            // 使用方向性 icon
+            const userIcon = createDirectionalUserIcon(currentHeading);
 
             // 如果已有用戶標記，先移除
             if (window.userMarker) {
@@ -4905,7 +5042,7 @@ async function locateUser() {
                 console.error('Reverse geocoding failed:', error);
             }
 
-            window.userMarker = L.marker([latitude, longitude], { icon: userIcon })
+            window.userMarker = L.marker([latitude, longitude], { icon: userIcon, rotationAngle: 0 })
                 .addTo(map)
                 .bindPopup(`
                     <div class="user-location-popup">
@@ -4924,8 +5061,42 @@ async function locateUser() {
             map.setView([latitude, longitude], 15);
 
             // 恢復按鈕狀態
-            locateBtn.innerHTML = originalHtml;
-            locateBtn.disabled = false;
+            if (locateBtn) {
+                locateBtn.innerHTML = originalHtml;
+                locateBtn.disabled = false;
+            }
+
+            // 啟動持續追蹤（位置移動 + GPS heading 更新）
+            window.locationWatchId = navigator.geolocation.watchPosition(
+                (pos) => {
+                    const { latitude: lat, longitude: lng, accuracy: acc, heading: gpsHeading } = pos.coords;
+                    // 更新標記位置
+                    if (window.userMarker) {
+                        window.userMarker.setLatLng([lat, lng]);
+                    }
+                    // 更新精確度圓圈
+                    if (window.userAccuracyCircle) {
+                        window.userAccuracyCircle.setLatLng([lat, lng]);
+                        window.userAccuracyCircle.setRadius(Math.max(acc, 10));
+                    }
+                    // GPS heading 後備
+                    if (gpsHeading !== null && gpsHeading !== undefined && !isNaN(gpsHeading) && window.userHeading === null) {
+                        window.userHeading = gpsHeading;
+                        refreshUserMarkerIcon(gpsHeading);
+                    }
+                },
+                (err) => {
+                    console.warn('Geolocation watch error:', err);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 2000
+                }
+            );
+
+            // 初始化 device orientation 監聽（非 iOS）
+            initDeviceOrientation();
         },
         (error) => {
             let errorMsg = '無法獲取您的位置：';
@@ -4943,9 +5114,15 @@ async function locateUser() {
                     errorMsg += '未知錯誤';
                     break;
             }
-            alert(errorMsg);
-            locateBtn.innerHTML = originalHtml;
-            locateBtn.disabled = false;
+            if (silent) {
+                console.warn('Auto-locate failed:', errorMsg);
+            } else {
+                alert(errorMsg);
+            }
+            if (locateBtn) {
+                locateBtn.innerHTML = originalHtml;
+                locateBtn.disabled = false;
+            }
         },
         {
             enableHighAccuracy: true,
@@ -4968,14 +5145,15 @@ function locateUserAndReport() {
         async (position) => {
             const { latitude, longitude } = position.coords;
             const accuracy = position.coords.accuracy;
+            const gpsHeading = position.coords.heading;
 
-            // 添加用戶位置標記 (與 locateUser 相同)
-            const userIcon = L.divIcon({
-                html: '<div class="user-marker"><i class="fas fa-user"></i></div>',
-                className: '',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            });
+            // 使用方向性 icon（與 locateUser 相同風格）
+            let currentHeading = window.userHeading;
+            if (currentHeading === null && gpsHeading !== null && gpsHeading !== undefined && !isNaN(gpsHeading)) {
+                window.userHeading = gpsHeading;
+                currentHeading = gpsHeading;
+            }
+            const userIcon = createDirectionalUserIcon(currentHeading);
 
             if (map && window.userMarker) {
                 map.removeLayer(window.userMarker);
@@ -4994,12 +5172,15 @@ function locateUserAndReport() {
                     opacity: 0.5
                 }).addTo(map);
 
-                window.userMarker = L.marker([latitude, longitude], { icon: userIcon })
+                window.userMarker = L.marker([latitude, longitude], { icon: userIcon, rotationAngle: 0 })
                     .addTo(map)
                     .bindPopup("📍 您的位置")
                     .openPopup();
 
                 map.setView([latitude, longitude], 15);
+
+                // 初始化 device orientation（如果尚未初始化）
+                initDeviceOrientation();
             }
 
             // 報告位置給後端
@@ -5130,6 +5311,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadChatPlaces();
     // 取消頁面啟動時自動檢查系統狀態，改為在首次打開聊天時檢查
     // checkSystemStatus();
+
+    // 自動定位：啟動時自動獲取用戶位置（靜默模式，失敗不彈窗）
+    locateUser(true);
 });
 
 // ==================== Chatbot 搜索標記與範圍顯示 ====================

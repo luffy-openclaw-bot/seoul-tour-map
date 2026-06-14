@@ -570,6 +570,58 @@ body {
     font-size: 12px;
 }
 
+/* ==================== 方向性用戶定位標記（Google Maps 風格） ==================== */
+/* 容器：藍點 + 方向錐形 */
+.user-location-icon-wrapper {
+    background: none !important;
+    border: none !important;
+}
+.user-location-marker {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* 固定藍色圓點（中心） */
+.user-location-dot {
+    width: 20px;
+    height: 20px;
+    background: #3388ff;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    position: absolute;
+    z-index: 2;
+}
+/* 方向錐形 — 預設朝上（北），透過 JS 動態旋轉 */
+.user-location-cone {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 28px solid rgba(51, 136, 255, 0.4);
+    top: -2px;
+    z-index: 1;
+    transition: transform 0.15s ease-out;
+    transform-origin: center 22px; /* 旋轉原點 = 藍點中心 */
+}
+/* 錐形朝上時需要微調位置讓尖端從圓心出發 */
+.user-location-cone-wrapper {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    transition: transform 0.15s ease-out;
+}
+
 /* AI 路線標記 */
 .route-marker {
     background: white;
