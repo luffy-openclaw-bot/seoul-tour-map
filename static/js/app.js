@@ -4703,28 +4703,33 @@ function refreshUserMarkerIcon(headingDeg) {
 }
 
 // ==================== 定位我的位置 ====================
-async function locateUser() {
+async function locateUser(silent = false) {
     if (!navigator.geolocation) {
-        alert('您的瀏覽器不支持地理位置定位');
+        if (!silent) alert('您的瀏覽器不支持地理位置定位');
         return;
     }
 
     // 請求 iOS DeviceOrientation 權限（必須在用戶手勢內）
-    const orientationGranted = await requestOrientationPermission();
-    if (orientationGranted && !window._orientationInitialized) {
-        initDeviceOrientation();
-        // iOS 需要在 permission granted 後才加入監聽
-        if (typeof DeviceOrientationEvent !== 'undefined' &&
-            typeof DeviceOrientationEvent.requestPermission === 'function') {
-            window.addEventListener('deviceorientation', handleDeviceOrientation);
+    // 自動定位時跳過 orientation 權限請求（需要用戶手勢），成功後再初始化
+    if (!silent) {
+        const orientationGranted = await requestOrientationPermission();
+        if (orientationGranted && !window._orientationInitialized) {
+            initDeviceOrientation();
+            // iOS 需要在 permission granted 後才加入監聽
+            if (typeof DeviceOrientationEvent !== 'undefined' &&
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                window.addEventListener('deviceorientation', handleDeviceOrientation);
+            }
         }
     }
 
     // 顯示加載狀態
     const locateBtn = document.getElementById('locate-user');
-    const originalHtml = locateBtn.innerHTML;
-    locateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 定位中...';
-    locateBtn.disabled = true;
+    const originalHtml = locateBtn ? locateBtn.innerHTML : null;
+    if (locateBtn) {
+        locateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 定位中...';
+        locateBtn.disabled = true;
+    }
 
     // 清除舊的 watch（如果有）
     if (window.locationWatchId !== null) {
@@ -4800,8 +4805,10 @@ async function locateUser() {
             map.setView([latitude, longitude], 15);
 
             // 恢復按鈕狀態
-            locateBtn.innerHTML = originalHtml;
-            locateBtn.disabled = false;
+            if (locateBtn) {
+                locateBtn.innerHTML = originalHtml;
+                locateBtn.disabled = false;
+            }
 
             // 啟動持續追蹤（位置移動 + GPS heading 更新）
             window.locationWatchId = navigator.geolocation.watchPosition(
@@ -4851,9 +4858,15 @@ async function locateUser() {
                     errorMsg += '未知錯誤';
                     break;
             }
-            alert(errorMsg);
-            locateBtn.innerHTML = originalHtml;
-            locateBtn.disabled = false;
+            if (silent) {
+                console.warn('Auto-locate failed:', errorMsg);
+            } else {
+                alert(errorMsg);
+            }
+            if (locateBtn) {
+                locateBtn.innerHTML = originalHtml;
+                locateBtn.disabled = false;
+            }
         },
         {
             enableHighAccuracy: true,
@@ -5042,6 +5055,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadChatPlaces();
     // 取消頁面啟動時自動檢查系統狀態，改為在首次打開聊天時檢查
     // checkSystemStatus();
+
+    // 自動定位：啟動時自動獲取用戶位置（靜默模式，失敗不彈窗）
+    locateUser(true);
 });
 
 // ==================== Chatbot 搜索標記與範圍顯示 ====================
