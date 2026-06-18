@@ -1951,14 +1951,7 @@ body {
     }
 
     .osrm-panel {
-        width: calc(100% - 40px);
-        right: 20px;
-        left: 20px;
-        max-width: 350px;
-        position: fixed;
-        top: 80px;
-        bottom: auto;
-        z-index: 9999 !important;
+        display: none !important;
     }
 
     .top-bar {
@@ -1992,12 +1985,6 @@ body {
             right: 5%;
             left: 5%;
             bottom: 15px;
-        }
-
-        .osrm-panel {
-            width: 90%;
-            right: 5%;
-            left: 5%;
         }
 
         .route-panel h3,
@@ -2417,6 +2404,35 @@ body {
     font-weight: 600;
 }
 
+.mobile-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mobile-panel-action-btn {
+    border: none;
+    background: #eef2ff;
+    color: #4f46e5;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.mobile-panel-action-btn.mobile-panel-action-btn-close {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
 /* 分類 Tabs */
 .mobile-panel-tabs {
     display: flex;
@@ -2465,6 +2481,178 @@ body {
     flex-direction: column;
     gap: 10px;
     -webkit-overflow-scrolling: touch;
+}
+
+.mobile-osrm-content {
+    display: none;
+    padding: 0 16px 16px;
+    overflow-y: auto;
+    gap: 12px;
+    flex-direction: column;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mobile-location-panel.walk-route-mode .mobile-osrm-content {
+    display: flex;
+}
+
+.mobile-location-panel.walk-route-mode .mobile-panel-tabs,
+.mobile-location-panel.walk-route-mode .mobile-panel-search-container,
+.mobile-location-panel.walk-route-mode .mobile-panel-list,
+.mobile-location-panel.walk-route-mode .mobile-panel-count {
+    display: none;
+}
+
+.mobile-osrm-hero {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px;
+    background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+}
+
+.mobile-osrm-badge {
+    flex-shrink: 0;
+    background: #4338ca;
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.mobile-osrm-hero-text {
+    min-width: 0;
+}
+
+.mobile-osrm-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.mobile-osrm-hero-text p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #4b5563;
+}
+
+.mobile-osrm-fields {
+    display: grid;
+    gap: 10px;
+}
+
+.mobile-osrm-card {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    transition: all 0.2s ease;
+}
+
+.mobile-osrm-card.active {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    background: #f8faff;
+}
+
+.mobile-osrm-card.complete {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.mobile-osrm-card-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+}
+
+.mobile-osrm-card-value {
+    font-size: 14px;
+    color: #111827;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.mobile-osrm-status-card {
+    padding: 14px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.mobile-osrm-status-card.text-muted {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.mobile-osrm-status-card.text-green {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.mobile-osrm-status-card.text-red {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.mobile-osrm-status {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #374151;
+}
+
+.mobile-osrm-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.mobile-osrm-actions .btn-primary,
+.mobile-osrm-actions .btn-secondary {
+    width: auto;
+    flex: 1;
+}
+
+.mobile-osrm-result-card {
+    padding: 14px;
+    border-radius: 16px;
+    background: #111827;
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.mobile-osrm-result-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.72);
+    margin-bottom: 6px;
+}
+
+.mobile-osrm-result-main {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.mobile-osrm-result-sub {
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.82);
 }
 
 /* 手機版景點卡片 */

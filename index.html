@@ -6,7 +6,7 @@
     <title>首爾旅遊地圖 | Seoul Tour Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="static/css/style.css?v=48" />
+    <link rel="stylesheet" href="static/css/style.css?v=49" />
     <link rel="stylesheet" href="static/css/search_module.css?v=45" />
 </head>
 <body>
@@ -302,6 +302,15 @@
                     <span class="mobile-panel-title">📍 景點列表</span>
                     <span class="mobile-panel-count" id="mobile-panel-count"></span>
                 </div>
+                <div class="mobile-panel-actions hidden" id="mobile-panel-actions">
+                    <button id="mobile-osrm-back" class="mobile-panel-action-btn" type="button">
+                        <i class="fas fa-list" aria-hidden="true"></i>
+                        景點列表
+                    </button>
+                    <button id="mobile-osrm-close" class="mobile-panel-action-btn mobile-panel-action-btn-close" type="button" aria-label="關閉步行路線規劃">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="mobile-panel-tabs" id="mobile-panel-tabs">
@@ -330,6 +339,49 @@
                 <option value="name_desc">名稱 (Z-A)</option>
                 <option value="distance">距離最近</option>
             </select>
+        </div>
+        <div id="mobile-osrm-content" class="mobile-osrm-content hidden" aria-live="polite">
+            <div class="mobile-osrm-hero">
+                <div class="mobile-osrm-badge" id="mobile-osrm-step-chip">步驟 1</div>
+                <div class="mobile-osrm-hero-text">
+                    <div class="mobile-osrm-title">步行路線規劃</div>
+                    <p id="mobile-osrm-step-text">先點選起點卡片，再於地圖上選擇位置。</p>
+                </div>
+            </div>
+            <div class="mobile-osrm-fields">
+                <button id="mobile-osrm-from-trigger" class="mobile-osrm-card" type="button">
+                    <span class="mobile-osrm-card-label">
+                        <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                        起點
+                    </span>
+                    <span id="mobile-osrm-from-value" class="mobile-osrm-card-value">點擊後再於地圖上選擇起點</span>
+                </button>
+                <button id="mobile-osrm-to-trigger" class="mobile-osrm-card" type="button">
+                    <span class="mobile-osrm-card-label">
+                        <i class="fas fa-flag-checkered" aria-hidden="true"></i>
+                        終點
+                    </span>
+                    <span id="mobile-osrm-to-value" class="mobile-osrm-card-value">點擊後再於地圖上選擇終點</span>
+                </button>
+            </div>
+            <div id="mobile-osrm-status-card" class="mobile-osrm-status-card">
+                <div id="mobile-osrm-status" class="mobile-osrm-status">請點擊起點卡片，然後在地圖上選擇位置。</div>
+            </div>
+            <div class="mobile-osrm-actions">
+                <button id="mobile-osrm-reset" class="btn-secondary" type="button">
+                    <i class="fas fa-redo" aria-hidden="true"></i>
+                    重置
+                </button>
+                <button id="mobile-osrm-focus-map" class="btn-primary" type="button">
+                    <i class="fas fa-map" aria-hidden="true"></i>
+                    看地圖選點
+                </button>
+            </div>
+            <div id="mobile-osrm-result-card" class="mobile-osrm-result-card hidden">
+                <div class="mobile-osrm-result-label">路線摘要</div>
+                <div id="mobile-osrm-result-main" class="mobile-osrm-result-main">尚未規劃路線</div>
+                <div id="mobile-osrm-result-sub" class="mobile-osrm-result-sub">選擇起點與終點後，會自動開始步行路線規劃。</div>
+            </div>
         </div>
         <div class="mobile-panel-list" id="mobile-panel-list">
             <!-- 動態生成 -->
@@ -503,7 +555,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="static/js/app.js?v=67"></script>
+    <script src="static/js/app.js?v=68"></script>
     <script src="static/js/search_module.js?v=50"></script>
 </body>
 </html>

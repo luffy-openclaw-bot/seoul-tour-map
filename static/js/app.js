@@ -63,7 +63,10 @@ let osrmState = {
     toLng: null,
     fromMarker: null,
     toMarker: null,
-    routeLayer: null
+    routeLayer: null,
+    summaryDistanceKm: null,
+    summaryDurationMin: null,
+    errorMessage: ''
 };
 
 let attractionsData = [];
@@ -1148,32 +1151,185 @@ function clearPanelSearch() {
 }
 
 // ==================== OSRM Pedestrian Routing Logic ====================
+function isMobileViewport() {
+    return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function collapseUiForOsrmOpen() {
+    const routePanel = document.getElementById('route-panel');
+    if (routePanel) routePanel.classList.add('hidden');
+
+    const radiusPanel = document.getElementById('radius-panel');
+    if (radiusPanel && !radiusPanel.classList.contains('hidden')) {
+        toggleRadiusPanel();
+    }
+
+    const chatWidget = document.getElementById('ai-chat');
+    if (chatWidget && !chatWidget.classList.contains('collapsed')) {
+        chatWidget.classList.add('collapsed');
+        const statusBar = document.getElementById('system-status-bar');
+        if (statusBar) statusBar.classList.add('hidden');
+    }
+}
+
+function updateMobileOsrmUI() {
+    const panel = document.getElementById('mobile-location-panel');
+    const title = panel?.querySelector('.mobile-panel-title');
+    const actions = document.getElementById('mobile-panel-actions');
+    const stepChip = document.getElementById('mobile-osrm-step-chip');
+    const stepText = document.getElementById('mobile-osrm-step-text');
+    const fromTrigger = document.getElementById('mobile-osrm-from-trigger');
+    const toTrigger = document.getElementById('mobile-osrm-to-trigger');
+    const fromValue = document.getElementById('mobile-osrm-from-value');
+    const toValue = document.getElementById('mobile-osrm-to-value');
+    const statusCard = document.getElementById('mobile-osrm-status-card');
+    const statusText = document.getElementById('mobile-osrm-status');
+    const resultCard = document.getElementById('mobile-osrm-result-card');
+    const resultMain = document.getElementById('mobile-osrm-result-main');
+    const resultSub = document.getElementById('mobile-osrm-result-sub');
+    if (!panel || !title || !actions) return;
+
+    const walkMode = mobilePanelMode === 'walk-route';
+    panel.classList.toggle('walk-route-mode', walkMode);
+    title.textContent = walkMode ? '步行路線規劃' : '📍 景點列表';
+    actions.classList.toggle('hidden', !walkMode);
+
+    if (!walkMode) {
+        return;
+    }
+
+    if (fromValue) {
+        fromValue.textContent = osrmState.fromLat && osrmState.fromLng
+            ? `${osrmState.fromLat.toFixed(5)}, ${osrmState.fromLng.toFixed(5)}`
+            : '點擊後再於地圖上選擇起點';
+    }
+    if (toValue) {
+        toValue.textContent = osrmState.toLat && osrmState.toLng
+            ? `${osrmState.toLat.toFixed(5)}, ${osrmState.toLng.toFixed(5)}`
+            : '點擊後再於地圖上選擇終點';
+    }
+
+    fromTrigger?.classList.toggle('active', osrmState.step === 'from');
+    toTrigger?.classList.toggle('active', osrmState.step === 'to');
+    fromTrigger?.classList.toggle('complete', Boolean(osrmState.fromLat && osrmState.fromLng));
+    toTrigger?.classList.toggle('complete', Boolean(osrmState.toLat && osrmState.toLng));
+
+    let badgeText = '步驟 1';
+    let helperText = '先點選起點卡片，再於地圖上選擇位置。';
+    let statusMessage = '請點擊起點卡片，然後在地圖上選擇位置。';
+    let statusClassName = 'mobile-osrm-status-card text-muted';
+
+    if (osrmState.step === 'from') {
+        badgeText = '步驟 1';
+        helperText = '起點選取中，請直接點擊地圖上的位置。';
+        statusMessage = '正在等待你在地圖上選擇起點。';
+    } else if (osrmState.step === 'to') {
+        badgeText = '步驟 2';
+        helperText = '終點選取中，請直接點擊地圖上的位置。';
+        statusMessage = '正在等待你在地圖上選擇終點。';
+    } else if (osrmState.step === 'calculating') {
+        badgeText = '規劃中';
+        helperText = '起點與終點已就緒，正在計算步行路線。';
+        statusMessage = '正在規劃步行路線，請稍候。';
+    } else if (osrmState.step === 'done') {
+        badgeText = '完成';
+        helperText = '已在地圖上顯示步行路線，你可以重新選點再規劃。';
+        statusMessage = osrmState.summaryDistanceKm && osrmState.summaryDurationMin
+            ? `路線規劃完成：約 ${osrmState.summaryDistanceKm} 公里，步行 ${osrmState.summaryDurationMin} 分鐘。`
+            : '路線規劃完成。';
+        statusClassName = 'mobile-osrm-status-card text-green';
+    } else if (osrmState.step === 'error') {
+        badgeText = '需調整';
+        helperText = '目前無法規劃這條步行路線，請重新選點再試一次。';
+        statusMessage = osrmState.errorMessage || '無法規劃路線，請重新選擇起點或終點。';
+        statusClassName = 'mobile-osrm-status-card text-red';
+    } else if (osrmState.fromLat && osrmState.toLat) {
+        badgeText = '待確認';
+        helperText = '起點與終點已選擇，可以查看結果或重新選點。';
+        statusMessage = '已選好起點與終點。';
+    } else if (osrmState.fromLat) {
+        badgeText = '步驟 2';
+        helperText = '起點已選好，接著請選擇終點。';
+        statusMessage = '請點擊終點卡片，再於地圖上選擇終點。';
+    }
+
+    if (stepChip) stepChip.textContent = badgeText;
+    if (stepText) stepText.textContent = helperText;
+    if (statusText) statusText.textContent = statusMessage;
+    if (statusCard) statusCard.className = statusClassName;
+
+    if (resultCard && resultMain && resultSub) {
+        if (osrmState.summaryDistanceKm && osrmState.summaryDurationMin) {
+            resultCard.classList.remove('hidden');
+            resultMain.textContent = `${osrmState.summaryDistanceKm} 公里 · ${osrmState.summaryDurationMin} 分鐘`;
+            resultSub.textContent = '地圖上已顯示步行路線，可拖動地圖檢視完整路徑。';
+        } else {
+            resultCard.classList.add('hidden');
+            resultMain.textContent = '尚未規劃路線';
+            resultSub.textContent = '選擇起點與終點後，會自動開始步行路線規劃。';
+        }
+    }
+}
+
+function setMobilePanelMode(mode) {
+    mobilePanelMode = mode;
+    const panel = document.getElementById('mobile-location-panel');
+    if (panel) {
+        panel.dataset.mode = mode;
+    }
+    updateMobileOsrmUI();
+}
+
+function openMobileOsrmPanel() {
+    const osrmControlBtn = document.querySelector('.leaflet-control-osrm a');
+    osrmState.active = true;
+    collapseUiForOsrmOpen();
+    setMobilePanelMode('walk-route');
+    toggleMobilePanel(true);
+    if (osrmControlBtn) osrmControlBtn.classList.add('active');
+    if (!osrmState.fromLat && !osrmState.toLat && osrmState.step === 'idle') {
+        osrmState.step = 'from';
+    } else if (!osrmState.fromLat) {
+        osrmState.step = 'from';
+    } else if (!osrmState.toLat && osrmState.step === 'idle') {
+        osrmState.step = 'to';
+    }
+    updateOsrmStatus();
+}
+
+function exitMobileOsrmMode(options = {}) {
+    const { reset = false, returnToList = true } = options;
+    const osrmControlBtn = document.querySelector('.leaflet-control-osrm a');
+    osrmState.active = false;
+    if (osrmControlBtn) osrmControlBtn.classList.remove('active');
+    if (reset) {
+        resetOsrmState();
+    }
+    if (returnToList) {
+        setMobilePanelMode('location-list');
+        toggleMobilePanel(true);
+    }
+}
+
 function toggleOsrmPanel() {
     const panel = document.getElementById('osrm-panel');
     const osrmControlBtn = document.querySelector('.leaflet-control-osrm a');
-    const chatWidget = document.getElementById('ai-chat');
-    
+
+    if (isMobileViewport()) {
+        if (!osrmState.active || mobilePanelMode !== 'walk-route') {
+            openMobileOsrmPanel();
+        } else {
+            exitMobileOsrmMode({ reset: true, returnToList: true });
+        }
+        return;
+    }
+
     if (panel) {
         panel.classList.toggle('hidden');
         if (!panel.classList.contains('hidden')) {
             osrmState.active = true;
             if (osrmControlBtn) osrmControlBtn.classList.add('active');
-            
-            // Collapse other panels
-            const routePanel = document.getElementById('route-panel');
-            if (routePanel) routePanel.classList.add('hidden');
-            const radiusPanel = document.getElementById('radius-panel');
-            if (radiusPanel && !radiusPanel.classList.contains('hidden')) {
-                toggleRadiusPanel();
-            }
-            
-            // Collapse chatbot widget
-            if (chatWidget && !chatWidget.classList.contains('collapsed')) {
-                chatWidget.classList.add('collapsed');
-                const statusBar = document.getElementById('system-status-bar');
-                if (statusBar) statusBar.classList.add('hidden');
-            }
-            
+            collapseUiForOsrmOpen();
             osrmState.step = 'from';
             updateOsrmStatus();
         } else {
@@ -1190,6 +1346,9 @@ function resetOsrmState() {
     osrmState.fromLng = null;
     osrmState.toLat = null;
     osrmState.toLng = null;
+    osrmState.summaryDistanceKm = null;
+    osrmState.summaryDurationMin = null;
+    osrmState.errorMessage = '';
     
     if (osrmState.fromMarker) {
         map.removeLayer(osrmState.fromMarker);
@@ -1214,21 +1373,23 @@ function resetOsrmState() {
 
 function updateOsrmStatus() {
     const statusDiv = document.getElementById('osrm-status');
-    if (!statusDiv) return;
-    
     const fromField = document.getElementById('osrm-from')?.parentElement;
     const toField = document.getElementById('osrm-to')?.parentElement;
     const mapElement = document.getElementById('map');
     
     if (osrmState.step === 'from') {
-        statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇起點';
-        statusDiv.className = 'osrm-status text-muted';
+        if (statusDiv) {
+            statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇起點';
+            statusDiv.className = 'osrm-status text-muted';
+        }
         if (fromField) fromField.classList.add('picking');
         if (toField) toField.classList.remove('picking');
         if (mapElement) mapElement.style.cursor = 'crosshair';
     } else if (osrmState.step === 'to') {
-        statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇終點';
-        statusDiv.className = 'osrm-status text-muted';
+        if (statusDiv) {
+            statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請點擊地圖選擇終點';
+            statusDiv.className = 'osrm-status text-muted';
+        }
         if (fromField) fromField.classList.remove('picking');
         if (toField) toField.classList.add('picking');
         if (mapElement) mapElement.style.cursor = 'crosshair';
@@ -1238,29 +1399,37 @@ function updateOsrmStatus() {
         if (mapElement) mapElement.style.cursor = '';
         
         if (osrmState.step === 'calculating') {
-            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃路線...';
-            statusDiv.className = 'osrm-status text-muted';
+            if (statusDiv) {
+                statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃路線...';
+                statusDiv.className = 'osrm-status text-muted';
+            }
         } else if (osrmState.step === 'done') {
             // done message is handled in calculateOsrmRoute, but we keep this as fallback
-            if (!statusDiv.innerHTML.includes('路線規劃完成')) {
+            if (statusDiv && !statusDiv.innerHTML.includes('路線規劃完成')) {
                 statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> 路線規劃完成';
             }
-            statusDiv.className = 'osrm-status text-green';
+            if (statusDiv) statusDiv.className = 'osrm-status text-green';
         } else if (osrmState.step === 'error') {
-            if (!statusDiv.innerHTML.includes('無法規劃路線')) {
+            if (statusDiv && !statusDiv.innerHTML.includes('無法規劃路線')) {
                 statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 無法規劃路線';
             }
-            statusDiv.className = 'osrm-status text-red';
+            if (statusDiv) statusDiv.className = 'osrm-status text-red';
         } else if (osrmState.step === 'idle') {
             if (osrmState.fromLat && osrmState.toLat) {
-                statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 準備規劃路線...';
-                statusDiv.className = 'osrm-status text-muted';
+                if (statusDiv) {
+                    statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 準備規劃路線...';
+                    statusDiv.className = 'osrm-status text-muted';
+                }
             } else {
-                statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請選擇起點或終點';
-                statusDiv.className = 'osrm-status text-muted';
+                if (statusDiv) {
+                    statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> 請選擇起點或終點';
+                    statusDiv.className = 'osrm-status text-muted';
+                }
             }
         }
     }
+
+    updateMobileOsrmUI();
 }
 
 // OSRM Event Listeners
@@ -1294,6 +1463,63 @@ document.addEventListener('DOMContentLoaded', () => {
             updateOsrmStatus();
         });
     }
+
+    const mobileFromTrigger = document.getElementById('mobile-osrm-from-trigger');
+    if (mobileFromTrigger) {
+        mobileFromTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            osrmState.active = true;
+            osrmState.step = 'from';
+            updateOsrmStatus();
+        });
+    }
+
+    const mobileToTrigger = document.getElementById('mobile-osrm-to-trigger');
+    if (mobileToTrigger) {
+        mobileToTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            osrmState.active = true;
+            osrmState.step = 'to';
+            updateOsrmStatus();
+        });
+    }
+
+    const mobileResetBtn = document.getElementById('mobile-osrm-reset');
+    if (mobileResetBtn) {
+        mobileResetBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetOsrmState();
+            osrmState.active = true;
+            osrmState.step = 'from';
+            updateOsrmStatus();
+        });
+    }
+
+    const mobileBackBtn = document.getElementById('mobile-osrm-back');
+    if (mobileBackBtn) {
+        mobileBackBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            exitMobileOsrmMode({ reset: false, returnToList: true });
+        });
+    }
+
+    const mobileCloseBtn = document.getElementById('mobile-osrm-close');
+    if (mobileCloseBtn) {
+        mobileCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            exitMobileOsrmMode({ reset: true, returnToList: true });
+        });
+    }
+
+    const mobileFocusMapBtn = document.getElementById('mobile-osrm-focus-map');
+    if (mobileFocusMapBtn) {
+        mobileFocusMapBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMobilePanel(false);
+        });
+    }
+
+    updateMobileOsrmUI();
 });
 
 // Document click to cancel picking mode
@@ -1302,8 +1528,8 @@ document.addEventListener('click', (e) => {
     if (osrmState.step !== 'from' && osrmState.step !== 'to') return;
     
     const isMap = e.target.closest('#map');
-    const isOsrmInput = e.target.closest('#osrm-from, #osrm-to');
-    const isOsrmPanelCtrl = e.target.closest('#osrm-panel-close, #btn-osrm-reset');
+    const isOsrmInput = e.target.closest('#osrm-from, #osrm-to, #mobile-osrm-from-trigger, #mobile-osrm-to-trigger');
+    const isOsrmPanelCtrl = e.target.closest('#osrm-panel-close, #btn-osrm-reset, #mobile-osrm-reset, #mobile-osrm-close, #mobile-osrm-back, #mobile-osrm-focus-map, #mobile-osrm-content');
     
     if (!isMap && !isOsrmInput && !isOsrmPanelCtrl) {
         osrmState.step = 'idle';
@@ -1333,6 +1559,7 @@ function handleOsrmMapClick(lat, lng) {
         
         // Exit picking mode
         osrmState.step = 'idle';
+        osrmState.errorMessage = '';
         updateOsrmStatus();
         
         checkAndCalculateOsrmRoute();
@@ -1357,6 +1584,7 @@ function handleOsrmMapClick(lat, lng) {
         
         // Exit picking mode
         osrmState.step = 'idle';
+        osrmState.errorMessage = '';
         updateOsrmStatus();
         
         checkAndCalculateOsrmRoute();
@@ -1366,6 +1594,7 @@ function handleOsrmMapClick(lat, lng) {
 function checkAndCalculateOsrmRoute() {
     if (osrmState.fromLat && osrmState.toLat) {
         osrmState.step = 'calculating';
+        osrmState.errorMessage = '';
         updateOsrmStatus();
         calculateOsrmRoute(osrmState.fromLat, osrmState.fromLng, osrmState.toLat, osrmState.toLng);
     }
@@ -1414,16 +1643,23 @@ async function calculateOsrmRoute(lat1, lng1, lat2, lng2) {
         // OSRM demo server's foot profile sometimes returns car speeds for duration.
         // We manually calculate walking duration assuming an average speed of 5 km/h (about 83 m/min).
         const duration = Math.round((route.distance / 1000) / 5 * 60); // minutes
+        osrmState.summaryDistanceKm = distance;
+        osrmState.summaryDurationMin = duration;
+        osrmState.errorMessage = '';
         
         const statusDiv = document.getElementById('osrm-status');
         if (statusDiv) {
             statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> 路線規劃完成：約 ${distance} 公里, 步行 ${duration} 分鐘`;
             statusDiv.className = 'osrm-status text-green';
         }
+        updateMobileOsrmUI();
         
     } catch (error) {
         console.error('Error fetching OSRM route:', error);
         osrmState.step = 'error';
+        osrmState.summaryDistanceKm = null;
+        osrmState.summaryDurationMin = null;
+        osrmState.errorMessage = error.message === 'No route found' ? '找不到合適路線，請重新選擇附近一點的起點或終點。' : '網絡錯誤，請稍後再試。';
         updateOsrmStatus();
         
         const statusDiv = document.getElementById('osrm-status');
@@ -3041,7 +3277,7 @@ async function sendMessage() {
 function handleWalkCommand() {
     addMessage("正在為您開啟步行路線規劃面板...", 'bot');
     const panel = document.getElementById('osrm-panel');
-    if (panel && panel.classList.contains('hidden')) {
+    if (isMobileViewport() || (panel && panel.classList.contains('hidden'))) {
         toggleOsrmPanel();
     }
 }
@@ -4125,6 +4361,7 @@ function initChatDrag() {
 
 // ==================== 手機版底部景點列表面板 ====================
 let mobilePanelExpanded = false;
+let mobilePanelMode = 'location-list';
 
 // 類別對應 emoji
 const CATEGORY_EMOJIS = {
@@ -4336,6 +4573,7 @@ function initMobilePanel() {
 
     // 初始渲染
     renderMobilePanelList();
+    setMobilePanelMode('location-list');
 }
 
 function toggleMobilePanel(expanded) {
@@ -4365,9 +4603,11 @@ function toggleMobilePanel(expanded) {
     if (dragHandle) {
         var titleEl = dragHandle.querySelector('.mobile-panel-title');
         if (titleEl) {
-            titleEl.textContent = expanded ? '📍 景點列表' : '📍 景點列表';
+            titleEl.textContent = mobilePanelMode === 'walk-route' ? '步行路線規劃' : '📍 景點列表';
         }
     }
+
+    updateMobileOsrmUI();
 }
 
 
@@ -6808,6 +7048,13 @@ if (typeof module !== 'undefined' && module.exports) {
         initRadiusFilter,
         applyRadiusFilter,
         clearRadiusFilter,
-        parseRadiusSlashCommand
+        parseRadiusSlashCommand,
+        toggleOsrmPanel,
+        toggleMobilePanel,
+        setMobilePanelMode,
+        updateMobileOsrmUI,
+        resetOsrmState,
+        getOsrmStateForTest: () => osrmState,
+        getMobilePanelModeForTest: () => mobilePanelMode
     };
 }
