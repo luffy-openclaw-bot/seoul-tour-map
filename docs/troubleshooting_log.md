@@ -1,5 +1,9 @@
 # Troubleshooting Log - Hermes Agent Timeout (2026-06-08)
 
+> Historical note: this file preserves dated troubleshooting records.
+> Treat timeout values, line references, and operational details here as incident-time snapshots rather than the current live configuration.
+> For example, the `15s` timeout mentioned in the first incident reflects that investigation period, while the current codebase may now use different values.
+
 ## Symptom
 All queries that should delegate to Hermes Agent (e.g. "search the current weather") result in the server waiting 120s then falling back to the offline knowledge base. The user sees "⚠️ 已切換至離線模式".
 
@@ -64,7 +68,7 @@ python server.py
 [2026-06-08 ...] Task xxx: Completed successfully
 ```
 
-## Configuration Reference
+## Configuration Reference At Time Of Incident
 | Setting | File | Value |
 |---------|------|-------|
 | `HERMES_ENABLED` | .env | `true` |
@@ -103,4 +107,3 @@ python server.py
 - [x] Updated `addMessage` to track `fly_to` in `autoActions`.
 - [x] Updated `recreateMapActionButton` and `executeMapAction` to pass and use the specific message element.
 - [x] Added `parseFloat` to coordinate parsing in `recreateMapActionButton`.
-

@@ -1,5 +1,23 @@
 # 首爾旅遊地圖平台 - 改動紀錄
 
+## 📅 2026-06-18 文件更新（README / docs refresh）
+
+### 📝 文件整理：更新目前產品說明並標示歷史文件性質
+
+**更新內容：**
+1. 重寫 `README.md`，令功能、UI、chatbot、自動化流程、旅客價值與 AI 能力描述對齊目前實作
+2. 修正項目結構說明，改為使用目前真實存在嘅檔案與資料來源（例如 `static/data/preset_locations.json`）
+3. 更新啟動方式與環境變量說明，避免沿用過時設定示例
+4. 為 `docs/troubleshooting_log.md` 同 `CODE_REVIEW.md` 加入歷史文件註記，避免將舊 troubleshooting / review 記錄誤解為即時系統狀態
+
+**修改文件：**
+- `README.md`
+- `docs/troubleshooting_log.md`
+- `CODE_REVIEW.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 📅 2026-06-07 v51 (範圍篩選：防止點擊標記)
 
 ### 🛠️ 修復：範圍篩選「在地圖上選取」模式防止點擊標記

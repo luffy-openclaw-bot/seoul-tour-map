@@ -1,5 +1,8 @@
 # Code Review Documentation
 
+> Historical note: this document captures a dated review snapshot from 2026-06-06 for the range filter and "Pick on map" flow.
+> It should be read as review context for that code state, not as a standing guarantee that the current application is fully reviewed end-to-end.
+
 ## Review Date
 2026-06-06
 
@@ -64,4 +67,4 @@ This document summarizes a full code review of the Seoul Tour Map application, f
 ---
 
 ## Summary & Recommendations
-✅ All implementations are complete and working! No issues found! The Range Filter panel styles are consistent with rest of application UI. Map click delegation logic is correct, and the Pick on Map feature works end to end properly.
+At the time of this review, no issues were found in the reviewed range-filter and pick-on-map flow. The notes below should remain useful as historical review evidence for that specific implementation state.
