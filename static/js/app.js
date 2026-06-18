@@ -4408,6 +4408,9 @@ function renderMobilePanelList() {
                 '<div class="card-emoji" style="background:' + color + '15">' + emoji + '</div>' +
                 '<div class="card-info">' +
                     '<div class="card-name">' + place.name + '</div>' +
+                    '<div class="mobile-card-category-tags">' +
+                        '<span class="category-tag mobile-category-tag" style="background:' + color + '">' + category + '</span>' +
+                    '</div>' +
                     '<div class="card-sub">' +
                         '<span class="card-dot" style="background:' + color + '"></span>' +
                         category +
@@ -4478,6 +4481,9 @@ function renderMobilePanelList() {
             '<div class="card-emoji" style="background:' + color + '15">' + emoji + '</div>' +
             '<div class="card-info">' +
                 '<div class="card-name">' + safeName + ' ' + badges + '</div>' +
+                '<div class="mobile-card-category-tags">' +
+                    '<span class="category-tag mobile-category-tag" style="background:' + color + '">' + safeCategory + '</span>' +
+                '</div>' +
                 '<div class="card-sub">' +
                     '<span class="card-dot" style="background:' + color + '"></span>' +
                     safeCategory + (attr.local_name ? ' · ' + attr.local_name : '') +
@@ -7039,6 +7045,8 @@ if (typeof module !== 'undefined' && module.exports) {
         getDefaultFallbackImage,
         setAttractionsDataForTest: (data) => { attractionsData = data; },       
         setMapForTest: (testMap) => { map = testMap; },
+        updateCategoryLanguage,
+        renderMobilePanelList,
         showAttractionDetailById,
         removeFromWishlist,
         removeFromWishlistFromModal,

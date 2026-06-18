@@ -2459,6 +2459,9 @@ body {
     transition: all 0.2s;
     color: #666;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .mobile-tab:hover {
@@ -2466,10 +2469,25 @@ body {
     color: #667eea;
 }
 
+.mobile-tab .mobile-tab-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4f46e5;
+    line-height: 1.2;
+}
+
 .mobile-tab.active {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
     border-color: transparent;
+}
+
+.mobile-tab.active .mobile-tab-tag {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
 }
 
 /* 景點列表 */
@@ -2744,6 +2762,24 @@ body {
     font-weight: 600;
     color: #333;
     margin-bottom: 2px;
+}
+
+.mobile-attraction-card .mobile-card-category-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.mobile-attraction-card .category-tag.mobile-category-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #fff;
+    line-height: 1.2;
+    max-width: 100%;
 }
 
 .mobile-attraction-card .card-sub {

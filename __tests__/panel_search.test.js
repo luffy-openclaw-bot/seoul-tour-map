@@ -55,6 +55,11 @@ document.body.innerHTML = `
         <span id="mobile-search-loading" class="hidden"></span>
         <button id="mobile-search-clear" class="hidden"></button>
     </div>
+    <div class="mobile-panel-tabs" id="mobile-panel-tabs">
+        <button class="mobile-tab active" data-category="all" data-category-id="cat-all"><span class="mobile-tab-tag"><span data-i18n-category="cat-all">全部</span></span></button>
+        <button class="mobile-tab" data-category="購物美食" data-category-id="cat-shopping">🍜 <span class="mobile-tab-tag"><span data-i18n-category="cat-shopping">美食</span></span></button>
+        <button class="mobile-tab" data-category="地標觀景" data-category-id="cat-landmark">🗼 <span class="mobile-tab-tag"><span data-i18n-category="cat-landmark">觀景</span></span></button>
+    </div>
     <div id="mobile-panel-list"></div>
     <span id="mobile-panel-count"></span>
 
@@ -95,6 +100,8 @@ const {
     WishlistManager,
     setAttractionsDataForTest,
     setMapForTest,
+    updateCategoryLanguage,
+    renderMobilePanelList,
     getFallbackImage,
     getDefaultFallbackImage
 } = app;
@@ -167,6 +174,7 @@ describe('Location Panel Search - Unit Tests', () => {
 describe('Location Panel Search - Integration Tests', () => {
     beforeEach(() => {
         setPanelSearchQuery('');
+        updateCategoryLanguage('zh-Hant');
         document.getElementById('desktop-search-input').value = '';
         document.getElementById('mobile-search-input').value = '';
         document.getElementById('desktop-search-loading').classList.add('hidden');
@@ -218,6 +226,34 @@ describe('Location Panel Search - Integration Tests', () => {
         // Verify getFilteredAttractions uses empty query now
         const results = getFilteredAttractions('all');
         expect(results.length).toBe(3);
+    });
+
+    test('renderMobilePanelList shows category tags while keeping the category metadata row', () => {
+        WishlistManager.getAll = jest.fn(() => []);
+
+        renderMobilePanelList();
+
+        const firstCard = document.querySelector('.mobile-attraction-card');
+        expect(firstCard).not.toBeNull();
+        expect(firstCard.querySelector('.mobile-category-tag')).not.toBeNull();
+        expect(firstCard.querySelector('.mobile-category-tag').textContent).toBe('地標觀景');
+        expect(firstCard.querySelector('.card-sub')).not.toBeNull();
+        expect(firstCard.querySelector('.card-dot')).not.toBeNull();
+        expect(firstCard.querySelector('.card-sub').textContent).toContain('地標觀景');
+    });
+
+    test('mobile tabs preserve i18n labels inside the new tag wrapper', () => {
+        updateCategoryLanguage('zh-Hant');
+
+        const shoppingLabel = document.querySelector('.mobile-tab[data-category-id="cat-shopping"] [data-i18n-category="cat-shopping"]');
+        const landmarkLabel = document.querySelector('.mobile-tab[data-category-id="cat-landmark"] [data-i18n-category="cat-landmark"]');
+
+        expect(shoppingLabel).not.toBeNull();
+        expect(landmarkLabel).not.toBeNull();
+        expect(shoppingLabel.closest('.mobile-tab-tag')).not.toBeNull();
+        expect(landmarkLabel.closest('.mobile-tab-tag')).not.toBeNull();
+        expect(shoppingLabel.textContent).toBe('美食');
+        expect(landmarkLabel.textContent).toBe('觀景');
     });
 });
 
